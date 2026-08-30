@@ -1,0 +1,597 @@
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Segoe UI,Arial,sans-serif;
+}
+
+body{
+  background:#eef2f7;
+  color:#263238;
+  padding:10px;
+}
+
+.page{
+  width:1280px;
+  margin:0 auto;
+}
+
+
+/* Offline banner */
+.offlineBar{
+  display:none;
+  width:100%;
+  max-width:1280px;
+  margin:0 auto 10px auto;
+  background:#d71920;
+  color:#fff;
+  border-radius:8px;
+  padding:8px 14px;
+  font-size:13px;
+  font-weight:600;
+}
+.offlineBar.show{ display:block; }
+
+
+/*====================================================
+  HEADER
+====================================================*/
+
+.header{
+  width:100%;
+  height:78px;
+  background:linear-gradient(90deg,#007b83,#33bfd0);
+  border-radius:10px;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  padding:0 18px;
+  margin-bottom:10px;
+  box-shadow:0 6px 14px rgba(0,0,0,.12);
+}
+
+.headerInner{ width:300px; }
+
+.header h1{
+  font-size:34px;
+  line-height:34px;
+  font-weight:700;
+}
+
+.header span{
+  display:block;
+  font-size:14px;
+  margin-top:4px;
+  font-weight:500;
+}
+
+
+/*====================================================
+  MAIN LAYOUT
+====================================================*/
+
+.main{
+  display:grid;
+  grid-template-columns:335px 540px 380px;
+  gap:10px;
+  align-items:stretch;
+  height:665px;
+}
+
+
+/*====================================================
+  CARDS
+====================================================*/
+
+.facility,
+.scheduleCard,
+.summary,
+.bulk{
+  background:#fff;
+  border-radius:10px;
+  padding:18px;
+  box-shadow:0 8px 18px rgba(0,0,0,.12);
+}
+
+.facility{
+  height:665px;
+  display:flex;
+  flex-direction:column;
+}
+
+.scheduleCard{
+  height:665px;
+  min-width:0;
+}
+
+.main>div:last-child{
+  height:665px;
+  display:grid;
+  grid-template-rows:1fr 1fr;
+  gap:14px;
+}
+
+.main>div:last-child>div:nth-child(2){ display:none; }
+
+.summary,
+.bulk{
+  height:100%;
+  min-height:0;
+}
+
+
+/*====================================================
+  CARD TITLES
+====================================================*/
+
+.cardTitle{
+  font-size:26px;
+  font-weight:700;
+  color:#007b83;
+  margin-bottom:16px;
+  line-height:1.15;
+}
+
+
+/*====================================================
+  FACILITY FIELDS
+====================================================*/
+
+.field{ margin-bottom:10px; }
+
+.field label{
+  display:block;
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:5px;
+  color:#263238;
+}
+
+input,
+select{
+  width:100%;
+  height:44px;
+  border:1px solid #d7d7d7;
+  border-radius:5px;
+  padding:0 12px;
+  background:#fff4c4;
+  color:#263238;
+  font-size:14px;
+  outline:none;
+}
+
+input:focus,
+select:focus{
+  border-color:#007b83;
+  box-shadow:0 0 0 2px rgba(0,123,131,.12);
+}
+
+
+/*====================================================
+  BULLET PAYMENT BUTTON
+====================================================*/
+
+.facilityBulletButtonWrapper{
+  margin-top:auto;
+  padding-top:14px;
+  border-top:1px solid #e5e5e5;
+}
+
+.addBulletPaymentButton{
+  width:100%;
+  height:36px;
+  border:0;
+  border-radius:3px;
+  background:#007f78;
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.addBulletPaymentButton:hover{ background:#006d67; }
+
+
+/*====================================================
+  BULLET PAYMENT SCHEDULE HEADER
+====================================================*/
+
+.scheduleHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:10px;
+  gap:12px;
+}
+
+.scheduleTitle{
+  margin:0;
+  font-size:22px;
+  max-width:260px;
+  line-height:1.15;
+}
+
+.scheduleControls{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.scheduleHeader select{
+  width:180px;
+  height:44px;
+  flex-shrink:0;
+  font-size:12px;
+  padding:0 10px;
+}
+
+
+/*====================================================
+  BULLET PAYMENT TABLE
+====================================================*/
+
+.scheduleTableContainer{
+  height:calc(100% - 84px);
+  max-height:none;
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+#scheduleTable{ width:100%; }
+
+#scheduleTable th{
+  height:28px;
+  padding:4px;
+  border:1px solid #e5e5e5;
+  background:#007b72;
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  text-align:center;
+}
+
+#scheduleTable td{
+  height:36px;
+  padding:2px 3px;
+  border:1px solid #e5e5e5;
+  text-align:center;
+}
+
+#scheduleTable th:nth-child(1),
+#scheduleTable td:nth-child(1){ width:24%; }
+
+#scheduleTable th:nth-child(2),
+#scheduleTable td:nth-child(2){ width:24%; }
+
+#scheduleTable th:nth-child(3),
+#scheduleTable td:nth-child(3){ width:52%; }
+
+#scheduleTable input{
+  width:100%;
+  height:32px;
+  padding:2px 6px;
+  font-size:13px;
+  text-align:center;
+  background:#fff4c4;
+  border:1px solid #d7d7d7;
+  border-radius:4px;
+}
+
+
+/*====================================================
+  SCHEDULE ACTION BUTTON
+====================================================*/
+
+.scheduleAmountCell{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  width:100%;
+}
+
+.scheduleAmountCell input{
+  flex:1;
+  min-width:0;
+}
+
+.scheduleAction{
+  width:78px !important;
+  height:32px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:3px !important;
+  background:#007f78 !important;
+  color:#fff !important;
+  font-size:11px !important;
+  font-weight:700 !important;
+  cursor:pointer !important;
+}
+
+.scheduleAction.delete{ background:#d71920 !important; }
+.scheduleAction:hover{ opacity:.9; }
+.scheduleAction:disabled{
+  opacity:.6;
+  cursor:not-allowed !important;
+}
+
+
+/*====================================================
+  SUMMARY CARDS
+====================================================*/
+
+.summary .cardTitle,
+.bulk .cardTitle{ margin-bottom:16px; }
+
+.bigValue{
+  height:64px;
+  border-radius:6px;
+  color:#fff;
+  font-size:32px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  padding:0 16px;
+  margin-bottom:16px;
+}
+
+.red{ background:#d71920; }
+.blue{ background:#2864d7; }
+
+.summaryTable{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.summaryTable td{
+  height:28px;
+  padding:3px 8px;
+  border:1px solid #e0e0e0;
+  font-size:13px;
+}
+
+.summaryTable td:first-child{
+  width:58%;
+  text-align:left;
+}
+
+.summaryTable td:last-child{
+  width:42%;
+  text-align:right;
+  font-weight:600;
+}
+
+.bulk .cardTitle{
+  max-width:100%;
+  line-height:1.15;
+}
+
+
+/*====================================================
+  RENTAL SCHEDULE BUTTON
+====================================================*/
+
+.rentalScheduleButtonWrapper{
+  margin-top:auto;
+  padding-top:12px;
+}
+
+.rentalScheduleToggle{
+  width:100%;
+  height:38px;
+  border:0;
+  border-radius:3px;
+  background:#007f78;
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.rentalScheduleToggle:hover{ background:#006d67; }
+
+
+/*====================================================
+  RENTAL SCHEDULE SECTION
+====================================================*/
+
+.rentalScheduleSection{
+  width:100%;
+  margin-top:10px;
+  background:#fff;
+  border-radius:8px;
+  padding:0 12px 12px 12px;
+  box-shadow:0 6px 16px rgba(0,0,0,.12);
+  display:none;
+}
+
+
+.rentalScheduleTableContainer{
+  width:100%;
+  overflow-x:auto;
+  overflow-y:auto;
+  max-height:520px;
+}
+
+
+#rentalScheduleTable{
+  width:100%;
+  min-width:1050px;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+
+#rentalScheduleTable tr:first-child td{
+  height:42px;
+  padding:7px 8px;
+  background:#007f78;
+  color:#fff;
+  border:1px solid #fff;
+  font-size:13px;
+  font-weight:700;
+  text-align:center;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+
+
+#rentalScheduleTable tr:not(:first-child) td{
+  height:34px;
+  padding:5px 8px;
+  border:1px solid #d9d9d9;
+  background:#fff;
+  color:#263238;
+  font-size:13px;
+  font-weight:500;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+
+
+#rentalScheduleTable td:first-child{
+  text-align:center;
+  font-weight:600;
+}
+
+
+#rentalScheduleTable tr:not(:first-child)
+td:not(:first-child){ text-align:right; }
+
+
+#rentalScheduleTable td:nth-child(1){ width:11%; }
+#rentalScheduleTable td:nth-child(2){ width:18%; }
+#rentalScheduleTable td:nth-child(3){ width:18%; }
+#rentalScheduleTable td:nth-child(4){ width:18%; }
+#rentalScheduleTable td:nth-child(5){ width:18%; }
+#rentalScheduleTable td:nth-child(6){ width:17%; }
+
+
+#rentalScheduleTable tr:not(:first-child):hover td{ background:#f4fbfb; }
+
+
+.rentalScheduleTableContainer::-webkit-scrollbar{
+  width:10px;
+  height:10px;
+}
+.rentalScheduleTableContainer::-webkit-scrollbar-track{ background:#eeeeee; }
+.rentalScheduleTableContainer::-webkit-scrollbar-thumb{
+  background:#007f78;
+  border-radius:5px;
+}
+.rentalScheduleTableContainer::-webkit-scrollbar-thumb:hover{ background:#006d67; }
+
+
+/*====================================================
+  HIDDEN SCHEDULE LAYOUT
+====================================================*/
+
+.page:has(.main.schedule-hidden){ width:610px; }
+.page:has(.main.schedule-hidden) .header{ width:610px; }
+
+.main.schedule-hidden{
+  grid-template-columns:280px 320px;
+  gap:10px;
+  justify-content:center;
+}
+
+.main.schedule-hidden>div:last-child{
+  grid-column:2;
+  width:320px;
+}
+
+.main.schedule-hidden .facility{ width:280px; }
+
+
+/*====================================================
+  RESPONSIVE
+====================================================*/
+
+@media(max-width:1300px){
+  .page{ width:100%; max-width:1280px; }
+  .header{ width:100%; }
+  .main{
+    grid-template-columns:335px minmax(420px,1fr) 380px;
+  }
+}
+
+
+@media(max-width:1100px){
+  body{ padding:8px; }
+  .main{
+    grid-template-columns:280px minmax(360px,1fr) 300px;
+    gap:8px;
+  }
+  .facility{ width:280px; }
+  .scheduleCard{ width:100%; }
+  .main>div:last-child{ width:300px; }
+}
+
+
+@media(max-width:900px){
+  body{ padding:6px; }
+  .page{ width:100%; }
+  .header{ width:100%; height:72px; }
+  .main{
+    grid-template-columns:1fr;
+    gap:10px;
+    height:auto;
+  }
+  .facility,
+  .scheduleCard,
+  .main>div:last-child{
+    width:100%;
+    height:auto;
+  }
+  .facility{ min-height:500px; }
+  .scheduleCard{ min-height:500px; }
+  .main>div:last-child{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .summary,
+  .bulk{ width:100%; height:250px; }
+  .main>div:last-child>div:nth-child(2){ display:none; }
+  .scheduleTableContainer{ height:auto; max-height:500px; }
+
+  .rentalScheduleSection{ margin-top:10px; padding:0 8px 8px 8px; }
+  #rentalScheduleTable{ min-width:1000px; }
+  #rentalScheduleTable tr:first-child td{ font-size:12px; height:40px; }
+  #rentalScheduleTable tr:not(:first-child) td{ font-size:12px; height:32px; }
+}
+
+
+@media(max-width:600px){
+  body{ padding:5px; }
+  .header{ height:68px; padding:0 14px; }
+  .header h1{ font-size:27px; }
+  .header span{ font-size:11px; }
+  .main{ grid-template-columns:1fr; }
+  .facility,
+  .scheduleCard,
+  .main>div:last-child{ width:100%; }
+  .main>div:last-child{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+  .summary,
+  .bulk{ width:100%; height:230px; }
+  .scheduleHeader{ flex-direction:column; }
+  .scheduleTitle{ max-width:100%; }
+  .scheduleHeader select{ width:100%; }
+  .scheduleTableContainer{ max-height:450px; }
+  .scheduleAction{ width:70px !important; }
+
+  .rentalScheduleSection{ margin-top:8px; }
+  #rentalScheduleTable{ min-width:950px; }
+  #rentalScheduleTable tr:first-child td{ font-size:11px; }
+  #rentalScheduleTable tr:not(:first-child) td{ font-size:11px; }
+}

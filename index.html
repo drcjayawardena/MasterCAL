@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+  <title>MasterCAL Pro</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007b83">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MasterCAL">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <link rel="stylesheet" href="styles.css">
+
+</head>
+
+
+<body>
+
+<div class="offlineBar" id="offlineBar">
+  You are offline — calculations need an internet connection. The app will keep working once you reconnect.
+</div>
+
+
+<div class="page">
+
+
+  <!-- HEADER -->
+  <div class="header">
+    <div style="width:300px;">
+      <h1>MasterCAL</h1>
+      <span>Vehicle Leasing Rental Calculator</span>
+    </div>
+  </div>
+
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+
+    <!-- FACILITY DETAILS -->
+    <div class="facility">
+
+      <div class="cardTitle">Facility Details</div>
+
+      <div class="field">
+        <label>PRODUCT TYPE</label>
+        <select id="productType"></select>
+      </div>
+
+      <div class="field">
+        <label>FACILITY AMOUNT</label>
+        <input id="facilityAmount" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label>BIC</label>
+        <input id="bic" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label>INSURANCE</label>
+        <input id="insurance" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label>STAMP DUTY</label>
+        <select id="stampDuty"></select>
+      </div>
+
+      <div class="field">
+        <label>IRR (%)</label>
+        <input id="irr" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label>PERIOD</label>
+        <input id="period" type="number" inputmode="numeric">
+      </div>
+
+      <div class="facilityBulletButtonWrapper">
+        <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
+          ADD BULLET PAYMENT
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- BULLET PAYMENT SCHEDULE -->
+    <div class="scheduleCard" id="scheduleCard">
+
+      <div class="scheduleHeader">
+
+        <div class="cardTitle scheduleTitle">Bullet Payment Schedule</div>
+
+        <div class="scheduleControls">
+          <select id="scheduleType">
+            <option value="MANUAL SCHEDULE">MANUAL SCHEDULE</option>
+            <option value="SLABBED SCHEDULE">SLABBED SCHEDULE</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="scheduleTableContainer">
+        <table id="scheduleTable">
+          <thead>
+            <tr>
+              <th>FROM</th>
+              <th>TO</th>
+              <th>AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+
+    <!-- SUMMARY -->
+    <div>
+
+      <!-- MONTHLY RENTAL -->
+      <div class="summary">
+
+        <div class="cardTitle">Monthly Rental</div>
+
+        <div class="bigValue red">
+          <span id="monthlyRental">0.00</span>
+        </div>
+
+        <table class="summaryTable">
+          <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
+          <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
+          <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
+        </table>
+
+      </div>
+
+      <div style="height:14px"></div>
+
+      <!-- RENTAL WITH RESIDUAL -->
+      <div class="bulk">
+
+        <div class="cardTitle">Rental with Residual</div>
+
+        <div class="bigValue blue">
+          <span id="lastMonthRental">0.00</span>
+        </div>
+
+        <table class="summaryTable">
+          <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
+          <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
+          <tr><td>Total Paid</td><td id="lastMonthTotalPaid"></td></tr>
+        </table>
+
+        <div class="rentalScheduleButtonWrapper">
+          <button type="button" id="rentalScheduleToggle" class="rentalScheduleToggle">
+            SHOW RENTAL SCHEDULE
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+
+  </div>
+  <!-- END .main -->
+
+
+  <!-- RENTAL SCHEDULE -->
+  <div id="rentalScheduleSection" class="rentalScheduleSection">
+    <div class="rentalScheduleTableContainer">
+      <table id="rentalScheduleTable">
+        <tbody id="rentalScheduleBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+</div>
+<!-- END .page -->
+
+
+<script src="app.js"></script>
+
+<script>
+  /* Register the service worker (PWA install + offline shell). */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function (e) {
+        console.warn("SW registration failed:", e);
+      });
+    });
+  }
+</script>
+
+</body>
+
+</html>
