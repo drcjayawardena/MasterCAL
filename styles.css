@@ -702,3 +702,87 @@ td:not(:first-child){ text-align:right; }
   margin-top:8px;
   min-height:16px;
 }
+
+
+/*====================================================
+  MOBILE / TABLET — reflow to single column
+  (overrides the fixed desktop layout below 900px)
+====================================================*/
+
+@media (max-width: 900px){
+
+  body{ padding:8px; }
+
+  /* remove all fixed page widths (incl. the schedule-hidden hack) */
+  .page,
+  .page:has(.main.schedule-hidden){ width:100% !important; max-width:100%; }
+  .page:has(.main.schedule-hidden) .header{ width:100%; }
+
+  .header{ width:100%; height:auto; padding:14px 16px; }
+  .header > div{ width:100% !important; }
+  .header h1{ font-size:26px; line-height:1.1; }
+  .header span{ font-size:12px; }
+
+  /* stack every card vertically */
+  .main,
+  .main.schedule-hidden{
+    display:flex !important;
+    flex-direction:column;
+    gap:12px;
+    height:auto !important;
+    grid-template-columns:none !important;
+    justify-content:flex-start;
+  }
+
+  .facility,
+  .scheduleCard,
+  .main > div:last-child,
+  .main.schedule-hidden .facility,
+  .main.schedule-hidden > div:last-child{
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    grid-column:auto !important;
+  }
+
+  /* summary column flows naturally (not a fixed 2-row grid) */
+  .main > div:last-child{
+    display:flex !important;
+    flex-direction:column;
+    gap:12px;
+  }
+  .summary, .bulk{ height:auto !important; }
+
+  .scheduleTableContainer{ height:auto; max-height:none; }
+
+  /* touch-friendly form controls (16px stops iOS auto-zoom) */
+  input, select{ height:50px; font-size:16px; }
+  .field{ margin-bottom:12px; }
+  .field label{ font-size:13px; }
+
+  .cardTitle{ font-size:22px; }
+  .scheduleTitle{ font-size:20px; max-width:100%; }
+  .scheduleHeader{ flex-direction:column; align-items:stretch; gap:8px; }
+  .scheduleHeader select{ width:100%; }
+
+  .bigValue{ height:58px; font-size:28px; }
+
+  .addBulletPaymentButton,
+  .rentalScheduleToggle{ height:48px; font-size:13px; }
+  #scheduleTable input{ height:42px; font-size:15px; }
+  .scheduleAction{ height:40px !important; width:72px !important; font-size:11px !important; }
+
+  .summaryTable td{ height:34px; font-size:13.5px; }
+  .rentalScheduleTableContainer{ max-height:72vh; }
+}
+
+@media (max-width: 560px){
+  .header h1{ font-size:22px; }
+  .header span{ font-size:11px; }
+  .cardTitle{ font-size:20px; }
+  .bigValue{ height:54px; font-size:24px; }
+  .facility, .scheduleCard, .summary, .bulk{ padding:14px; }
+  #scheduleTable th{ font-size:12px; }
+  .scheduleAction{ width:64px !important; }
+  .gateCard{ padding:24px 20px; }
+}
