@@ -13,7 +13,7 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbxhavjw3sHtplSyxuSy2kCnfclb2-1JnQAlr0jxgHwSO62y93rmWRLv0DJWMkpZP3E4oQ/exec";
+  "https://script.google.com/macros/s/AKfycbwpaZhjIEtwqWUtaI5howX5VA2sDyM7Tblpf4SuPadRy-FobikXvRFiM24opwWhapA-ZA/exec";
 
 
 /* =========================================================
@@ -452,6 +452,28 @@ function showOutputs(result) {
   text("lastMonthInterest",  result.lastMonthInterest);
   text("lastMonthTotalPaid", result.lastMonthTotalPaid);
   text("rate100",            result.rate100);
+
+  if (result.labels) applyLabels(result.labels);
+}
+
+
+/* Dynamic field labels from the sheet (A5:A10). */
+function applyLabels(labels) {
+  const ids = [
+    "lblFacilityAmount", /* A5 */
+    "lblBic",            /* A6 */
+    "lblInsurance",      /* A7 */
+    "lblStampDuty",      /* A8 */
+    "lblIrr",            /* A9 */
+    "lblPeriod"          /* A10 */
+  ];
+  ids.forEach(function (id, i) {
+    const el = document.getElementById(id);
+    const val = labels[i];
+    if (el && val != null && String(val).trim() !== "") {
+      el.textContent = val;
+    }
+  });
 }
 
 
