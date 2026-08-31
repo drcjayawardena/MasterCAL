@@ -13,7 +13,7 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbxhavjw3sHtplSyxuSy2kCnfclb2-1JnQAlr0jxgHwSO62y93rmWRLv0DJWMkpZP3E4oQ/exec";
+  "https://script.google.com/macros/s/AKfycbwpaZhjIEtwqWUtaI5howX5VA2sDyM7Tblpf4SuPadRy-FobikXvRFiM24opwWhapA-ZA/exec";
 
 
 /* =========================================================
@@ -35,12 +35,24 @@ function getUserId() {
   return id;
 }
 
+function getEmail() { try { return localStorage.getItem("mastercal_email") || ""; } catch (e) { return ""; } }
+function getName()  { try { return localStorage.getItem("mastercal_name")  || ""; } catch (e) { return ""; } }
+function setIdentity(email, name) {
+  try {
+    localStorage.setItem("mastercal_email", email);
+    localStorage.setItem("mastercal_name", name || "");
+  } catch (e) {}
+}
+
 async function api(action, args) {
 
   const res = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: action, args: args || [], userId: getUserId() }),
+    body: JSON.stringify({
+      action: action, args: args || [],
+      userId: getUserId(), email: getEmail(), name: getName()
+    }),
     redirect: "follow"
   });
 
@@ -51,7 +63,9 @@ async function api(action, args) {
   const json = await res.json();
 
   if (!json || json.ok !== true) {
-    throw new Error((json && json.error) || "API error");
+    const e = new Error((json && json.error) || "API error");
+    if (json && json.access) e.access = json.access;   /* PENDING / BLOCKED / NO_EMAIL */
+    throw e;
   }
 
   return json.data;
@@ -95,6 +109,16 @@ function init() {
   setupBulletPaymentButton();
   setupRentalScheduleToggle();
 
+  /* Gate: need an email before doing anything. */
+  if (!getEmail()) { showRegister(); return; }
+
+  loadApp();
+}
+
+function loadApp() {
+
+  hideGate();
+
   /* One round trip: clear + dropdowns + outputs + schedule. */
   api("init")
     .then(function (result) {
@@ -113,10 +137,77 @@ function init() {
       hideRentalSchedule();
     })
     .catch(function (error) {
+      if (error.access) { showGate(error.access); return; }
       console.error("OPEN ERROR:", error);
       hideRentalSchedule();
       alert("Could not load the calculator.\n\n" + error.message);
     });
+}
+
+
+/* =========================================================
+   ACCESS GATE  (register / pending / blocked)
+========================================================= */
+
+function gateEl() { return document.getElementById("gate"); }
+function gateBody() { return document.getElementById("gateBody"); }
+
+function hideGate() { const g = gateEl(); if (g) g.style.display = "none"; }
+
+function showRegister() {
+  const g = gateEl(); if (!g) return;
+  g.style.display = "flex";
+  gateBody().innerHTML =
+    '<h2>Request Access</h2>' +
+    '<p>App එක පාවිච්චි කරන්න, ඔයාගේ email එක දාලා access request කරන්න. ' +
+    'Admin approve කරාට පස්සේ පාවිච්චි කරන්න පුළුවන්.</p>' +
+    '<input id="gateName" type="text" placeholder="Your name">' +
+    '<input id="gateEmail" type="email" placeholder="Your email">' +
+    '<button id="gateSubmit" class="gateBtn">Request Access</button>' +
+    '<div id="gateErr" class="gateErr"></div>';
+  document.getElementById("gateSubmit").addEventListener("click", submitRegister);
+}
+
+function submitRegister() {
+  const email = (document.getElementById("gateEmail").value || "").trim();
+  const name  = (document.getElementById("gateName").value || "").trim();
+  const err   = document.getElementById("gateErr");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    err.textContent = "හරි email එකක් දාන්න.";
+    return;
+  }
+  setIdentity(email.toLowerCase(), name);
+  err.textContent = "";
+  loadApp();   /* backend registers as PENDING and returns the status */
+}
+
+function showGate(status) {
+  const g = gateEl(); if (!g) return;
+  g.style.display = "flex";
+
+  if (status === "NO_EMAIL") { showRegister(); return; }
+
+  if (status === "BLOCKED") {
+    gateBody().innerHTML =
+      '<h2>Access Denied</h2>' +
+      '<p>ඔයාගේ access එක block කරලා. Admin එක්ක කතා කරන්න.</p>' +
+      '<div class="gateMuted">' + escapeHtml(getEmail()) + '</div>';
+    return;
+  }
+
+  /* PENDING (default) */
+  gateBody().innerHTML =
+    '<h2>Approval Pending ⏳</h2>' +
+    '<p>ඔයාගේ request එක admin approval එකට යවලා.<br>' +
+    'Approve වුණාට පස්සේ පහළ button එක click කරන්න.</p>' +
+    '<div class="gateMuted">' + escapeHtml(getEmail()) + '</div>' +
+    '<button id="gateRetry" class="gateBtn">Check again</button>' +
+    '<button id="gateSwitch" class="gateBtnLink">Use a different email</button>';
+  document.getElementById("gateRetry").addEventListener("click", loadApp);
+  document.getElementById("gateSwitch").addEventListener("click", function () {
+    setIdentity("", "");
+    showRegister();
+  });
 }
 
 
