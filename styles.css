@@ -595,3 +595,110 @@ td:not(:first-child){ text-align:right; }
   #rentalScheduleTable tr:first-child td{ font-size:11px; }
   #rentalScheduleTable tr:not(:first-child) td{ font-size:11px; }
 }
+
+
+/*====================================================
+  ACCESS GATE
+====================================================*/
+
+.gate{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:linear-gradient(135deg,#007b83,#33bfd0);
+}
+
+.gateCard{
+  width:100%;
+  max-width:380px;
+  background:#fff;
+  border-radius:14px;
+  padding:28px 26px;
+  box-shadow:0 18px 50px rgba(0,0,0,.25);
+  text-align:center;
+}
+
+.gateLogo{
+  font-size:26px;
+  font-weight:800;
+  color:#007b83;
+  margin-bottom:14px;
+  letter-spacing:.5px;
+}
+
+.gateCard h2{
+  font-size:20px;
+  color:#20323a;
+  margin-bottom:8px;
+}
+
+.gateCard p{
+  font-size:13.5px;
+  color:#51636b;
+  line-height:1.55;
+  margin-bottom:16px;
+}
+
+.gateCard input{
+  width:100%;
+  height:46px;
+  border:1px solid #cfd8dc;
+  border-radius:8px;
+  padding:0 14px;
+  font-size:14px;
+  background:#fff;
+  margin-bottom:12px;
+}
+
+.gateCard input:focus{
+  border-color:#007b83;
+  box-shadow:0 0 0 2px rgba(0,123,131,.15);
+}
+
+.gateBtn{
+  width:100%;
+  height:46px;
+  border:0;
+  border-radius:8px;
+  background:#007b83;
+  color:#fff;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  margin-top:4px;
+}
+.gateBtn:hover{ background:#006d67; }
+
+.gateBtnLink{
+  width:100%;
+  background:none;
+  border:0;
+  color:#007b83;
+  font-size:12.5px;
+  font-weight:600;
+  cursor:pointer;
+  margin-top:10px;
+  padding:6px;
+}
+.gateBtnLink:hover{ text-decoration:underline; }
+
+.gateMuted{
+  font-size:12.5px;
+  color:#8797a0;
+  background:#f2f6f7;
+  border-radius:6px;
+  padding:8px;
+  margin-bottom:14px;
+  word-break:break-all;
+}
+
+.gateErr{
+  color:#d71920;
+  font-size:12.5px;
+  margin-top:8px;
+  min-height:16px;
+}
