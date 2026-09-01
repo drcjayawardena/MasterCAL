@@ -837,3 +837,87 @@ td:not(:first-child){ text-align:right; }
   border-radius:50%;
   animation:mc-spin .7s linear infinite;
 }
+
+
+/*====================================================
+  CHARGES CALCULATION CARD (J1:L14)
+====================================================*/
+
+.chargesCard{
+  width:100%;
+  margin-top:10px;
+  background:#fff;
+  border-radius:10px;
+  padding:16px 18px 18px;
+  box-shadow:0 8px 18px rgba(0,0,0,.12);
+}
+
+.chargesHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+  padding-bottom:10px;
+  border-bottom:2px solid #eef2f4;
+}
+
+.chargesHead .cardTitle{ margin:0; }
+
+.chargesTotal{
+  background:#d71920;
+  color:#fff;
+  font-size:20px;
+  font-weight:700;
+  padding:6px 16px;
+  border-radius:6px;
+  white-space:nowrap;
+}
+
+.chargesTable{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.chargesTable td{
+  padding:7px 10px;
+  border-bottom:1px solid #eef1f2;
+  font-size:13.5px;
+}
+
+.chargesTable tr:last-child td{ border-bottom:0; }
+
+.chargesTable td:first-child{
+  text-align:left;
+  color:#3b4a52;
+}
+
+.chargesTable td:last-child{
+  text-align:right;
+  font-weight:700;
+  color:#20323a;
+  white-space:nowrap;
+  width:38%;
+}
+
+.chargesTable tr:hover td{ background:#f6fbfb; }
+
+@media (max-width: 560px){
+  .chargesTotal{ font-size:17px; padding:5px 12px; }
+  .chargesTable td{ font-size:13px; padding:6px 8px; }
+}
+
+
+/* RMV type dropdown inside the charges card */
+.chargesSelect{
+  width:auto;
+  max-width:100%;
+  height:34px;
+  padding:0 8px;
+  font-size:13px;
+  border:1px solid #cfd8dc;
+  border-radius:5px;
+  background:#fff4c4;
+  font-weight:600;
+  color:#20323a;
+}
