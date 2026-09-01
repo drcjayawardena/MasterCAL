@@ -22,6 +22,9 @@ const SHELL = [
   "./styles.css",
   "./app.js",
   "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./icon-maskable-512.png"
 ];
 
 
