@@ -13,7 +13,8 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbx43jLIvKq6LmbGc-oKdqJsXfoINUlM_mtH1To5uDyWUIwzyg7uS0dMQobEBaiehcE2/exec";
+  "https://script.google.com/macros/s/AKfycbwpaZhjIEtwqWUtaI5howX5VA2sDyM7Tblpf4SuPadRy-FobikXvRFiM24opwWhapA-ZA/exec";
+
 
 /* =========================================================
    API HELPER
@@ -168,6 +169,7 @@ function loadApp() {
         fillSelect("productType", result.dropdowns.productTypes || []);
         fillSelect("stampDuty",
           (result.stampDuty || result.dropdowns.stampDuty) || []);
+        RMV_TYPES = result.dropdowns.rmvTypes || RMV_TYPES;
       }
 
       if (result.outputs) showOutputs(result.outputs);
@@ -333,7 +335,7 @@ function bindInputs() {
 
     element.addEventListener("input", function () {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveInputs, 300);
+      saveTimer = setTimeout(saveInputs, 550);
     });
 
     element.addEventListener("change", function () {
@@ -380,7 +382,8 @@ function saveInputs() {
 
   const data = collectInputData();
 
-  api("saveInputs", [data])
+  /* calcInputs = lighter/faster (returns only outputs). */
+  api("calcInputs", [data])
     .then(function (result) {
       if (!result) return;
       if (result.outputs) showOutputs(result.outputs);
@@ -494,6 +497,68 @@ function showOutputs(result) {
   text("rate100",            result.rate100);
 
   if (result.labels) applyLabels(result.labels);
+  if (result.charges) renderCharges(result.charges);
+}
+
+
+/* Charges breakdown from J1:L14 (rows: [J label, K sub, L amount]). */
+var RMV_TYPES = [];
+const RMV_ROW_INDEX = 12;   /* grid index 12 = sheet row 13 = J13 (RMV type) */
+
+function renderCharges(grid) {
+  if (!Array.isArray(grid) || !grid.length) return;
+
+  /* Total = L1 (row 1, col 3). */
+  text("chargesTotal", (grid[0] && grid[0][2]) ? grid[0][2] : "0.00");
+
+  const body = document.getElementById("chargesBody");
+  if (!body) return;
+  body.innerHTML = "";
+
+  /* Line items: rows 3..14 (index 2..13). */
+  for (let i = 2; i < grid.length; i++) {
+    const row = grid[i] || [];
+    let label = String(row[0] == null ? "" : row[0]).trim();
+    const sub = String(row[1] == null ? "" : row[1]).trim();
+    const amount = String(row[2] == null ? "" : row[2]).trim();
+
+    if (label === "" && amount === "") continue;      /* skip empty rows */
+
+    const tr = document.createElement("tr");
+    const td1 = document.createElement("td");
+    const td2 = document.createElement("td");
+    td2.textContent = amount;
+
+    if (i === RMV_ROW_INDEX && RMV_TYPES.length) {
+      /* RMV type = editable dropdown (J13). */
+      const sel = document.createElement("select");
+      sel.className = "chargesSelect";
+      RMV_TYPES.forEach(function (opt) {
+        const o = document.createElement("option");
+        o.value = opt; o.textContent = opt;
+        sel.appendChild(o);
+      });
+      sel.value = String(row[0] || "");
+      sel.addEventListener("change", function () { setRmvTypeUI(this.value); });
+      td1.appendChild(sel);
+    } else {
+      if (sub !== "") label += "  (" + sub + ")";      /* e.g. CRIB SCORE (3.00) */
+      td1.textContent = label;
+    }
+
+    tr.appendChild(td1);
+    tr.appendChild(td2);
+    body.appendChild(tr);
+  }
+}
+
+function setRmvTypeUI(value) {
+  api("setRmvType", [value])
+    .then(function (r) { if (r && r.outputs) showOutputs(r.outputs); })
+    .catch(function (e) {
+      console.error("RMV ERROR:", e);
+      alert("RMV type could not be saved.\n\n" + e.message);
+    });
 }
 
 
