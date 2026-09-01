@@ -13,7 +13,7 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbx43jLIvKq6LmbGc-oKdqJsXfoINUlM_mtH1To5uDyWUIwzyg7uS0dMQobEBaiehcE2/exec";
+  "https://script.google.com/macros/s/AKfycbwpaZhjIEtwqWUtaI5howX5VA2sDyM7Tblpf4SuPadRy-FobikXvRFiM24opwWhapA-ZA/exec";
 
 
 /* =========================================================
@@ -22,53 +22,90 @@ const API_URL =
    (no preflight) so Apps Script can respond.
 ========================================================= */
 
+/* localStorage with in-memory fallback (iOS private mode throws). */
+var _mem = {};
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return (k in _mem) ? _mem[k] : null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { _mem[k] = v; } }
+
 /* Per-user identity — each user gets their own isolated Sheet copy. */
 function getUserId() {
-  let id = null;
-  try { id = localStorage.getItem("mastercal_uid"); } catch (e) {}
+  let id = lsGet("mastercal_uid");
   if (!id) {
     id = (window.crypto && crypto.randomUUID)
       ? crypto.randomUUID()
       : "u" + Date.now() + Math.random().toString(36).slice(2);
-    try { localStorage.setItem("mastercal_uid", id); } catch (e) {}
+    lsSet("mastercal_uid", id);
   }
   return id;
 }
 
-function getEmail() { try { return localStorage.getItem("mastercal_email") || ""; } catch (e) { return ""; } }
-function getName()  { try { return localStorage.getItem("mastercal_name")  || ""; } catch (e) { return ""; } }
+function getEmail() { return lsGet("mastercal_email") || ""; }
+function getName()  { return lsGet("mastercal_name")  || ""; }
 function setIdentity(email, name) {
-  try {
-    localStorage.setItem("mastercal_email", email);
-    localStorage.setItem("mastercal_name", name || "");
-  } catch (e) {}
+  lsSet("mastercal_email", email);
+  lsSet("mastercal_name", name || "");
 }
+
+
+/* =========================================================
+   BUSY INDICATORS
+========================================================= */
+
+function showLoading(msg) {
+  const el = document.getElementById("loading");
+  const t = document.getElementById("loadingText");
+  if (t && msg) t.textContent = msg;
+  if (el) el.style.display = "flex";
+}
+function hideLoading() {
+  const el = document.getElementById("loading");
+  if (el) el.style.display = "none";
+}
+
+let calcBusy = 0;
+function calcStart() { calcBusy++; updateCalcUI(); }
+function calcEnd()   { calcBusy = Math.max(0, calcBusy - 1); updateCalcUI(); }
+function updateCalcUI() {
+  const box = document.querySelector(".summary .bigValue");
+  if (!box) return;
+  if (calcBusy > 0) box.classList.add("calculating");
+  else box.classList.remove("calculating");
+}
+
 
 async function api(action, args) {
 
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      action: action, args: args || [],
-      userId: getUserId(), email: getEmail(), name: getName()
-    }),
-    redirect: "follow"
-  });
+  const isCalc = (action !== "init");   /* show the calculating spinner for calc actions */
+  if (isCalc) calcStart();
 
-  if (!res.ok) {
-    throw new Error("Network error " + res.status);
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: action, args: args || [],
+        userId: getUserId(), email: getEmail(), name: getName()
+      }),
+      redirect: "follow"
+    });
+
+    if (!res.ok) {
+      throw new Error("Network error " + res.status);
+    }
+
+    const json = await res.json();
+
+    if (!json || json.ok !== true) {
+      const e = new Error((json && json.error) || "API error");
+      if (json && json.access) e.access = json.access;   /* PENDING / BLOCKED / NO_EMAIL */
+      throw e;
+    }
+
+    return json.data;
+
+  } finally {
+    if (isCalc) calcEnd();
   }
-
-  const json = await res.json();
-
-  if (!json || json.ok !== true) {
-    const e = new Error((json && json.error) || "API error");
-    if (json && json.access) e.access = json.access;   /* PENDING / BLOCKED / NO_EMAIL */
-    throw e;
-  }
-
-  return json.data;
 }
 
 
@@ -118,10 +155,13 @@ function init() {
 function loadApp() {
 
   hideGate();
+  showLoading("Loading…");
 
   /* One round trip: clear + dropdowns + outputs + schedule. */
   api("init")
     .then(function (result) {
+
+      hideLoading();
 
       if (!result) return;
 
@@ -137,6 +177,7 @@ function loadApp() {
       hideRentalSchedule();
     })
     .catch(function (error) {
+      hideLoading();
       if (error.access) { showGate(error.access); return; }
       console.error("OPEN ERROR:", error);
       hideRentalSchedule();
