@@ -13,7 +13,7 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbwISRyGTj4iazpo1BIxvUt-fED8HkFmJgD3OLkKhWaeDh83jDG3VoJuXGmL4OiCKBbs/exec";
+  "https://script.google.com/macros/s/AKfycbwpaZhjIEtwqWUtaI5howX5VA2sDyM7Tblpf4SuPadRy-FobikXvRFiM24opwWhapA-ZA/exec";
 
 
 /* =========================================================
@@ -524,6 +524,13 @@ function renderCharges(grid) {
 
     if (label === "" && amount === "") continue;      /* skip empty rows */
 
+    /* Hide these subtotal/header rows from the card. */
+    const norm = label.replace(/\s+/g, " ").toUpperCase();
+    if (i !== RMV_ROW_INDEX &&
+        (norm === "DOCUMENTATION CHARGES WITH STAMP DUTY" || norm === "RMV CHARGES")) {
+      continue;
+    }
+
     const tr = document.createElement("tr");
     const td1 = document.createElement("td");
     const td2 = document.createElement("td");
@@ -575,10 +582,16 @@ function applyLabels(labels) {
   ids.forEach(function (id, i) {
     const el = document.getElementById(id);
     const val = labels[i];
-    if (el && val != null && String(val).trim() !== "") {
+    /* Skip empty or sheet-error values -> keep the default label. */
+    if (el && val != null && String(val).trim() !== "" && !isSheetError(val)) {
       el.textContent = val;
     }
   });
+}
+
+function isSheetError(s) {
+  return /^#(N\/A|REF!|DIV\/0!|VALUE!|NUM!|NAME\?|NULL!|ERROR!|CYCLE!)/i
+    .test(String(s).trim());
 }
 
 
