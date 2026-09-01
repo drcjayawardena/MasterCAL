@@ -910,7 +910,6 @@ td:not(:first-child){ text-align:right; }
 
 /* RMV type dropdown inside the charges card */
 .chargesSelect{
-
   width:auto;
   max-width:100%;
   height:34px;
