@@ -1100,6 +1100,18 @@ input::placeholder{ color:var(--faint); }
   #chargesSection .chargesTable td{ font-size:12.5px; padding:8px 6px; }
   #chargesSection .chargesTable td:last-child{ width:42%; }
   #chargesSection .chargesSelect{ height:30px; font-size:12px; }
+
+  /* Keep Monthly & Residual content inside their equal halves, and make
+     the cards flex columns so the SHOW RENTAL SCHEDULE button pins to the
+     card bottom — lining up with the ADD BULLET PAYMENT button. */
+  .summary,
+  .bulk{ display:flex; flex-direction:column; }
+  .summary .cardTitle,
+  .bulk .cardTitle{ margin-bottom:10px; }
+  .bigValue{ margin-bottom:10px; flex-shrink:0; }
+  .summaryTable{ border-spacing:0 4px; }
+  .summaryTable td{ height:30px; }
+  .rentalScheduleButtonWrapper{ margin-top:auto; padding-top:10px; }
 }
 
 
