@@ -69,6 +69,7 @@ self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") {
     return;
   }
+  
 
   /* Shell: cache-first, fall back to network, update cache. */
   event.respondWith(
