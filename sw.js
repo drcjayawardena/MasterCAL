@@ -14,7 +14,7 @@
  * so users pick up the new version.
  ******************************************************/
 
-const CACHE_VERSION = "mastercal-v17";
+const CACHE_VERSION = "mastercal-v19";
 
 const SHELL = [
   "./",
@@ -69,7 +69,6 @@ self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") {
     return;
   }
-  
 
   /* Shell: cache-first, fall back to network, update cache. */
   event.respondWith(
