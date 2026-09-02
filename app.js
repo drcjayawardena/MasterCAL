@@ -283,6 +283,8 @@ function setupBulletPaymentButton() {
     const hidden = window.getComputedStyle(card).display === "none";
     if (hidden) showScheduleCard();
     else hideScheduleCard();
+    /* Clear the bullet schedule (FROM & AMOUNT) on every manual toggle. */
+    clearScheduleUI();
   });
 
   wrapper.appendChild(button);
@@ -335,7 +337,7 @@ function bindInputs() {
 
     element.addEventListener("input", function () {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveInputs, 550);
+      saveTimer = setTimeout(saveInputs, 300);
     });
 
     element.addEventListener("change", function () {
@@ -431,16 +433,20 @@ function saveScheduleType(scheduleType) {
   const select = document.getElementById("scheduleType");
   if (select) select.disabled = true;
 
-  applyScheduleMode();   /* instant show/hide of the TO column */
+  applyScheduleMode();       /* instant show/hide of the TO column */
+  clearTimeout(saveTimer);   /* cancel any pending input save */
 
   const data = collectInputData();
   data.scheduleType = scheduleType;
 
-  api("saveInputs", [data])
+  /* Persist inputs + new type, then CLEAR the bullet schedule
+     (FROM & AMOUNT) so switching the schedule type starts fresh. */
+  api("saveScheduleTypeAndClear", [data])
     .then(function (result) {
-      if (!result) return;
-      if (result.outputs) showOutputs(result.outputs);
-      drawSchedule(result.schedule || []);
+      if (result) {
+        if (result.outputs) showOutputs(result.outputs);
+        drawSchedule(result.schedule || []);
+      }
       if (isRentalScheduleVisible()) loadRentalSchedule();
       if (select) select.disabled = false;
     })
