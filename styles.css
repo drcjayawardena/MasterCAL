@@ -921,3 +921,230 @@ td:not(:first-child){ text-align:right; }
   font-weight:600;
   color:#20323a;
 }
+
+
+/*==================================================================
+  PROFESSIONAL THEME  (reference-matched, teal brand)
+  Appended override — clean white inputs, soft cards, tinted results
+==================================================================*/
+
+:root{
+  --brand:#0f766e; --brand-600:#0c6a62; --brand-700:#0a564f;
+  --bg:#f4f6fa; --card:#ffffff; --line:#e7eaf0;
+  --ink:#1e293b; --muted:#5b6b7b; --faint:#9aa7b4;
+  --field:#ffffff; --field-bd:#d8e0e8;
+  --row:#f6f8fb;
+  --tealTint:#ecfaf7; --tealInk:#0b6a62; --tealBd:#cdece7;
+  --blueTint:#eef4ff; --blueInk:#2a4a7d; --blueBd:#d5e1f4;
+}
+
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Header — flatter, refined */
+.header{
+  height:auto;
+  padding:16px 22px;
+  background:linear-gradient(100deg,var(--brand-700),var(--brand));
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(11,90,82,.18);
+}
+.header h1{ font-size:26px; letter-spacing:.3px; }
+.header span{ font-size:13px; opacity:.92; }
+
+/* Cards — soft border + subtle shadow */
+.facility,.scheduleCard,.summary,.bulk,.chargesCard,.rentalScheduleSection{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(20,40,60,.05);
+}
+.cardTitle{ color:var(--ink); font-size:19px; font-weight:700; margin-bottom:14px; }
+.scheduleTitle{ font-size:18px; color:var(--ink); }
+
+/* Labels — muted, sentence weight */
+.field label{ color:var(--muted); font-size:12px; font-weight:600; letter-spacing:.2px; text-transform:none; }
+
+/* Inputs & selects — clean white (no yellow) */
+input, select,
+#scheduleTable input, .scheduleHeader select, .chargesSelect, .gateCard input{
+  background:var(--field) !important;
+  border:1px solid var(--field-bd) !important;
+  border-radius:10px !important;
+  color:var(--ink);
+}
+input{ height:46px; }
+input:focus, select:focus,
+#scheduleTable input:focus, .chargesSelect:focus, .gateCard input:focus{
+  border-color:var(--brand) !important;
+  box-shadow:0 0 0 3px rgba(15,118,110,.14) !important;
+  outline:none;
+}
+input::placeholder{ color:var(--faint); }
+
+/* Result value boxes — soft tinted (was loud red/blue) */
+.bigValue{ border-radius:12px; box-shadow:none; font-variant-numeric:tabular-nums; }
+.bigValue.red{  background:var(--tealTint); color:var(--tealInk); border:1px solid var(--tealBd); }
+.bigValue.blue{ background:var(--blueTint); color:var(--blueInk); border:1px solid var(--blueBd); }
+.bigValue.calculating{ opacity:.75; }
+.bigValue.calculating::before{ border-color:rgba(15,118,110,.30); border-top-color:var(--brand); }
+
+/* Summary rows — soft pill style */
+.summaryTable{ border-collapse:separate; border-spacing:0 6px; }
+.summaryTable td{ border:0; background:var(--row); height:38px; padding:8px 12px; font-size:13px; color:var(--muted); }
+.summaryTable td:first-child{ border-radius:8px 0 0 8px; }
+.summaryTable td:last-child{ border-radius:0 8px 8px 0; color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; }
+
+/* Buttons — refined teal */
+.addBulletPaymentButton,.rentalScheduleToggle{
+  height:44px; border-radius:10px; background:var(--brand);
+  font-size:12.5px; letter-spacing:.3px;
+  box-shadow:0 2px 8px rgba(15,118,110,.22);
+}
+.addBulletPaymentButton:hover,.rentalScheduleToggle:hover{ background:var(--brand-700); }
+
+/* Bullet schedule table */
+#scheduleTable th{ background:var(--brand); border-color:#dbe7e4; letter-spacing:.3px; }
+#scheduleTable td{ border-color:#eef1f4; }
+.scheduleAction{ background:var(--brand) !important; border-radius:8px !important; }
+.scheduleAction.delete{ background:#e11d48 !important; }
+
+/* Charges card */
+.chargesHead{ border-bottom:2px solid var(--line); }
+.chargesTotal{ background:var(--brand); border-radius:8px; font-variant-numeric:tabular-nums; }
+.chargesTable td{ border-color:#eef1f4; color:var(--muted); }
+.chargesTable td:last-child{ color:var(--ink); }
+.chargesTable tr:hover td{ background:var(--row); }
+
+/* Rental schedule header */
+#rentalScheduleTable tr:first-child td{ background:var(--brand); }
+
+/* Access gate refine */
+.gate{ background:linear-gradient(135deg,var(--brand-700),var(--brand)); }
+.gateLogo{ color:var(--brand); }
+.gateBtn{ background:var(--brand); border-radius:10px; }
+.gateBtn:hover{ background:var(--brand-700); }
+.gateBtnLink{ color:var(--brand); }
+
+
+/*==================================================================
+  COLOUR — reverted to yesterday's TEAL theme
+  (The "PROFESSIONAL THEME (reference-matched, teal brand)" block above
+   governs colours again: teal brand, teal-tint Monthly, blue-tint Residual.
+   The blue/red overrides were removed.)
+==================================================================*/
+
+
+/*----------------------------------------------------------------
+  WIDE SCREENS (≥1100px): one row of EQUAL-WIDTH, EQUAL-HEIGHT
+  cards — Facility | Bullet Schedule | Monthly+Residual | Charges.
+  Charges height matches Facility; Monthly & Residual are equal
+  halves of their column. Below 1100px everything stacks.
+
+  .main uses display:contents so its cards become direct grid
+  items of .page, giving all four columns the same width.
+----------------------------------------------------------------*/
+@media (min-width:1100px){
+
+  .page{
+    width:100%;
+    max-width:1480px;
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:12px;
+    align-items:start;
+  }
+
+  .header{ grid-column:1 / -1; width:auto; margin-bottom:0; }
+
+  /* let the cards inside .main become direct grid items */
+  .main,
+  .main.schedule-hidden{
+    display:contents;
+    height:auto;
+  }
+
+  /* when the Bullet Payment card is hidden, use 3 equal columns */
+  .page:has(.main.schedule-hidden){
+    width:100%;
+    max-width:1480px;
+    grid-template-columns:repeat(3, 1fr);
+  }
+  .page:has(.main.schedule-hidden) .header{ width:auto; }
+
+  /* equal heights across the row */
+  .facility,
+  .scheduleCard,
+  .main>div:last-child{
+    width:auto !important;
+    height:665px;
+  }
+
+  #chargesSection{
+    height:665px;
+    margin-top:0;
+    display:flex;
+    flex-direction:column;
+    overflow:auto;
+  }
+
+  #rentalScheduleSection{ grid-column:1 / -1; margin-top:0; }
+
+  /* charges fits its narrower column */
+  #chargesSection .cardTitle{ font-size:17px; }
+  #chargesSection .chargesTotal{ font-size:24px; }
+  #chargesSection .chargesTable td{ font-size:12.5px; padding:8px 6px; }
+  #chargesSection .chargesTable td:last-child{ width:42%; }
+  #chargesSection .chargesSelect{ height:30px; font-size:12px; }
+}
+
+
+/*==================================================================
+  THEME v3 — Charges total as a big light-red box
+  (consistent with the Monthly Rental / Rental with Residual boxes)
+==================================================================*/
+.chargesHead{
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+  border-bottom:0;
+  padding-bottom:0;
+  margin-bottom:12px;
+}
+.chargesHead .cardTitle{ margin:0; font-size:19px; }
+
+.chargesTotal{
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+  text-align:center;
+  background:#ecfaf7;
+  color:#0b6a62;
+  border:1px solid #cdece7;
+  border-radius:12px;
+  font-size:26px;
+  font-weight:700;
+  padding:14px 12px;
+  box-shadow:none;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+
+
+/*==================================================================
+  BULLET PAYMENT SCHEDULE — hide the "TO" column for
+  MANUAL SCHEDULE; show it only for SLABBED SCHEDULE.
+  (JS toggles .hide-to on #scheduleTable)
+==================================================================*/
+#scheduleTable.hide-to th:nth-child(2),
+#scheduleTable.hide-to td:nth-child(2){ display:none; }
+
+#scheduleTable.hide-to th:nth-child(1),
+#scheduleTable.hide-to td:nth-child(1){ width:40%; }
+
+#scheduleTable.hide-to th:nth-child(3),
+#scheduleTable.hide-to td:nth-child(3){ width:60%; }
