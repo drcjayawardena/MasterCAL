@@ -13,7 +13,7 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbzgi6Deu62PbH8oD8KI_5Elf7GIma7BwqOmJtPIb62Dp4f-7hTJ0teUx1La1T8uiD0X/exec";
+  "https://script.google.com/macros/s/AKfycbwISRyGTj4iazpo1BIxvUt-fED8HkFmJgD3OLkKhWaeDh83jDG3VoJuXGmL4OiCKBbs/exec";
 
 
 /* =========================================================
@@ -431,6 +431,8 @@ function saveScheduleType(scheduleType) {
   const select = document.getElementById("scheduleType");
   if (select) select.disabled = true;
 
+  applyScheduleMode();   /* instant show/hide of the TO column */
+
   const data = collectInputData();
   data.scheduleType = scheduleType;
 
@@ -503,7 +505,8 @@ function showOutputs(result) {
 
 /* Charges breakdown from J1:L14 (rows: [J label, K sub, L amount]). */
 var RMV_TYPES = [];
-const RMV_ROW_INDEX = 12;   /* grid index 12 = sheet row 13 = J13 (RMV type) */
+const RMV_ROW_INDEX = 13;   /* grid index 13 = sheet row 14 = J14 (RMV type) */
+const HIDE_ROW_INDEX = 2;   /* grid index 2  = sheet row 3  = J3 (hidden) */
 
 function renderCharges(grid) {
   if (!Array.isArray(grid) || !grid.length) return;
@@ -517,6 +520,7 @@ function renderCharges(grid) {
 
   /* Line items: rows 3..14 (index 2..13). */
   for (let i = 2; i < grid.length; i++) {
+    if (i === HIDE_ROW_INDEX) continue;   /* J3 — hidden per request */
     const row = grid[i] || [];
     let label = String(row[0] == null ? "" : row[0]).trim();
     const sub = String(row[1] == null ? "" : row[1]).trim();
@@ -537,7 +541,7 @@ function renderCharges(grid) {
     td2.textContent = amount;
 
     if (i === RMV_ROW_INDEX && RMV_TYPES.length) {
-      /* RMV type = editable dropdown (J13). */
+      /* RMV type = editable dropdown (J14). */
       const sel = document.createElement("select");
       sel.className = "chargesSelect";
       RMV_TYPES.forEach(function (opt) {
@@ -633,6 +637,22 @@ function drawSchedule(rows) {
   body.querySelectorAll("tr[data-index]").forEach(function (row) {
     bindScheduleRowEvents(row);
   });
+
+  applyScheduleMode();
+}
+
+
+/* =========================================================
+   SCHEDULE MODE — show the "TO" column only for
+   SLABBED SCHEDULE; hide it for MANUAL SCHEDULE.
+========================================================= */
+
+function applyScheduleMode() {
+  const table = document.getElementById("scheduleTable");
+  if (!table) return;
+  const type = String(value("scheduleType") || "").toUpperCase();
+  const isSlabbed = type.indexOf("SLAB") !== -1;
+  table.classList.toggle("hide-to", !isSlabbed);
 }
 
 
