@@ -505,7 +505,8 @@ function showOutputs(result) {
 
 /* Charges breakdown from J1:L14 (rows: [J label, K sub, L amount]). */
 var RMV_TYPES = [];
-const RMV_ROW_INDEX = 13;   /* grid index 13 = sheet row 14 = J14 (RMV type) */
+/* grid index -> sheet cell for the editable RMV-type dropdowns */
+const RMV_CELLS = { 12: "J13", 13: "J14" };   /* J13 + J14 */
 const HIDE_ROW_INDEX = 2;   /* grid index 2  = sheet row 3  = J3 (hidden) */
 
 function renderCharges(grid) {
@@ -530,7 +531,7 @@ function renderCharges(grid) {
 
     /* Hide these subtotal/header rows from the card. */
     const norm = label.replace(/\s+/g, " ").toUpperCase();
-    if (i !== RMV_ROW_INDEX &&
+    if (!RMV_CELLS[i] &&
         (norm === "DOCUMENTATION CHARGES WITH STAMP DUTY" || norm === "RMV CHARGES")) {
       continue;
     }
@@ -540,8 +541,9 @@ function renderCharges(grid) {
     const td2 = document.createElement("td");
     td2.textContent = amount;
 
-    if (i === RMV_ROW_INDEX && RMV_TYPES.length) {
-      /* RMV type = editable dropdown (J14). */
+    if (RMV_CELLS[i] && RMV_TYPES.length) {
+      /* RMV type = editable dropdown (J13 / J14). */
+      const cell = RMV_CELLS[i];
       const sel = document.createElement("select");
       sel.className = "chargesSelect";
       RMV_TYPES.forEach(function (opt) {
@@ -550,7 +552,7 @@ function renderCharges(grid) {
         sel.appendChild(o);
       });
       sel.value = String(row[0] || "");
-      sel.addEventListener("change", function () { setRmvTypeUI(this.value); });
+      sel.addEventListener("change", function () { setRmvTypeUI(this.value, cell); });
       td1.appendChild(sel);
     } else {
       if (sub !== "") label += "  (" + sub + ")";      /* e.g. CRIB SCORE (3.00) */
@@ -563,8 +565,8 @@ function renderCharges(grid) {
   }
 }
 
-function setRmvTypeUI(value) {
-  api("setRmvType", [value])
+function setRmvTypeUI(value, cell) {
+  api("setRmvType", [value, cell])
     .then(function (r) { if (r && r.outputs) showOutputs(r.outputs); })
     .catch(function (e) {
       console.error("RMV ERROR:", e);
