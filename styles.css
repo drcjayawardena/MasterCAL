@@ -867,7 +867,7 @@ td:not(:first-child){ text-align:right; }
 .chargesTotal{
   background:#d71920;
   color:#fff;
-  font-size:26px;
+  font-size:20px;
   font-weight:700;
   padding:6px 16px;
   border-radius:6px;
@@ -1054,18 +1054,17 @@ input::placeholder{ color:var(--faint); }
      fixed pixel height can be overflowed by the browser's fonts. Each
      card is a flex column and its bottom button pins to the card bottom
      — so ADD BULLET PAYMENT and SHOW RENTAL SCHEDULE always line up. */
-  .page{
-    width:100%;
-    max-width:1480px;
+  .page{ width:100%; max-width:1480px; margin:0 auto; }
+
+  /* the Vehicle panel is the 4-column grid */
+  #vehiclePanel{
     display:grid;
-    grid-template-columns:repeat(4, 1fr);
+    grid-template-columns:1fr 1.4fr 1fr 1fr;   /* facility | schedule(wide) | summary | charges */
     gap:12px;
     align-items:stretch;
   }
 
-  .header{ grid-column:1 / -1; width:auto; margin-bottom:0; }
-
-  /* cards inside .main become direct grid items of .page */
+  /* cards inside .main become direct grid items of #vehiclePanel */
   .main,
   .main.schedule-hidden{
     display:contents;
@@ -1073,12 +1072,9 @@ input::placeholder{ color:var(--faint); }
   }
 
   /* when the Bullet Payment card is hidden, use 3 equal columns */
-  .page:has(.main.schedule-hidden){
-    width:100%;
-    max-width:1480px;
-    grid-template-columns:repeat(3, 1fr);
-  }
-  .page:has(.main.schedule-hidden) .header{ width:auto; }
+  #vehiclePanel:has(.main.schedule-hidden){ grid-template-columns:repeat(3, 1fr); }
+  .page:has(.main.schedule-hidden){ width:100%; max-width:1480px; }   /* cancel old 610px */
+  .page:has(.main.schedule-hidden) .header{ width:100%; }             /* cancel old 610px header */
 
   /* every card fills the (stretched) row height, no fixed height */
   .facility,
@@ -1218,10 +1214,7 @@ input::placeholder{ color:var(--faint); }
 .header{ border-bottom:3px solid var(--accent); }
 
 /* (1) Schedule card — wider so FROM/TO/AMOUNT fit ~10 digits */
-@media (min-width:1100px){
-  .page{ grid-template-columns:1fr 1.4fr 1fr 1fr; }
-  .page:has(.main.schedule-hidden){ grid-template-columns:repeat(3, 1fr); }
-}
+/* (schedule column width is set on #vehiclePanel above) */
 /* smaller action button + roomier amount input */
 .scheduleAction{ width:56px !important; font-size:10px !important; padding:0 2px !important; }
 #scheduleTable input{ font-size:14px; min-width:0; }
@@ -1238,3 +1231,37 @@ input::placeholder{ color:var(--faint); }
 }
 .chargesButtons .addBulletPaymentButton,
 .chargesButtons .rentalScheduleToggle{ width:100%; margin:0; }
+
+
+/*==================================================================
+  TABS + THREE-WHEEL PANEL
+==================================================================*/
+.tabBar{ display:flex; gap:8px; margin:0 0 12px; flex-wrap:wrap; }
+.tab{
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--muted);
+  font-size:14px; font-weight:700;
+  padding:10px 20px;
+  border-radius:10px;
+  cursor:pointer;
+}
+.tab.active{ background:var(--brand); color:#fff; border-color:var(--brand); }
+.tab:hover:not(.active){ background:#f2f6f4; }
+
+.twLoading{ padding:30px; text-align:center; color:var(--muted); font-weight:600; }
+
+.tw-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+.tw-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(20,40,60,.05);
+  padding:18px;
+}
+.tw-card .field{ margin-bottom:10px; }
+
+@media (min-width:1100px){
+  .tw-grid{ grid-template-columns:repeat(4, 1fr); align-items:start; }
+}
