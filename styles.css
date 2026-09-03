@@ -1248,6 +1248,7 @@ input::placeholder{ color:var(--faint); }
   cursor:pointer;
 }
 .tab.active{ background:var(--brand); color:#fff; border-color:var(--brand); }
+
 .tab:hover:not(.active){ background:#f2f6f4; }
 
 .twLoading{ padding:30px; text-align:center; color:var(--muted); font-weight:600; }
