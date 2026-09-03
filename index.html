@@ -1,512 +1,254 @@
-/******************************************************
- * MasterCAL Pro
- * Code.gs  (v3 — per-user Sheet copies)
- *
- * Multi-user model:
- *   - The spreadsheet this script is bound to is the MASTER
- *     (template). Users NEVER touch it.
- *   - Each user (identified by a userId from the PWA) gets
- *     their OWN COPY of the whole spreadsheet in the owner's
- *     Drive. All their reads/writes go to that copy, so there
- *     is no cross-talk and the real formulas (iterative calc,
- *     QUERY, everything) run correctly.
- *   - A registry (Script Properties) maps userId -> copyId.
- *
- * Deploy: Execute as = Me, Who has access = Anyone.
- ******************************************************/
+<!DOCTYPE html>
+<html lang="en">
 
-const SHEET_NAME = "CALCULATOR_TEMPLATE";
-const MASTER_ID  = SpreadsheetApp.getActiveSpreadsheet().getId();
+<head>
 
-/* Per-request user spreadsheet (set by Api.gs before dispatch). */
-var CURRENT_SS = null;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+  <title>MasterCAL Pro</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007b83">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MasterCAL">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <link rel="stylesheet" href="styles.css">
+
+</head>
 
 
-/*====================================================
-  PER-USER COPY MANAGEMENT
-====================================================*/
+<body>
 
-const USER_COPIES_FOLDER = "MasterCAL_UserCopies";
+<!-- ACCESS GATE (register / pending / blocked) -->
+<div id="gate" class="gate" style="display:none">
+  <div class="gateCard">
+    <div class="gateLogo">MasterCAL</div>
+    <div id="gateBody"></div>
+  </div>
+</div>
 
-/* All per-user copies live in one Drive folder (created once). */
-function getUserCopiesFolder_() {
-  const it = DriveApp.getFoldersByName(USER_COPIES_FOLDER);
-  if (it.hasNext()) return it.next();
-  return DriveApp.createFolder(USER_COPIES_FOLDER);
-}
+<!-- LOADING OVERLAY -->
+<div id="loading" class="loading" style="display:none">
+  <div class="spinner"></div>
+  <div class="loadingText" id="loadingText">Loading…</div>
+</div>
 
-function setUserContext_(userId) {
-  CURRENT_SS = getUserSpreadsheet_(userId);
-  return CURRENT_SS;
-}
+<div class="offlineBar" id="offlineBar">
+  You are offline — calculations need an internet connection. The app will keep working once you reconnect.
+</div>
 
-function getUserSpreadsheet_(userId) {
-  if (!userId) throw new Error("Missing userId.");
 
-  const props = PropertiesService.getScriptProperties();
-  const key = "copy_" + userId;
+<div class="page">
 
-  let id = props.getProperty(key);
-  if (id) {
-    try { return SpreadsheetApp.openById(id); }
-    catch (e) { props.deleteProperty(key); id = null; }   /* copy was deleted */
+
+  <!-- HEADER -->
+  <div class="header">
+    <div style="width:300px;">
+      <h1>MasterCAL</h1>
+      <span>Vehicle Leasing Rental Calculator</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabBar">
+    <button type="button" class="tab active" data-tab="vehicle">🚗 Vehicle Lease</button>
+    <button type="button" class="tab" data-tab="threewheel">🛺 Three-Wheel</button>
+  </div>
+
+
+  <!-- ============ VEHICLE PANEL ============ -->
+  <div id="vehiclePanel">
+
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+
+    <!-- FACILITY DETAILS -->
+    <div class="facility">
+
+      <div class="cardTitle">Facility Details</div>
+
+      <div class="field">
+        <label>PRODUCT TYPE</label>
+        <select id="productType"></select>
+      </div>
+
+      <div class="field">
+        <label id="lblFacilityAmount">FACILITY AMOUNT</label>
+        <input id="facilityAmount" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label id="lblBic">BIC</label>
+        <input id="bic" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label id="lblInsurance">INSURANCE</label>
+        <input id="insurance" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label id="lblStampDuty">STAMP DUTY</label>
+        <select id="stampDuty"></select>
+      </div>
+
+      <div class="field">
+        <label id="lblIrr">IRR (%)</label>
+        <input id="irr" type="number" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label id="lblPeriod">PERIOD</label>
+        <input id="period" type="number" inputmode="numeric">
+      </div>
+
+    </div>
+
+
+    <!-- BULLET PAYMENT SCHEDULE -->
+    <div class="scheduleCard" id="scheduleCard">
+
+      <div class="scheduleHeader">
+
+        <div class="cardTitle scheduleTitle">Bullet Payment Schedule</div>
+
+        <div class="scheduleControls">
+          <select id="scheduleType">
+            <option value="MANUAL SCHEDULE">MANUAL SCHEDULE</option>
+            <option value="SLABBED SCHEDULE">SLABBED SCHEDULE</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="scheduleTableContainer">
+        <table id="scheduleTable">
+          <thead>
+            <tr>
+              <th>FROM</th>
+              <th>TO</th>
+              <th>AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+
+    <!-- SUMMARY -->
+    <div>
+
+      <!-- MONTHLY RENTAL -->
+      <div class="summary">
+
+        <div class="cardTitle">Monthly Rental</div>
+
+        <div class="bigValue red">
+          <span id="monthlyRental">0.00</span>
+        </div>
+
+        <table class="summaryTable">
+          <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
+          <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
+          <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
+        </table>
+
+      </div>
+
+      <div style="height:14px"></div>
+
+      <!-- RENTAL WITH RESIDUAL -->
+      <div class="bulk">
+
+        <div class="cardTitle">Rental with Residual</div>
+
+        <div class="bigValue blue">
+          <span id="lastMonthRental">0.00</span>
+        </div>
+
+        <table class="summaryTable">
+          <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
+          <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
+          <tr><td>Total Paid</td><td id="lastMonthTotalPaid"></td></tr>
+        </table>
+
+      </div>
+
+    </div>
+
+
+  </div>
+  <!-- END .main -->
+
+
+  <!-- CHARGES CALCULATION (J1:L14) -->
+  <div id="chargesSection" class="chargesCard">
+    <div class="chargesHead">
+      <span class="cardTitle" id="chargesTitle">Charges Calculation</span>
+      <span class="chargesTotal" id="chargesTotal">0.00</span>
+    </div>
+    <table class="chargesTable">
+      <tbody id="chargesBody"></tbody>
+    </table>
+
+    <!-- Both action buttons live at the bottom of the charges card -->
+    <div class="chargesButtons">
+      <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
+        ADD BULLET PAYMENT
+      </button>
+      <button type="button" id="rentalScheduleToggle" class="rentalScheduleToggle">
+        SHOW RENTAL SCHEDULE
+      </button>
+    </div>
+  </div>
+
+
+  <!-- RENTAL SCHEDULE -->
+  <div id="rentalScheduleSection" class="rentalScheduleSection">
+    <div class="rentalScheduleTableContainer">
+      <table id="rentalScheduleTable">
+        <tbody id="rentalScheduleBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  </div>
+  <!-- ============ END VEHICLE PANEL ============ -->
+
+
+  <!-- ============ THREE-WHEEL PANEL (built by app.js) ============ -->
+  <div id="threewheelPanel" hidden>
+    <div id="twLoading" class="twLoading">Loading three-wheel calculator…</div>
+    <div id="twGrid" class="tw-grid"></div>
+  </div>
+
+
+</div>
+<!-- END .page -->
+
+
+<script src="app.js"></script>
+
+<script>
+  /* Register the service worker (PWA install + offline shell). */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function (e) {
+        console.warn("SW registration failed:", e);
+      });
+    });
   }
+</script>
 
-  /* Create the copy once. Lock only around creation so two
-     first-time requests from the same user don't double-create. */
-  const lock = LockService.getScriptLock();
-  lock.waitLock(45000);
-  try {
-    id = props.getProperty(key);
-    if (id) {
-      try { return SpreadsheetApp.openById(id); } catch (e) {}
-    }
-    const copy = DriveApp.getFileById(MASTER_ID)
-      .makeCopy("MasterCAL — user " + userId, getUserCopiesFolder_());
-    props.setProperty(key, copy.getId());
-    return SpreadsheetApp.openById(copy.getId());
-  } finally {
-    lock.releaseLock();
-  }
-}
+</body>
 
-
-/*====================================================
-  SHEET / RANGE HELPERS  (operate on the USER'S copy)
-====================================================*/
-
-function ssActive_() {
-  return CURRENT_SS || SpreadsheetApp.getActiveSpreadsheet();
-}
-
-function sh() {
-  const sheet = ssActive_().getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error("Sheet '" + SHEET_NAME + "' not found.");
-  return sheet;
-}
-
-/* Range by CFG key: named range first (on the user's copy), A1 fallback. */
-function rng(key) {
-  const named = ssActive_().getRangeByName(key);
-  if (named) return named;
-  const a1 = CFG[key];
-  if (!a1) throw new Error("Unknown range key: " + key);
-  return sh().getRange(a1);
-}
-
-const CFG = {
-  PRODUCT_TYPES:      "AY3:AY",
-  STAMP_DUTY_OPTIONS: "P1:P3",
-  IN_PRODUCT_TYPE:    "D1",
-  IN_MAIN:            "D5:D10",
-  IN_SCHEDULE_TYPE:   "F1",
-  SCHED_FROM:         "F3:F14",
-  SCHED_TO:           "G3:G14",
-  SCHED_AMOUNT:       "H3:H14",
-  SCHED_BLOCK:        "F3:H14",
-  OUT_BLOCK:          "D11:M18",
-  RENTAL_SCHEDULE:    "A27:F112"
-};
-
-
-/*====================================================
-  READS
-====================================================*/
-
-function getStampDuty_() {
-  return rng("STAMP_DUTY_OPTIONS").getDisplayValues().flat().filter(String);
-}
-
-function getDropdownData() {
-  return {
-    productTypes: rng("PRODUCT_TYPES").getDisplayValues().flat().filter(String),
-    stampDuty:    getStampDuty_(),
-    rmvTypes:     getRmvTypes_()
-  };
-}
-
-/* RMV charge type options: Charges!B where A = "RMV CHARGES". */
-function getRmvTypes_() {
-  const ch = ssActive_().getSheetByName("Charges");
-  if (!ch) return [];
-  const data = ch.getRange("A2:B30").getDisplayValues();
-  const out = [];
-  for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0]).trim().toUpperCase() === "RMV CHARGES" &&
-        String(data[i][1]).trim() !== "") {
-      out.push(data[i][1]);
-    }
-  }
-  return out;
-}
-
-/* Set an RMV charge type dropdown (J13 or J14) and recompute. */
-function setRmvType(value, cell) {
-  const target = (cell === "J13" || cell === "J14") ? cell : "J14";
-  sh().getRange(target).setValue(value == null ? "" : value);
-  SpreadsheetApp.flush();
-  return { success: true, outputs: getOutputs() };
-}
-
-/* Core numeric outputs + charges (no label read). */
-function getOutputsLite() {
-  const v = rng("OUT_BLOCK").getDisplayValues();   /* D11:M18 */
-  return {
-    monthlyRental:      v[0][1], /* E11 */
-    totalInterest:      v[2][1], /* E13 */
-    totalPaid:          v[3][1], /* E14 */
-    lastMonthRental:    v[4][1], /* E15 */
-    lastMonthInterest:  v[6][1], /* E17 */
-    lastMonthTotalPaid: v[7][1], /* E18 */
-    bulkAmount:         v[5][0], /* D16 */
-    rate100:            v[3][9], /* M14 */
-    /* Charges breakdown block J1:L14 (label=J, sub=K, amount=L) */
-    charges:            sh().getRange("J1:L14").getDisplayValues()
-  };
-}
-
-function getOutputs() {
-  const out = getOutputsLite();
-  /* Dynamic field labels A5:A10 -> facility, bic, insurance, stamp, irr, period */
-  out.labels = sh().getRange("A5:A10").getDisplayValues().flat();
-  return out;
-}
-
-function getSchedule() {
-  const v = rng("SCHED_BLOCK").getDisplayValues();  /* F3:H14 */
-  const rows = [];
-  for (let i = 0; i < 12; i++) rows.push({ from: v[i][0], to: v[i][1], amount: v[i][2] });
-  return rows;
-}
-
-function toColumn_() { return rng("SCHED_TO").getDisplayValues().flat(); }
-
-function getRentalSchedule() {
-  return { success: true, rows: rng("RENTAL_SCHEDULE").getDisplayValues() };
-}
-
-function clearInputs_() {
-  rng("IN_PRODUCT_TYPE").clearContent();
-  rng("IN_MAIN").clearContent();
-  rng("IN_SCHEDULE_TYPE").clearContent();
-  rng("SCHED_FROM").clearContent();
-  rng("SCHED_AMOUNT").clearContent();
-}
-
-
-/*====================================================
-  APP LOAD  (one round trip)
-====================================================*/
-
-function initApp() {
-  clearInputs_();
-  SpreadsheetApp.flush();
-  return {
-    success:   true,
-    dropdowns: getDropdownData(),
-    stampDuty: getStampDuty_(),
-    outputs:   getOutputs(),
-    schedule:  getSchedule()
-  };
-}
-
-function resetAppOnOpen() {
-  clearInputs_();
-  SpreadsheetApp.flush();
-  return { success: true, outputs: getOutputs(), schedule: getSchedule() };
-}
-
-
-/*====================================================
-  WRITES  (each on the user's OWN copy — no shared lock needed)
-====================================================*/
-
-function saveProductType(productType) {
-  rng("IN_PRODUCT_TYPE").setValue(productType == null ? "" : productType);
-  rng("SCHED_FROM").clearContent();
-  rng("SCHED_AMOUNT").clearContent();
-  SpreadsheetApp.flush();
-  return { success: true, stampDuty: getStampDuty_(), outputs: getOutputs(), schedule: getSchedule() };
-}
-
-function saveInputs(data) {
-  data = data || {};
-  rng("IN_PRODUCT_TYPE").setValue(data.productType || "");
-  rng("IN_MAIN").setValues([
-    [ data.facilityAmount || "" ],
-    [ data.bic            || "" ],
-    [ data.insurance      || "" ],
-    [ data.stampDuty      || "" ],
-    [ data.irr            || "" ],
-    [ data.period         || "" ]
-  ]);
-  rng("IN_SCHEDULE_TYPE").setValue(data.scheduleType || "");
-  SpreadsheetApp.flush();
-  return { success: true, outputs: getOutputs(), stampDuty: getStampDuty_(), schedule: getSchedule() };
-}
-
-/* Lighter version for live field edits: writes inputs, returns ONLY
-   outputs (skips the stamp-duty + schedule reads) — a bit faster. */
-function calcInputs(data) {
-  data = data || {};
-  rng("IN_PRODUCT_TYPE").setValue(data.productType || "");
-  rng("IN_MAIN").setValues([
-    [ data.facilityAmount || "" ],
-    [ data.bic            || "" ],
-    [ data.insurance      || "" ],
-    [ data.stampDuty      || "" ],
-    [ data.irr            || "" ],
-    [ data.period         || "" ]
-  ]);
-  rng("IN_SCHEDULE_TYPE").setValue(data.scheduleType || "");
-  SpreadsheetApp.flush();
-  return { success: true, outputs: getOutputsLite() };
-}
-
-function saveScheduleType(scheduleType) {
-  rng("IN_SCHEDULE_TYPE").setValue(scheduleType == null ? "" : scheduleType);
-  rng("SCHED_FROM").clearContent();
-  rng("SCHED_AMOUNT").clearContent();
-  SpreadsheetApp.flush();
-  return { success: true, outputs: getOutputs(), schedule: getSchedule() };
-}
-
-/* Save all inputs + new schedule type AND clear the bullet schedule
-   (FROM & AMOUNT) in one round trip — used when the schedule type
-   changes so it starts fresh without a second network call. */
-function saveScheduleTypeAndClear(data) {
-  data = data || {};
-  rng("IN_PRODUCT_TYPE").setValue(data.productType || "");
-  rng("IN_MAIN").setValues([
-    [ data.facilityAmount || "" ],
-    [ data.bic            || "" ],
-    [ data.insurance      || "" ],
-    [ data.stampDuty      || "" ],
-    [ data.irr            || "" ],
-    [ data.period         || "" ]
-  ]);
-  rng("IN_SCHEDULE_TYPE").setValue(data.scheduleType || "");
-  rng("SCHED_FROM").clearContent();
-  rng("SCHED_AMOUNT").clearContent();
-  SpreadsheetApp.flush();
-  return { success: true, outputs: getOutputs(), schedule: getSchedule() };
-}
-
-function schedFromCell_(idx) { const r = rng("SCHED_FROM");   return sh().getRange(r.getRow() + idx, r.getColumn()); }
-function schedAmountCell_(idx){ const r = rng("SCHED_AMOUNT"); return sh().getRange(r.getRow() + idx, r.getColumn()); }
-function validIndex_(index){ const i = Number(index); if (isNaN(i) || i < 0 || i > 11) throw new Error("Invalid schedule row: " + index); return i; }
-
-function addScheduleRow(index, from, amount) {
-  const idx = validIndex_(index);
-  const fc = schedFromCell_(idx), ac = schedAmountCell_(idx);
-  fc.setValue(from == null ? "" : from);
-  ac.setValue(amount == null ? "" : amount);
-  SpreadsheetApp.flush();
-  const out = getOutputs();
-  return { success: true, index: idx, from: fc.getDisplayValue(), amount: ac.getDisplayValue(),
-           to: toColumn_(), monthlyRental: out.monthlyRental, outputs: out, schedule: getSchedule() };
-}
-
-function updateScheduleFrom(index, value) {
-  const idx = validIndex_(index); const cell = schedFromCell_(idx);
-  cell.setValue(value == null ? "" : value);
-  SpreadsheetApp.flush();
-  const out = getOutputs();
-  return { success: true, row: cell.getRow(), value: cell.getDisplayValue(),
-           to: toColumn_(), monthlyRental: out.monthlyRental, outputs: out, schedule: getSchedule() };
-}
-
-function updateScheduleAmount(index, value) {
-  const idx = validIndex_(index); const cell = schedAmountCell_(idx);
-  cell.setValue(value == null ? "" : value);
-  SpreadsheetApp.flush();
-  const out = getOutputs();
-  return { success: true, row: cell.getRow(), value: cell.getDisplayValue(),
-           to: toColumn_(), monthlyRental: out.monthlyRental, outputs: out, schedule: getSchedule() };
-}
-
-function deleteScheduleRow(index) {
-  const idx = validIndex_(index);
-  schedFromCell_(idx).clearContent();
-  schedAmountCell_(idx).clearContent();
-  SpreadsheetApp.flush();
-  const out = getOutputs();
-  return { success: true, row: rng("SCHED_FROM").getRow() + idx,
-           to: toColumn_(), monthlyRental: out.monthlyRental, outputs: out, schedule: getSchedule() };
-}
-
-function saveSchedule(rows) {
-  rows = rows || [];
-  const fromValues = [], amountValues = [];
-  for (let i = 0; i < 12; i++) {
-    const item = rows[i] || {};
-    fromValues.push([ item.from == null ? "" : item.from ]);
-    amountValues.push([ item.amount == null ? "" : item.amount ]);
-  }
-  rng("SCHED_FROM").setValues(fromValues);
-  rng("SCHED_AMOUNT").setValues(amountValues);
-  SpreadsheetApp.flush();
-  const out = getOutputs();
-  return { success: true, schedule: getSchedule(), outputs: out,
-           to: toColumn_(), monthlyRental: out.monthlyRental };
-}
-
-function clearScheduleInputs() {
-  rng("SCHED_FROM").clearContent();
-  rng("SCHED_AMOUNT").clearContent();
-  SpreadsheetApp.flush();
-  const out = getOutputs();
-  return { success: true, outputs: out, schedule: getSchedule(),
-           to: toColumn_(), monthlyRental: out.monthlyRental };
-}
-
-function clearScheduleData() { return clearScheduleInputs(); }
-
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-
-/*====================================================
-  ADMIN / MAINTENANCE  (run manually from the editor)
-====================================================*/
-
-/* How many user copies exist. */
-function adminCountCopies() {
-  const p = PropertiesService.getScriptProperties().getProperties();
-  const n = Object.keys(p).filter(k => k.indexOf("copy_") === 0).length;
-  Logger.log("User copies: " + n);
-  return n;
-}
-
-/* Delete ALL user copies (trash) and clear the registry. Use with care. */
-function adminDeleteAllCopies() {
-  const props = PropertiesService.getScriptProperties();
-  const all = props.getProperties();
-  let removed = 0;
-  Object.keys(all).forEach(function (k) {
-    if (k.indexOf("copy_") === 0) {
-      try { DriveApp.getFileById(all[k]).setTrashed(true); } catch (e) {}
-      props.deleteProperty(k);
-      removed++;
-    }
-  });
-  Logger.log("Removed " + removed + " copies.");
-  return removed;
-}
-
-/* Delete copies not opened in the last N days (needs Drive lastUpdated). */
-function adminCleanupOlderThan(days) {
-  days = days || 30;
-  const cutoff = Date.now() - days * 86400000;
-  const props = PropertiesService.getScriptProperties();
-  const all = props.getProperties();
-  let removed = 0;
-  Object.keys(all).forEach(function (k) {
-    if (k.indexOf("copy_") !== 0) return;
-    try {
-      const f = DriveApp.getFileById(all[k]);
-      if (f.getLastUpdated().getTime() < cutoff) {
-        f.setTrashed(true);
-        props.deleteProperty(k);
-        removed++;
-      }
-    } catch (e) { props.deleteProperty(k); removed++; }
-  });
-  Logger.log("Cleaned " + removed + " stale copies (older than " + days + " days).");
-  return removed;
-}
-
-
-/*====================================================
-  THREE-WHEEL (3W) CALCULATOR
-  Reads/writes a separate tab in the user's copy whose
-  A1 == "VALUATION & EXPOSURE CALCULATION".
-  Inputs are column B; outputs column C. Dropdown option
-  lists are read straight from each cell's data validation.
-====================================================*/
-
-const THREE_WHEEL_SHEET = "3W";   /* fast path — auto-detected if named differently */
-const IN_CELLS_3W = ["B2","B3","B4","B5","B10","B11","B12","B13","B14","B15","B22","B23"];
-
-function sh3W_() {
-  const ss = ssActive_();
-  var s = ss.getSheetByName(THREE_WHEEL_SHEET);
-  if (s) return s;
-  const sheets = ss.getSheets();
-  for (var i = 0; i < sheets.length; i++) {
-    if (String(sheets[i].getRange("A1").getDisplayValue()).trim().toUpperCase()
-        === "VALUATION & EXPOSURE CALCULATION") return sheets[i];
-  }
-  throw new Error("Three-wheel sheet not found (need a tab with A1 = 'VALUATION & EXPOSURE CALCULATION').");
-}
-
-function dropdownOptions3W_(rg) {
-  try {
-    const dv = rg.getDataValidation();
-    if (!dv) return null;
-    const type = String(dv.getCriteriaType());
-    const vals = dv.getCriteriaValues();
-    if (type === "VALUE_IN_LIST") {
-      return (vals[0] || []).map(function (v) { return String(v); })
-        .filter(function (v) { return v.trim() !== ""; });
-    }
-    if (type === "VALUE_IN_RANGE") {
-      const disp = vals[0].getDisplayValues();
-      const out = [];
-      for (var i = 0; i < disp.length; i++) {
-        for (var j = 0; j < disp[i].length; j++) {
-          const v = String(disp[i][j]).trim();
-          if (v !== "" && out.indexOf(v) === -1) out.push(v);
-        }
-      }
-      return out;
-    }
-  } catch (e) {}
-  return null;
-}
-
-function get3W() {
-  const s = sh3W_();
-  const inputs = {};
-  IN_CELLS_3W.forEach(function (c) {
-    const rg = s.getRange(c);
-    inputs[c] = { value: rg.getDisplayValue(), options: dropdownOptions3W_(rg) };
-  });
-  const c = s.getRange("C1:C34").getDisplayValues();
-  const g = function (row) { return (c[row - 1] && c[row - 1][0] != null) ? c[row - 1][0] : ""; };
-  return {
-    inputs: inputs,
-    labelFacility: s.getRange("A10").getDisplayValue(),
-    totalCapPct:   s.getRange("B6").getDisplayValue(),
-    out: {
-      cfValuation:   g(3),
-      maxFacility:   g(5),
-      totCapVal:     g(6),
-      facilityAmt:   g(10),
-      bic:           g(11),
-      insurance:     g(12),
-      rmv:           g(13),
-      monthlyRental: g(15),
-      chargesTotal:  g(21),
-      cribCharge:    g(22),
-      rmvCharge:     g(23),
-      insCharge:     g(24),
-      valCharge:     g(25),
-      svcCharge:     g(26),
-      vat:           g(27),
-      totCapital:    g(30),
-      totPaid:       g(31),
-      totInterest:   g(32),
-      rate100:       g(33),
-      flatRate:      g(34)
-    }
-  };
-}
-
-function set3W(cell, value) {
-  if (IN_CELLS_3W.indexOf(cell) === -1) throw new Error("Invalid 3W cell: " + cell);
-  sh3W_().getRange(cell).setValue(value == null ? "" : value);
-  SpreadsheetApp.flush();
-  return get3W();
-}
+</html>
