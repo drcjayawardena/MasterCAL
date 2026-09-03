@@ -1265,3 +1265,8 @@ input::placeholder{ color:var(--faint); }
 @media (min-width:1100px){
   .tw-grid{ grid-template-columns:repeat(4, 1fr); align-items:start; }
 }
+
+/* FIX: the id-level display:grid on the panels overrides the [hidden]
+   attribute — force hidden panels to actually hide. */
+#vehiclePanel[hidden],
+#threewheelPanel[hidden]{ display:none !important; }
