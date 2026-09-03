@@ -62,7 +62,7 @@
     <!-- FACILITY DETAILS -->
     <div class="facility">
 
-      <div class="cardTitle">FACILITY DETAIL</div>
+      <div class="cardTitle">Facility Details</div>
 
       <div class="field">
         <label>PRODUCT TYPE</label>
@@ -99,12 +99,6 @@
         <input id="period" type="number" inputmode="numeric">
       </div>
 
-      <div class="facilityBulletButtonWrapper">
-        <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
-          ADD BULLET PAYMENT
-        </button>
-      </div>
-
     </div>
 
 
@@ -113,7 +107,7 @@
 
       <div class="scheduleHeader">
 
-        <div class="cardTitle scheduleTitle">BULLET PAYMENT</div>
+        <div class="cardTitle scheduleTitle">Bullet Payment Schedule</div>
 
         <div class="scheduleControls">
           <select id="scheduleType">
@@ -146,16 +140,16 @@
       <!-- MONTHLY RENTAL -->
       <div class="summary">
 
-        <div class="cardTitle">MONTHLY RENTAL</div>
+        <div class="cardTitle">Monthly Rental</div>
 
         <div class="bigValue red">
           <span id="monthlyRental">0.00</span>
         </div>
 
         <table class="summaryTable">
-          <tr><td>RATE/100,000</td><td id="rate100"></td></tr>
-          <tr><td>TOTAL INTEREST</td><td id="totalInterest"></td></tr>
-          <tr><td>TOTAL PAID</td><td id="totalPaid"></td></tr>
+          <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
+          <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
+          <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
         </table>
 
       </div>
@@ -165,23 +159,17 @@
       <!-- RENTAL WITH RESIDUAL -->
       <div class="bulk">
 
-        <div class="cardTitle">RENTAL WITH RESIDUAL</div>
+        <div class="cardTitle">Rental with Residual</div>
 
         <div class="bigValue blue">
           <span id="lastMonthRental">0.00</span>
         </div>
 
         <table class="summaryTable">
-          <tr><td>RESIDUAL VALUE</td><td id="bulkAmount"></td></tr>
-          <tr><td>TOTAL INTERESTt</td><td id="lastMonthInterest"></td></tr>
-          <tr><td>TOTAL PAID</td><td id="lastMonthTotalPaid"></td></tr>
+          <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
+          <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
+          <tr><td>Total Paid</td><td id="lastMonthTotalPaid"></td></tr>
         </table>
-
-        <div class="rentalScheduleButtonWrapper">
-          <button type="button" id="rentalScheduleToggle" class="rentalScheduleToggle">
-            SHOW RENTAL SCHEDULE
-          </button>
-        </div>
 
       </div>
 
@@ -195,12 +183,22 @@
   <!-- CHARGES CALCULATION (J1:L14) -->
   <div id="chargesSection" class="chargesCard">
     <div class="chargesHead">
-      <span class="cardTitle" id="chargesTitle">INITIAL CHARGES</span>
+      <span class="cardTitle" id="chargesTitle">Charges Calculation</span>
       <span class="chargesTotal" id="chargesTotal">0.00</span>
     </div>
     <table class="chargesTable">
       <tbody id="chargesBody"></tbody>
     </table>
+
+    <!-- Both action buttons live at the bottom of the charges card -->
+    <div class="chargesButtons">
+      <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
+        ADD BULLET PAYMENT
+      </button>
+      <button type="button" id="rentalScheduleToggle" class="rentalScheduleToggle">
+        SHOW RENTAL SCHEDULE
+      </button>
+    </div>
   </div>
 
 
@@ -216,6 +214,7 @@
 
 </div>
 <!-- END .page -->
+
 
 <script src="app.js"></script>
 
