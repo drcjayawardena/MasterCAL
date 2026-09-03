@@ -259,25 +259,15 @@ function showGate(status) {
 
 function setupBulletPaymentButton() {
 
-  const facility = document.querySelector(".facility");
-  if (!facility) return;
+  /* The button now lives at the bottom of the Charges card (in index.html). */
+  const button = document.getElementById("addBulletPaymentButton");
+  if (!button) return;
 
-  const oldButton = document.getElementById("addBulletPaymentButton");
-  if (oldButton) oldButton.remove();
+  /* Clone to drop any old listeners, then bind fresh. */
+  const nb = button.cloneNode(true);
+  button.parentNode.replaceChild(nb, button);
 
-  const oldWrapper = document.querySelector(".facilityBulletButtonWrapper");
-  if (oldWrapper) oldWrapper.remove();
-
-  const wrapper = document.createElement("div");
-  wrapper.className = "facilityBulletButtonWrapper";
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.id = "addBulletPaymentButton";
-  button.className = "addBulletPaymentButton";
-  button.textContent = "ADD BULLET PAYMENT";
-
-  button.addEventListener("click", function () {
+  nb.addEventListener("click", function () {
     const card = document.getElementById("scheduleCard");
     if (!card) return;
     const hidden = window.getComputedStyle(card).display === "none";
@@ -286,9 +276,6 @@ function setupBulletPaymentButton() {
     /* Clear the bullet schedule (FROM & AMOUNT) on every manual toggle. */
     clearScheduleUI();
   });
-
-  wrapper.appendChild(button);
-  facility.appendChild(wrapper);
 
   hideScheduleCard();
 }
@@ -436,12 +423,10 @@ function saveScheduleType(scheduleType) {
   applyScheduleMode();       /* instant show/hide of the TO column */
   clearTimeout(saveTimer);   /* cancel any pending input save */
 
-  const data = collectInputData();
-  data.scheduleType = scheduleType;
-
-  /* Persist inputs + new type, then CLEAR the bullet schedule
-     (FROM & AMOUNT) so switching the schedule type starts fresh. */
-  api("saveScheduleTypeAndClear", [data])
+  /* The existing saveScheduleType action sets the type AND clears the
+     bullet schedule (FROM & AMOUNT) in one call — no backend redeploy
+     needed. Facility inputs are already saved from their own edits. */
+  api("saveScheduleType", [scheduleType])
     .then(function (result) {
       if (result) {
         if (result.outputs) showOutputs(result.outputs);
