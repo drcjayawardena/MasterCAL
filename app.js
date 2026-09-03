@@ -13,7 +13,7 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbzgi6Deu62PbH8oD8KI_5Elf7GIma7BwqOmJtPIb62Dp4f-7hTJ0teUx1La1T8uiD0X/exec";
+  "https://script.google.com/macros/s/AKfycbwISRyGTj4iazpo1BIxvUt-fED8HkFmJgD3OLkKhWaeDh83jDG3VoJuXGmL4OiCKBbs/exec";
 
 
 /* =========================================================
@@ -1102,6 +1102,10 @@ const TW_INPUT_LABELS = {
   B14: "PERIOD", B15: "IRR", B22: "CRIB CHARGES", B23: "RMV CHARGES"
 };
 
+/* These 3W inputs are ALWAYS dropdowns (MAKE, VEHICLE NO, GRADE,
+   INSURANCE, RMV rental, RMV initial). The rest are number inputs. */
+const TW_DROPDOWN_CELLS = ["B2", "B3", "B4", "B12", "B13", "B23"];
+
 function setupTabs() {
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
@@ -1150,7 +1154,8 @@ function twField(cell, data) {
   wrap.appendChild(lab);
 
   let el;
-  if (info.options && info.options.length) {
+  const forceSelect = TW_DROPDOWN_CELLS.indexOf(cell) !== -1;
+  if (forceSelect || (info.options && info.options.length)) {
     el = document.createElement("select");
     el.addEventListener("change", function () { set3WValue(cell, this.value); });
   } else {
@@ -1240,9 +1245,16 @@ function render3W(data) {
     const el = document.getElementById("tw_" + cell);
     if (!el) return;
     if (el.tagName === "SELECT") {
-      const cur = info.value;
+      const cur = String(info.value == null ? "" : info.value);
+      const opts = info.options || [];
       el.innerHTML = "";
-      (info.options || []).forEach(function (opt) {
+      /* keep the current value selectable even if it's not in the list */
+      if (cur !== "" && opts.indexOf(cur) === -1) {
+        const o0 = document.createElement("option");
+        o0.value = cur; o0.textContent = cur;
+        el.appendChild(o0);
+      }
+      opts.forEach(function (opt) {
         const o = document.createElement("option");
         o.value = opt; o.textContent = opt;
         el.appendChild(o);
