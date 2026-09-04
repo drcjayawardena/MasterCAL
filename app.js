@@ -27,7 +27,6 @@ const SHELL = [
   "./icon-maskable-512.png"
 ];
 
-
 /* Install: pre-cache the shell. */
 self.addEventListener("install", function (event) {
   event.waitUntil(
