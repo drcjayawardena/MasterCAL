@@ -14,7 +14,7 @@
  * so users pick up the new version.
  ******************************************************/
 
-const CACHE_VERSION = "mastercal-v25";
+const CACHE_VERSION = "mastercal-v26";
 
 const SHELL = [
   "./",
@@ -52,6 +52,7 @@ self.addEventListener("activate", function (event) {
   );
   self.clients.claim();
 });
+
 
 /* Fetch. */
 self.addEventListener("fetch", function (event) {
