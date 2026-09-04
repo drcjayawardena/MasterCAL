@@ -1050,18 +1050,22 @@ input::placeholder{ color:var(--faint); }
 ----------------------------------------------------------------*/
 @media (min-width:1100px){
 
+  /* All columns stretch to the SAME height (the tallest card), so no
+     fixed pixel height can be overflowed by the browser's fonts. Each
+     card is a flex column and its bottom button pins to the card bottom
+     — so ADD BULLET PAYMENT and SHOW RENTAL SCHEDULE always line up. */
   .page{
     width:100%;
     max-width:1480px;
     display:grid;
     grid-template-columns:repeat(4, 1fr);
     gap:12px;
-    align-items:start;
+    align-items:stretch;
   }
 
   .header{ grid-column:1 / -1; width:auto; margin-bottom:0; }
 
-  /* let the cards inside .main become direct grid items */
+  /* cards inside .main become direct grid items of .page */
   .main,
   .main.schedule-hidden{
     display:contents;
@@ -1076,22 +1080,52 @@ input::placeholder{ color:var(--faint); }
   }
   .page:has(.main.schedule-hidden) .header{ width:auto; }
 
-  /* equal heights across the row */
+  /* every card fills the (stretched) row height, no fixed height */
   .facility,
   .scheduleCard,
-  .main>div:last-child{
+  .main>div:last-child,
+  #chargesSection{
     width:auto !important;
-    height:665px;
+    height:auto !important;
+    min-height:0;
+    align-self:stretch;
   }
 
+  .facility{ display:flex; flex-direction:column; }
+
+  /* Bullet schedule card scrolls inside its own space */
+  .scheduleCard{ display:flex; flex-direction:column; }
+  .scheduleTableContainer{ flex:1; min-height:0; height:auto; }
+
+  /* Monthly + Residual = two EQUAL halves that fill the column */
+  .main>div:last-child{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .main>div:last-child>div:nth-child(2){ display:none; } /* spacer */
+  .summary,
+  .bulk{
+    display:flex;
+    flex-direction:column;
+    flex:1 1 0;
+    min-height:0;
+    height:auto;
+  }
+  .summary .cardTitle,
+  .bulk .cardTitle{ margin-bottom:10px; }
+  .bigValue{ margin-bottom:10px; flex-shrink:0; }
+  .summaryTable{ border-spacing:0 4px; }
+  .summaryTable td{ height:30px; }
+  /* pin the SHOW RENTAL SCHEDULE button to the card bottom */
+  .rentalScheduleButtonWrapper{ margin-top:auto; padding-top:10px; }
+
   #chargesSection{
-    height:665px;
     margin-top:0;
     display:flex;
     flex-direction:column;
     overflow:auto;
   }
-
   #rentalScheduleSection{ grid-column:1 / -1; margin-top:0; }
 
   /* charges fits its narrower column */
@@ -1100,18 +1134,6 @@ input::placeholder{ color:var(--faint); }
   #chargesSection .chargesTable td{ font-size:12.5px; padding:8px 6px; }
   #chargesSection .chargesTable td:last-child{ width:42%; }
   #chargesSection .chargesSelect{ height:30px; font-size:12px; }
-
-  /* Keep Monthly & Residual content inside their equal halves, and make
-     the cards flex columns so the SHOW RENTAL SCHEDULE button pins to the
-     card bottom — lining up with the ADD BULLET PAYMENT button. */
-  .summary,
-  .bulk{ display:flex; flex-direction:column; }
-  .summary .cardTitle,
-  .bulk .cardTitle{ margin-bottom:10px; }
-  .bigValue{ margin-bottom:10px; flex-shrink:0; }
-  .summaryTable{ border-spacing:0 4px; }
-  .summaryTable td{ height:30px; }
-  .rentalScheduleButtonWrapper{ margin-top:auto; padding-top:10px; }
 }
 
 
@@ -1160,3 +1182,59 @@ input::placeholder{ color:var(--faint); }
 
 #scheduleTable.hide-to th:nth-child(3),
 #scheduleTable.hide-to td:nth-child(3){ width:60%; }
+
+
+/*==================================================================
+  CENTRAL FINANCE THEME + result-amount red + equal headers
+  + wider schedule inputs  (appended override — wins by source order)
+==================================================================*/
+
+/* CF brand: deep forest green, with an orange accent (CF letters). */
+:root{
+  --brand:#1c5e3a; --brand-600:#17502f; --brand-700:#123f25;
+  --accent:#f5a623;
+}
+
+/* (4) Big result amounts — Monthly Rental, Residual, Total Charges — RED */
+.bigValue.red,
+.bigValue.blue{
+  background:#f6faf7; color:#d8261c; border:1px solid #dce8e0;
+}
+.bigValue{ color:#d8261c; }
+.chargesTotal{
+  background:#f6faf7 !important; color:#d8261c !important;
+  border:1px solid #dce8e0 !important;
+}
+
+/* (2) All card headers the SAME font size */
+.cardTitle,
+.scheduleTitle,
+.chargesHead .cardTitle{ font-size:18px !important; }
+
+/* keep the calculating spinner tinted to the brand */
+.bigValue.calculating::before{ border-color:rgba(28,94,58,.30); border-top-color:var(--brand); }
+
+/* small orange accent on the header edge (CF look) */
+.header{ border-bottom:3px solid var(--accent); }
+
+/* (1) Schedule card — wider so FROM/TO/AMOUNT fit ~10 digits */
+@media (min-width:1100px){
+  .page{ grid-template-columns:1fr 1.4fr 1fr 1fr; }
+  .page:has(.main.schedule-hidden){ grid-template-columns:repeat(3, 1fr); }
+}
+/* smaller action button + roomier amount input */
+.scheduleAction{ width:56px !important; font-size:10px !important; padding:0 2px !important; }
+#scheduleTable input{ font-size:14px; min-width:0; }
+#scheduleTable td:nth-child(3){ width:56%; }
+.scheduleAmountCell input{ min-width:9ch; }   /* ~10 numeric digits */
+
+/* (3) Both action buttons pinned to the bottom of the Charges card */
+.chargesButtons{
+  margin-top:auto;
+  padding-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.chargesButtons .addBulletPaymentButton,
+.chargesButtons .rentalScheduleToggle{ width:100%; margin:0; }
