@@ -13,9 +13,9 @@
  * Bump CACHE_VERSION whenever you change any shell file
  * so users pick up the new version.
  ******************************************************/
- 
-const CACHE_VERSION = "mastercal-v27";
- 
+
+const CACHE_VERSION = "mastercal-v19";
+
 const SHELL = [
   "./",
   "./index.html",
@@ -26,8 +26,8 @@ const SHELL = [
   "./icon-512.png",
   "./icon-maskable-512.png"
 ];
- 
- 
+
+
 /* Install: pre-cache the shell. */
 self.addEventListener("install", function (event) {
   event.waitUntil(
@@ -37,8 +37,8 @@ self.addEventListener("install", function (event) {
   );
   self.skipWaiting();
 });
- 
- 
+
+
 /* Activate: drop old caches. */
 self.addEventListener("activate", function (event) {
   event.waitUntil(
@@ -52,29 +52,29 @@ self.addEventListener("activate", function (event) {
   );
   self.clients.claim();
 });
- 
- 
+
+
 /* Fetch. */
 self.addEventListener("fetch", function (event) {
- 
+
   const url = new URL(event.request.url);
- 
+
   /* Never cache the Apps Script API — always network. */
   if (url.hostname.indexOf("script.google.com") !== -1 ||
       url.hostname.indexOf("googleusercontent.com") !== -1) {
     return; /* let the browser handle it (network) */
   }
- 
+
   /* Only GET requests are cacheable. */
   if (event.request.method !== "GET") {
     return;
   }
- 
+
   /* Shell: cache-first, fall back to network, update cache. */
   event.respondWith(
     caches.match(event.request).then(function (cached) {
       if (cached) return cached;
- 
+
       return fetch(event.request).then(function (response) {
         return response;
       }).catch(function () {
@@ -84,6 +84,3 @@ self.addEventListener("fetch", function (event) {
     })
   );
 });
- 
-
-
