@@ -1174,3 +1174,14 @@ function escapeHtml(input) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+/* =========================================================
+   Schedule clear when clicking Hide bullet payment button
+========================================================= */
+
+if (hidden) {
+  showScheduleCard();
+} else {
+  hideScheduleCard();
+  clearScheduleUI();
+}
