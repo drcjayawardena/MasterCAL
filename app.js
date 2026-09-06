@@ -167,6 +167,8 @@ function loadApp() {
 
       if (result.dropdowns) {
         fillSelect("productType", result.dropdowns.productTypes || []);
+        const productType = document.getElementById("productType");
+        if (productType) productType.value = "REG CAR";
         fillSelect("stampDuty",
           (result.stampDuty || result.dropdowns.stampDuty) || []);
         RMV_TYPES = result.dropdowns.rmvTypes || RMV_TYPES;
@@ -270,12 +272,34 @@ function setupBulletPaymentButton() {
   nb.addEventListener("click", function () {
     const card = document.getElementById("scheduleCard");
     if (!card) return;
+
     const hidden = window.getComputedStyle(card).display === "none";
+
+    /*
+       SHOW/HIDE is only a visibility action.
+       It must never clear FROM / AMOUNT values.
+       Clearing is a separate, explicit operation.
+    */
     if (hidden) showScheduleCard();
     else hideScheduleCard();
-    /* Clear the bullet schedule (FROM & AMOUNT) on every manual toggle. */
-    clearScheduleUI();
   });
+
+  const clearButton = document.getElementById("clearScheduleButton");
+  if (clearButton) {
+    const nc = clearButton.cloneNode(true);
+    clearButton.parentNode.replaceChild(nc, clearButton);
+
+    nc.addEventListener("click", function () {
+      if (scheduleBusy) return;
+
+      const confirmed = window.confirm(
+        "Clear all Bullet Payment Schedule FROM and AMOUNT values?\n\nThis action cannot be undone."
+      );
+      if (!confirmed) return;
+
+      clearScheduleUI();
+    });
+  }
 
   hideScheduleCard();
 }
@@ -343,8 +367,30 @@ function bindInputs() {
   const scheduleType = document.getElementById("scheduleType");
   if (scheduleType) {
     scheduleType.addEventListener("change", function () {
-      saveScheduleType(this.value);
+      const previousType = scheduleType.dataset.previousValue || scheduleType.value;
+      const newType = scheduleType.value;
+
+      /* Changing schedule mode clears the stored bullet schedule on the
+         server, so ask for confirmation before making that destructive change. */
+      if (previousType && previousType !== newType) {
+        const confirmed = window.confirm(
+          "Changing the schedule type will clear the existing Bullet Payment Schedule (FROM & AMOUNT).\n\n" +
+          "Do you want to continue?"
+        );
+
+        if (!confirmed) {
+          scheduleType.value = previousType;
+          applyScheduleMode();
+          return;
+        }
+      }
+
+      scheduleType.dataset.previousValue = newType;
+      saveScheduleType(newType);
     });
+
+    /* Keep the last successfully selected type for confirmation/revert. */
+    scheduleType.dataset.previousValue = scheduleType.value;
   }
 }
 
@@ -438,7 +484,11 @@ function saveScheduleType(scheduleType) {
     .catch(function (error) {
       console.error("SCHEDULE TYPE ERROR:", error);
       alert("Schedule Type could not be changed.\n\n" + error.message);
-      if (select) select.disabled = false;
+      if (select) {
+        select.value = select.dataset.previousValue || select.value;
+        select.disabled = false;
+        applyScheduleMode();
+      }
     });
 }
 
@@ -690,13 +740,27 @@ function bindScheduleRowEvents(row) {
 
   const fromInput = row.querySelector('input[data-type="from"]');
   if (fromInput) {
+    const saveExistingFrom = function (input) {
+      /*
+         New rows are drafts. Typing/blur/Enter must NOT write FROM to the
+         sheet until the row's ADD button is clicked. Existing rows (DELETE
+         button) may still be edited and saved normally.
+      */
+      const actionButton = row.querySelector(".scheduleAction");
+      const isSavedRow = actionButton && actionButton.textContent.trim().toUpperCase() === "DELETE";
+      if (!isSavedRow) return;
+
+      updateFrom(Number(input.dataset.index), input.value);
+    };
+
     fromInput.addEventListener("blur", function () {
-      updateFrom(Number(this.dataset.index), this.value);
+      saveExistingFrom(this);
     });
+
     fromInput.addEventListener("keydown", function (event) {
       if (event.key === "Enter") {
         event.preventDefault();
-        updateFrom(Number(this.dataset.index), this.value);
+        saveExistingFrom(this);
       }
     });
   }
