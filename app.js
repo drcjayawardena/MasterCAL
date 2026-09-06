@@ -308,8 +308,12 @@ function setupBulletPaymentButton() {
        It must never clear FROM / AMOUNT values.
        Clearing is a separate, explicit operation.
     */
-    if (hidden) showScheduleCard();
-    else hideScheduleCard();
+    if (hidden) {
+      showScheduleCard();
+    } else {
+      hideScheduleCard();
+      clearScheduleUI();
+    }
   });
 
   const clearButton = document.getElementById("clearScheduleButton");
@@ -1173,15 +1177,4 @@ function escapeHtml(input) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
-
-/* =========================================================
-   Schedule clear when clicking Hide bullet payment button
-========================================================= */
-
-if (hidden) {
-  showScheduleCard();
-} else {
-  hideScheduleCard();
-  clearScheduleUI();
 }
