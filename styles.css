@@ -1,573 +1,167 @@
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:Segoe UI,Arial,sans-serif;
-}
-
-body{
-  background:#eef2f7;
-  color:#263238;
-  padding:10px;
-}
-
-.page{
-  width:1280px;
-  margin:0 auto;
-}
-
-
+*{  margin:0;  padding:0;  box-sizing:border-box;  font-family:Segoe UI,Arial,sans-serif;}
+body{  background:#eef2f7;  color:#263238;  padding:10px;}
+.page{  width:1280px;  margin:0 auto;}
 /* Offline banner */
-.offlineBar{
-  display:none;
-  width:100%;
-  max-width:1280px;
-  margin:0 auto 10px auto;
-  background:#d71920;
-  color:#fff;
-  border-radius:8px;
-  padding:8px 14px;
-  font-size:13px;
-  font-weight:600;
-}
+.offlineBar{  display:none;  width:100%;  max-width:1280px;  margin:0 auto 10px auto;  background:#d71920;  color:#fff;  border-radius:8px;  padding:8px 14px;  font-size:13px;  font-weight:600;}
 .offlineBar.show{ display:block; }
-
-
 /*====================================================
   HEADER
 ====================================================*/
-
-.header{
-  width:100%;
-  height:78px;
-  background:linear-gradient(90deg,#007b83,#33bfd0);
-  border-radius:10px;
-  color:#fff;
-  display:flex;
-  align-items:center;
-  padding:0 18px;
-  margin-bottom:10px;
-  box-shadow:0 6px 14px rgba(0,0,0,.12);
-}
-
+.header{  width:100%;  height:78px;  background:linear-gradient(90deg,#007b83,#33bfd0);  border-radius:10px;  color:#fff;  display:flex;  align-items:center;  padding:0 18px;  margin-bottom:10px;  box-shadow:0 6px 14px rgba(0,0,0,.12);}
 .headerInner{ width:300px; }
-
-.header h1{
-  font-size:34px;
-  line-height:34px;
-  font-weight:700;
-}
-
-.header span{
-  display:block;
-  font-size:14px;
-  margin-top:4px;
-  font-weight:500;
-}
-
-
+.header h1{  font-size:34px;  line-height:34px;  font-weight:700;}
+.header span{  display:block;  font-size:14px;  margin-top:4px;  font-weight:500;}
 /*====================================================
   MAIN LAYOUT
 ====================================================*/
-
-.main{
-  display:grid;
-  grid-template-columns:335px 540px 380px;
-  gap:10px;
-  align-items:stretch;
-  height:665px;
-}
-
-
+.main{  display:grid;  grid-template-columns:335px 540px 380px;  gap:10px;  align-items:stretch;  height:665px;}
 /*====================================================
   CARDS
 ====================================================*/
-
 .facility,
 .scheduleCard,
 .summary,
-.bulk{
-  background:#fff;
-  border-radius:10px;
-  padding:18px;
-  box-shadow:0 8px 18px rgba(0,0,0,.12);
-}
-
-.facility{
-  height:665px;
-  display:flex;
-  flex-direction:column;
-}
-
-.scheduleCard{
-  height:665px;
-  min-width:0;
-}
-
-.main>div:last-child{
-  height:665px;
-  display:grid;
-  grid-template-rows:1fr 1fr;
-  gap:14px;
-}
-
+.bulk{  background:#fff;  border-radius:10px;  padding:18px;  box-shadow:0 8px 18px rgba(0,0,0,.12);}
+.facility{  height:665px;  display:flex;  flex-direction:column;}
+.scheduleCard{  height:665px;  min-width:0;}
+.main>div:last-child{  height:665px;  display:grid;  grid-template-rows:1fr 1fr;  gap:14px;}
 .main>div:last-child>div:nth-child(2){ display:none; }
-
 .summary,
-.bulk{
-  height:100%;
-  min-height:0;
-}
-
-
+.bulk{  height:100%;  min-height:0;}
 /*====================================================
   CARD TITLES
 ====================================================*/
-
-.cardTitle{
-  font-size:26px;
-  font-weight:700;
-  color:#007b83;
-  margin-bottom:16px;
-  line-height:1.15;
-}
-
-
+.cardTitle{  font-size:26px;  font-weight:700;  color:#007b83;  margin-bottom:16px;  line-height:1.15;}
 /*====================================================
   FACILITY FIELDS
 ====================================================*/
-
 .field{ margin-bottom:10px; }
-
-.field label{
-  display:block;
-  font-size:12px;
-  font-weight:700;
-  margin-bottom:5px;
-  color:#263238;
-}
-
+.field label{  display:block;  font-size:12px;  font-weight:700;  margin-bottom:5px;  color:#263238;}
 input,
-select{
-  width:100%;
-  height:44px;
-  border:1px solid #d7d7d7;
-  border-radius:5px;
-  padding:0 12px;
-  background:#fff4c4;
-  color:#263238;
-  font-size:14px;
-  outline:none;
-}
-
+select{  width:100%;  height:44px;  border:1px solid #d7d7d7;  border-radius:5px;  padding:0 12px;  background:#fff4c4;  color:#263238;  font-size:14px;  outline:none;}
 input:focus,
-select:focus{
-  border-color:#007b83;
-  box-shadow:0 0 0 2px rgba(0,123,131,.12);
-}
-
-
+select:focus{  border-color:#007b83;  box-shadow:0 0 0 2px rgba(0,123,131,.12);}
 /*====================================================
   BULLET PAYMENT BUTTON
 ====================================================*/
-
-.facilityBulletButtonWrapper{
-  margin-top:auto;
-  padding-top:14px;
-  border-top:1px solid #e5e5e5;
-}
-
-.addBulletPaymentButton{
-  width:100%;
-  height:36px;
-  border:0;
-  border-radius:3px;
-  background:#007f78;
-  color:#fff;
-  font-size:12px;
-  font-weight:700;
-  cursor:pointer;
-}
-
+.facilityBulletButtonWrapper{  margin-top:auto;  padding-top:14px;  border-top:1px solid #e5e5e5;}
+.addBulletPaymentButton{  width:100%;  height:36px;  border:0;  border-radius:3px;  background:#007f78;  color:#fff;  font-size:12px;  font-weight:700;  cursor:pointer;}
 .addBulletPaymentButton:hover{ background:#006d67; }
-
-
 /*====================================================
   BULLET PAYMENT SCHEDULE HEADER
 ====================================================*/
-
-.scheduleHeader{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  margin-bottom:10px;
-  gap:12px;
-}
-
-.scheduleTitle{
-  margin:0;
-  font-size:22px;
-  max-width:260px;
-  line-height:1.15;
-}
-
-.scheduleControls{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.scheduleHeader select{
-  width:180px;
-  height:44px;
-  flex-shrink:0;
-  font-size:12px;
-  padding:0 10px;
-}
-
-
+.scheduleHeader{  display:flex;  justify-content:space-between;  align-items:flex-start;  margin-bottom:10px;  gap:12px;}
+.scheduleTitle{  margin:0;  font-size:22px;  max-width:260px;  line-height:1.15;}
+.scheduleControls{  display:flex;  align-items:center;  gap:8px;}
+.scheduleHeader select{  width:180px;  height:44px;  flex-shrink:0;  font-size:12px;  padding:0 10px;}
 /*====================================================
   BULLET PAYMENT TABLE
 ====================================================*/
-
-.scheduleTableContainer{
-  height:calc(100% - 84px);
-  max-height:none;
-  overflow:auto;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  table-layout:fixed;
-}
-
+.scheduleTableContainer{  height:calc(100% - 84px);  max-height:none;  overflow:auto;}
+table{  width:100%;  border-collapse:collapse;  table-layout:fixed;}
 #scheduleTable{ width:100%; }
-
-#scheduleTable th{
-  height:28px;
-  padding:4px;
-  border:1px solid #e5e5e5;
-  background:#007b72;
-  color:#fff;
-  font-size:13px;
-  font-weight:700;
-  text-align:center;
-}
-
-#scheduleTable td{
-  height:36px;
-  padding:2px 3px;
-  border:1px solid #e5e5e5;
-  text-align:center;
-}
-
+#scheduleTable th{  height:28px;  padding:4px;  border:1px solid #e5e5e5;  background:#007b72;  color:#fff;  font-size:13px;  font-weight:700;  text-align:center;}
+#scheduleTable td{  height:36px;  padding:2px 3px;  border:1px solid #e5e5e5;  text-align:center;}
 #scheduleTable th:nth-child(1),
 #scheduleTable td:nth-child(1){ width:24%; }
-
 #scheduleTable th:nth-child(2),
 #scheduleTable td:nth-child(2){ width:24%; }
-
 #scheduleTable th:nth-child(3),
 #scheduleTable td:nth-child(3){ width:52%; }
-
-#scheduleTable input{
-  width:100%;
-  height:32px;
-  padding:2px 6px;
-  font-size:13px;
-  text-align:center;
-  background:#fff4c4;
-  border:1px solid #d7d7d7;
-  border-radius:4px;
-}
-
-
+#scheduleTable input{  width:100%;  height:32px;  padding:2px 6px;  font-size:13px;  text-align:center;  background:#fff4c4;  border:1px solid #d7d7d7;  border-radius:4px;}
 /*====================================================
   SCHEDULE ACTION BUTTON
 ====================================================*/
-
-.scheduleAmountCell{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  width:100%;
-}
-
-.scheduleAmountCell input{
-  flex:1;
-  min-width:0;
-}
-
-.scheduleAction{
-  width:78px !important;
-  height:32px !important;
-  padding:0 !important;
-  border:0 !important;
-  border-radius:3px !important;
-  background:#007f78 !important;
-  color:#fff !important;
-  font-size:11px !important;
-  font-weight:700 !important;
-  cursor:pointer !important;
-}
-
+.scheduleAmountCell{  display:flex;  align-items:center;  gap:6px;  width:100%;}
+.scheduleAmountCell input{  flex:1;  min-width:0;}
+.scheduleAction{  width:78px !important;  height:32px !important;  padding:0 !important;  border:0 !important;  border-radius:3px !important;  background:#007f78 !important;  color:#fff !important;  font-size:11px !important;  font-weight:700 !important;  cursor:pointer !important;}
 .scheduleAction.delete{ background:#d71920 !important; }
 .scheduleAction:hover{ opacity:.9; }
-.scheduleAction:disabled{
-  opacity:.6;
-  cursor:not-allowed !important;
-}
-
-
+.scheduleAction:disabled{  opacity:.6;  cursor:not-allowed !important;}
 /*====================================================
   SUMMARY CARDS
 ====================================================*/
-
 .summary .cardTitle,
 .bulk .cardTitle{ margin-bottom:16px; }
-
-.bigValue{
-  height:64px;
-  border-radius:6px;
-  color:#fff;
-  font-size:32px;
-  font-weight:700;
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  padding:0 16px;
-  margin-bottom:16px;
-}
-
+.bigValue{  height:64px;  border-radius:6px;  color:#fff;  font-size:32px;  font-weight:700;  display:flex;  align-items:center;  justify-content:flex-end;  padding:0 16px;  margin-bottom:16px;}
 .red{ background:#d71920; }
 .blue{ background:#2864d7; }
-
-.summaryTable{
-  width:100%;
-  border-collapse:collapse;
-  table-layout:fixed;
-}
-
-.summaryTable td{
-  height:28px;
-  padding:3px 8px;
-  border:1px solid #e0e0e0;
-  font-size:13px;
-}
-
-.summaryTable td:first-child{
-  width:58%;
-  text-align:left;
-}
-
-.summaryTable td:last-child{
-  width:42%;
-  text-align:right;
-  font-weight:600;
-}
-
-.bulk .cardTitle{
-  max-width:100%;
-  line-height:1.15;
-}
-
-
+.summaryTable{  width:100%;  border-collapse:collapse;  table-layout:fixed;}
+.summaryTable td{  height:28px;  padding:3px 8px;  border:1px solid #e0e0e0;  font-size:13px;}
+.summaryTable td:first-child{  width:58%;  text-align:left;}
+.summaryTable td:last-child{  width:42%;  text-align:right;  font-weight:600;}
+.bulk .cardTitle{  max-width:100%;  line-height:1.15;}
 /*====================================================
   RENTAL SCHEDULE BUTTON
 ====================================================*/
-
-.rentalScheduleButtonWrapper{
-  margin-top:auto;
-  padding-top:12px;
-}
-
-.rentalScheduleToggle{
-  width:100%;
-  height:38px;
-  border:0;
-  border-radius:3px;
-  background:#007f78;
-  color:#fff;
-  font-size:12px;
-  font-weight:700;
-  cursor:pointer;
-}
-
+.rentalScheduleButtonWrapper{  margin-top:auto;  padding-top:12px;}
+.rentalScheduleToggle{  width:100%;  height:38px;  border:0;  border-radius:3px;  background:#007f78;  color:#fff;  font-size:12px;  font-weight:700;  cursor:pointer;}
 .rentalScheduleToggle:hover{ background:#006d67; }
-
-
 /*====================================================
   RENTAL SCHEDULE SECTION
 ====================================================*/
-
-.rentalScheduleSection{
-  width:100%;
-  margin-top:10px;
-  background:#fff;
-  border-radius:8px;
-  padding:0 12px 12px 12px;
-  box-shadow:0 6px 16px rgba(0,0,0,.12);
-  display:none;
-}
-
-
-.rentalScheduleTableContainer{
-  width:100%;
-  overflow-x:auto;
-  overflow-y:auto;
-  max-height:520px;
-}
-
-
-#rentalScheduleTable{
-  width:100%;
-  min-width:1050px;
-  border-collapse:collapse;
-  table-layout:fixed;
-}
-
-
-#rentalScheduleTable tr:first-child td{
-  height:42px;
-  padding:7px 8px;
-  background:#007f78;
-  color:#fff;
-  border:1px solid #fff;
-  font-size:13px;
-  font-weight:700;
-  text-align:center;
-  vertical-align:middle;
-  white-space:nowrap;
-}
-
-
-#rentalScheduleTable tr:not(:first-child) td{
-  height:34px;
-  padding:5px 8px;
-  border:1px solid #d9d9d9;
-  background:#fff;
-  color:#263238;
-  font-size:13px;
-  font-weight:500;
-  vertical-align:middle;
-  white-space:nowrap;
-}
-
-
-#rentalScheduleTable td:first-child{
-  text-align:center;
-  font-weight:600;
-}
-
-
+.rentalScheduleSection{  width:100%;  margin-top:10px;  background:#fff;  border-radius:8px;  padding:0 12px 12px 12px;  box-shadow:0 6px 16px rgba(0,0,0,.12);  display:none;}
+.rentalScheduleTableContainer{  width:100%;  overflow-x:auto;  overflow-y:auto;  max-height:520px;}
+#rentalScheduleTable{  width:100%;  min-width:1050px;  border-collapse:collapse;  table-layout:fixed;}
+#rentalScheduleTable tr:first-child td{  height:42px;  padding:7px 8px;  background:#007f78;  color:#fff;  border:1px solid #fff;  font-size:13px;  font-weight:700;  text-align:center;  vertical-align:middle;  white-space:nowrap;}
+#rentalScheduleTable tr:not(:first-child) td{  height:34px;  padding:5px 8px;  border:1px solid #d9d9d9;  background:#fff;  color:#263238;  font-size:13px;  font-weight:500;  vertical-align:middle;  white-space:nowrap;}
+#rentalScheduleTable td:first-child{  text-align:center;  font-weight:600;}
 #rentalScheduleTable tr:not(:first-child)
 td:not(:first-child){ text-align:right; }
-
-
 #rentalScheduleTable td:nth-child(1){ width:11%; }
 #rentalScheduleTable td:nth-child(2){ width:18%; }
 #rentalScheduleTable td:nth-child(3){ width:18%; }
 #rentalScheduleTable td:nth-child(4){ width:18%; }
 #rentalScheduleTable td:nth-child(5){ width:18%; }
 #rentalScheduleTable td:nth-child(6){ width:17%; }
-
-
 #rentalScheduleTable tr:not(:first-child):hover td{ background:#f4fbfb; }
-
-
-.rentalScheduleTableContainer::-webkit-scrollbar{
-  width:10px;
-  height:10px;
-}
+.rentalScheduleTableContainer::-webkit-scrollbar{  width:10px;  height:10px;}
 .rentalScheduleTableContainer::-webkit-scrollbar-track{ background:#eeeeee; }
-.rentalScheduleTableContainer::-webkit-scrollbar-thumb{
-  background:#007f78;
-  border-radius:5px;
-}
+.rentalScheduleTableContainer::-webkit-scrollbar-thumb{  background:#007f78;  border-radius:5px;}
 .rentalScheduleTableContainer::-webkit-scrollbar-thumb:hover{ background:#006d67; }
-
-
 /*====================================================
   HIDDEN SCHEDULE LAYOUT
 ====================================================*/
-
 .page:has(.main.schedule-hidden){ width:610px; }
 .page:has(.main.schedule-hidden) .header{ width:610px; }
-
-.main.schedule-hidden{
-  grid-template-columns:280px 320px;
-  gap:10px;
-  justify-content:center;
-}
-
-.main.schedule-hidden>div:last-child{
-  grid-column:2;
-  width:320px;
-}
-
+.main.schedule-hidden{  grid-template-columns:280px 320px;  gap:10px;  justify-content:center;}
+.main.schedule-hidden>div:last-child{  grid-column:2;  width:320px;}
 .main.schedule-hidden .facility{ width:280px; }
-
-
 /*====================================================
   RESPONSIVE
 ====================================================*/
-
 @media(max-width:1300px){
   .page{ width:100%; max-width:1280px; }
   .header{ width:100%; }
-  .main{
-    grid-template-columns:335px minmax(420px,1fr) 380px;
-  }
+  .main{    grid-template-columns:335px minmax(420px,1fr) 380px;  }
 }
-
-
 @media(max-width:1100px){
   body{ padding:8px; }
-  .main{
-    grid-template-columns:280px minmax(360px,1fr) 300px;
-    gap:8px;
-  }
+  .main{    grid-template-columns:280px minmax(360px,1fr) 300px;    gap:8px;  }
   .facility{ width:280px; }
   .scheduleCard{ width:100%; }
   .main>div:last-child{ width:300px; }
 }
-
-
 @media(max-width:900px){
   body{ padding:6px; }
   .page{ width:100%; }
   .header{ width:100%; height:72px; }
-  .main{
-    grid-template-columns:1fr;
-    gap:10px;
-    height:auto;
-  }
+  .main{    grid-template-columns:1fr;    gap:10px;    height:auto;  }
   .facility,
   .scheduleCard,
-  .main>div:last-child{
-    width:100%;
-    height:auto;
-  }
+  .main>div:last-child{    width:100%;    height:auto;  }
   .facility{ min-height:500px; }
   .scheduleCard{ min-height:500px; }
-  .main>div:last-child{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-  }
+  .main>div:last-child{    display:grid;    grid-template-columns:1fr 1fr;    gap:10px;  }
   .summary,
   .bulk{ width:100%; height:250px; }
   .main>div:last-child>div:nth-child(2){ display:none; }
   .scheduleTableContainer{ height:auto; max-height:500px; }
-
   .rentalScheduleSection{ margin-top:10px; padding:0 8px 8px 8px; }
   #rentalScheduleTable{ min-width:1000px; }
   #rentalScheduleTable tr:first-child td{ font-size:12px; height:40px; }
   #rentalScheduleTable tr:not(:first-child) td{ font-size:12px; height:32px; }
 }
-
-
 @media(max-width:600px){
   body{ padding:5px; }
   .header{ height:68px; padding:0 14px; }
@@ -577,11 +171,7 @@ td:not(:first-child){ text-align:right; }
   .facility,
   .scheduleCard,
   .main>div:last-child{ width:100%; }
-  .main>div:last-child{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:10px;
-  }
+  .main>div:last-child{    display:grid;    grid-template-columns:1fr;    gap:10px;  }
   .summary,
   .bulk{ width:100%; height:230px; }
   .scheduleHeader{ flex-direction:column; }
@@ -589,193 +179,69 @@ td:not(:first-child){ text-align:right; }
   .scheduleHeader select{ width:100%; }
   .scheduleTableContainer{ max-height:450px; }
   .scheduleAction{ width:70px !important; }
-
   .rentalScheduleSection{ margin-top:8px; }
   #rentalScheduleTable{ min-width:950px; }
   #rentalScheduleTable tr:first-child td{ font-size:11px; }
   #rentalScheduleTable tr:not(:first-child) td{ font-size:11px; }
 }
-
-
 /*====================================================
   ACCESS GATE
 ====================================================*/
-
-.gate{
-  position:fixed;
-  top:0; left:0; right:0; bottom:0;
-  z-index:9999;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-  background:linear-gradient(135deg,#007b83,#33bfd0);
-}
-
-.gateCard{
-  width:100%;
-  max-width:380px;
-  background:#fff;
-  border-radius:14px;
-  padding:28px 26px;
-  box-shadow:0 18px 50px rgba(0,0,0,.25);
-  text-align:center;
-}
-
-.gateLogo{
-  font-size:26px;
-  font-weight:800;
-  color:#007b83;
-  margin-bottom:14px;
-  letter-spacing:.5px;
-}
-
-.gateCard h2{
-  font-size:20px;
-  color:#20323a;
-  margin-bottom:8px;
-}
-
-.gateCard p{
-  font-size:13.5px;
-  color:#51636b;
-  line-height:1.55;
-  margin-bottom:16px;
-}
-
-.gateCard input{
-  width:100%;
-  height:46px;
-  border:1px solid #cfd8dc;
-  border-radius:8px;
-  padding:0 14px;
-  font-size:14px;
-  background:#fff;
-  margin-bottom:12px;
-}
-
-.gateCard input:focus{
-  border-color:#007b83;
-  box-shadow:0 0 0 2px rgba(0,123,131,.15);
-}
-
-.gateBtn{
-  width:100%;
-  height:46px;
-  border:0;
-  border-radius:8px;
-  background:#007b83;
-  color:#fff;
-  font-size:14px;
-  font-weight:700;
-  cursor:pointer;
-  margin-top:4px;
-}
+.gate{  position:fixed;  top:0; left:0; right:0; bottom:0;  z-index:9999;  display:flex;  align-items:center;  justify-content:center;  padding:20px;  background:linear-gradient(135deg,#007b83,#33bfd0);}
+.gateCard{  width:100%;  max-width:380px;  background:#fff;  border-radius:14px;  padding:28px 26px;  box-shadow:0 18px 50px rgba(0,0,0,.25);  text-align:center;}
+.gateLogo{  font-size:26px;  font-weight:800;  color:#007b83;  margin-bottom:14px;  letter-spacing:.5px;}
+.gateCard h2{  font-size:20px;  color:#20323a;  margin-bottom:8px;}
+.gateCard p{  font-size:13.5px;  color:#51636b;  line-height:1.55;  margin-bottom:16px;}
+.gateCard input{  width:100%;  height:46px;  border:1px solid #cfd8dc;  border-radius:8px;  padding:0 14px;  font-size:14px;  background:#fff;  margin-bottom:12px;}
+.gateCard input:focus{  border-color:#007b83;  box-shadow:0 0 0 2px rgba(0,123,131,.15);}
+.gateBtn{  width:100%;  height:46px;  border:0;  border-radius:8px;  background:#007b83;  color:#fff;  font-size:14px;  font-weight:700;  cursor:pointer;  margin-top:4px;}
 .gateBtn:hover{ background:#006d67; }
-
-.gateBtnLink{
-  width:100%;
-  background:none;
-  border:0;
-  color:#007b83;
-  font-size:12.5px;
-  font-weight:600;
-  cursor:pointer;
-  margin-top:10px;
-  padding:6px;
-}
+.gateBtnLink{  width:100%;  background:none;  border:0;  color:#007b83;  font-size:12.5px;  font-weight:600;  cursor:pointer;  margin-top:10px;  padding:6px;}
 .gateBtnLink:hover{ text-decoration:underline; }
-
-.gateMuted{
-  font-size:12.5px;
-  color:#8797a0;
-  background:#f2f6f7;
-  border-radius:6px;
-  padding:8px;
-  margin-bottom:14px;
-  word-break:break-all;
-}
-
-.gateErr{
-  color:#d71920;
-  font-size:12.5px;
-  margin-top:8px;
-  min-height:16px;
-}
-
-
+.gateMuted{  font-size:12.5px;  color:#8797a0;  background:#f2f6f7;  border-radius:6px;  padding:8px;  margin-bottom:14px;  word-break:break-all;}
+.gateErr{  color:#d71920;  font-size:12.5px;  margin-top:8px;  min-height:16px;}
 /*====================================================
   MOBILE / TABLET — reflow to single column
   (overrides the fixed desktop layout below 900px)
 ====================================================*/
-
 @media (max-width: 900px){
-
   body{ padding:8px; }
-
   /* remove all fixed page widths (incl. the schedule-hidden hack) */
   .page,
   .page:has(.main.schedule-hidden){ width:100% !important; max-width:100%; }
   .page:has(.main.schedule-hidden) .header{ width:100%; }
-
   .header{ width:100%; height:auto; padding:14px 16px; }
   .header > div{ width:100% !important; }
   .header h1{ font-size:26px; line-height:1.1; }
   .header span{ font-size:12px; }
-
   /* stack every card vertically */
   .main,
-  .main.schedule-hidden{
-    display:flex !important;
-    flex-direction:column;
-    gap:12px;
-    height:auto !important;
-    grid-template-columns:none !important;
-    justify-content:flex-start;
-  }
-
+  .main.schedule-hidden{    display:flex !important;    flex-direction:column;    gap:12px;    height:auto !important;    grid-template-columns:none !important;    justify-content:flex-start;  }
   .facility,
   .scheduleCard,
   .main > div:last-child,
   .main.schedule-hidden .facility,
-  .main.schedule-hidden > div:last-child{
-    width:100% !important;
-    height:auto !important;
-    min-height:0 !important;
-    grid-column:auto !important;
-  }
-
+  .main.schedule-hidden > div:last-child{    width:100% !important;    height:auto !important;    min-height:0 !important;    grid-column:auto !important;  }
   /* summary column flows naturally (not a fixed 2-row grid) */
-  .main > div:last-child{
-    display:flex !important;
-    flex-direction:column;
-    gap:12px;
-  }
+  .main > div:last-child{    display:flex !important;    flex-direction:column;    gap:12px;  }
   .summary, .bulk{ height:auto !important; }
-
   .scheduleTableContainer{ height:auto; max-height:none; }
-
   /* touch-friendly form controls (16px stops iOS auto-zoom) */
   input, select{ height:50px; font-size:16px; }
   .field{ margin-bottom:12px; }
   .field label{ font-size:13px; }
-
   .cardTitle{ font-size:22px; }
   .scheduleTitle{ font-size:20px; max-width:100%; }
   .scheduleHeader{ flex-direction:column; align-items:stretch; gap:8px; }
   .scheduleHeader select{ width:100%; }
-
   .bigValue{ height:58px; font-size:28px; }
-
   .addBulletPaymentButton,
   .rentalScheduleToggle{ height:48px; font-size:13px; }
   #scheduleTable input{ height:42px; font-size:15px; }
   .scheduleAction{ height:40px !important; width:72px !important; font-size:11px !important; }
-
   .summaryTable td{ height:34px; font-size:13.5px; }
   .rentalScheduleTableContainer{ max-height:72vh; }
 }
-
 @media (max-width: 560px){
   .header h1{ font-size:22px; }
   .header span{ font-size:11px; }
@@ -786,148 +252,44 @@ td:not(:first-child){ text-align:right; }
   .scheduleAction{ width:64px !important; }
   .gateCard{ padding:24px 20px; }
 }
-
-
 /*====================================================
   LOADING OVERLAY  (initial load)
 ====================================================*/
-
-.loading{
-  position:fixed;
-  top:0; left:0; right:0; bottom:0;
-  z-index:9998;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:14px;
-  background:rgba(238,242,247,.94);
-}
-
-.spinner{
-  width:46px; height:46px;
-  border:4px solid #cfe6e8;
-  border-top-color:#007b83;
-  border-radius:50%;
-  animation:mc-spin .8s linear infinite;
-}
-
-.loadingText{
-  color:#007b83;
-  font-weight:700;
-  font-size:15px;
-}
-
+.loading{  position:fixed;  top:0; left:0; right:0; bottom:0;  z-index:9998;  display:flex;  flex-direction:column;  align-items:center;  justify-content:center;  gap:14px;  background:rgba(238,242,247,.94);}
+.spinner{  width:46px; height:46px;  border:4px solid #cfe6e8;  border-top-color:#007b83;  border-radius:50%;  animation:mc-spin .8s linear infinite;}
+.loadingText{  color:#007b83;  font-weight:700;  font-size:15px;}
 @keyframes mc-spin{ to{ transform:rotate(360deg); } }
-
-
 /*====================================================
   CALCULATING INDICATOR  (on Monthly Rental while saving)
 ====================================================*/
-
 .bigValue.calculating{ opacity:.8; position:relative; }
-
-.bigValue.calculating::before{
-  content:"";
-  position:absolute;
-  left:14px;
-  width:18px; height:18px;
-  border:3px solid rgba(255,255,255,.55);
-  border-top-color:#fff;
-  border-radius:50%;
-  animation:mc-spin .7s linear infinite;
-}
-
-
+.bigValue.calculating::before{  content:"";  position:absolute;  left:14px;  width:18px; height:18px;  border:3px solid rgba(255,255,255,.55);  border-top-color:#fff;  border-radius:50%;  animation:mc-spin .7s linear infinite;}
 /*====================================================
   CHARGES CALCULATION CARD (J1:L14)
 ====================================================*/
-
-.chargesCard{
-  width:100%;
-  margin-top:10px;
-  background:#fff;
-  border-radius:10px;
-  padding:16px 18px 18px;
-  box-shadow:0 8px 18px rgba(0,0,0,.12);
-}
-
-.chargesHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:12px;
-  padding-bottom:10px;
-  border-bottom:2px solid #eef2f4;
-}
-
+.chargesCard{  width:100%;  margin-top:10px;  background:#fff;  border-radius:10px;  padding:16px 18px 18px;  box-shadow:0 8px 18px rgba(0,0,0,.12);}
+.chargesHead{  display:flex;  align-items:center;  justify-content:space-between;  gap:12px;  margin-bottom:12px;  padding-bottom:10px;  border-bottom:2px solid #eef2f4;}
 .chargesHead .cardTitle{ margin:0; }
+.chargesTotal{  background:#d71920;  color:#fff;  font-size:26px;  font-weight:700;  padding:6px 16px;  border-radius:6px;  white-space:nowrap;}
 
-.chargesTotal{
-  background:#d71920;
-  color:#fff;
-  font-size:26px;
-  font-weight:700;
-  padding:6px 16px;
-  border-radius:6px;
-  white-space:nowrap;
-}
-
-.chargesTable{
-  width:100%;
-  border-collapse:collapse;
-}
-
-.chargesTable td{
-  padding:7px 10px;
-  border-bottom:1px solid #eef1f2;
-  font-size:13.5px;
-}
-
+.chargesTable{  width:100%;  border-collapse:collapse;}
+.chargesTable td{  padding:7px 10px;  border-bottom:1px solid #eef1f2;  font-size:13.5px;}
 .chargesTable tr:last-child td{ border-bottom:0; }
 
-.chargesTable td:first-child{
-  text-align:left;
-  color:#3b4a52;
-}
-
-.chargesTable td:last-child{
-  text-align:right;
-  font-weight:700;
-  color:#20323a;
-  white-space:nowrap;
-  width:38%;
-}
-
+.chargesTable td:first-child{  text-align:left;  color:#3b4a52;}
+.chargesTable td:last-child{  text-align:right;  font-weight:700;  color:#20323a;  white-space:nowrap;  width:38%;}
 .chargesTable tr:hover td{ background:#f6fbfb; }
 
 @media (max-width: 560px){
   .chargesTotal{ font-size:17px; padding:5px 12px; }
   .chargesTable td{ font-size:13px; padding:6px 8px; }
 }
-
-
 /* RMV type dropdown inside the charges card */
-.chargesSelect{
-  width:auto;
-  max-width:100%;
-  height:34px;
-  padding:0 8px;
-  font-size:13px;
-  border:1px solid #cfd8dc;
-  border-radius:5px;
-  background:#fff4c4;
-  font-weight:600;
-  color:#20323a;
-}
-
-
+.chargesSelect{  width:auto;  max-width:100%;  height:34px;  padding:0 8px;  font-size:13px;  border:1px solid #cfd8dc;  border-radius:5px;  background:#fff4c4;  font-weight:600;  color:#20323a;}
 /*==================================================================
   PROFESSIONAL THEME  (reference-matched, teal brand)
   Appended override — clean white inputs, soft cards, tinted results
 ==================================================================*/
-
 :root{
   --brand:#0f766e; --brand-600:#0c6a62; --brand-700:#0a564f;
   --bg:#f4f6fa; --card:#ffffff; --line:#e7eaf0;
@@ -937,108 +299,63 @@ td:not(:first-child){ text-align:right; }
   --tealTint:#ecfaf7; --tealInk:#0b6a62; --tealBd:#cdece7;
   --blueTint:#eef4ff; --blueInk:#2a4a7d; --blueBd:#d5e1f4;
 }
-
-body{
-  background:var(--bg);
-  color:var(--ink);
-  font-family:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  -webkit-font-smoothing:antialiased;
-}
-
+body{  background:var(--bg);  color:var(--ink);  font-family:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;  -webkit-font-smoothing:antialiased;}
 /* Header — flatter, refined */
-.header{
-  height:auto;
-  padding:16px 22px;
-  background:linear-gradient(100deg,var(--brand-700),var(--brand));
-  border-radius:14px;
-  box-shadow:0 6px 18px rgba(11,90,82,.18);
-}
+.header{  height:auto;  padding:16px 22px;  background:linear-gradient(100deg,var(--brand-700),var(--brand));  border-radius:14px;  box-shadow:0 6px 18px rgba(11,90,82,.18);}
 .header h1{ font-size:26px; letter-spacing:.3px; }
 .header span{ font-size:13px; opacity:.92; }
-
 /* Cards — soft border + subtle shadow */
-.facility,.scheduleCard,.summary,.bulk,.chargesCard,.rentalScheduleSection{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:14px;
-  box-shadow:0 6px 18px rgba(20,40,60,.05);
-}
+.facility,.scheduleCard,.summary,.bulk,.chargesCard,.rentalScheduleSection{  background:var(--card);  border:1px solid var(--line);  border-radius:14px;  box-shadow:0 6px 18px rgba(20,40,60,.05);}
 .cardTitle{ color:var(--ink); font-size:19px; font-weight:700; margin-bottom:14px; }
 .scheduleTitle{ font-size:18px; color:var(--ink); }
-
 /* Labels — muted, sentence weight */
 .field label{ color:var(--muted); font-size:12px; font-weight:600; letter-spacing:.2px; text-transform:none; }
-
 /* Inputs & selects — clean white (no yellow) */
 input, select,
-#scheduleTable input, .scheduleHeader select, .chargesSelect, .gateCard input{
-  background:var(--field) !important;
-  border:1px solid var(--field-bd) !important;
-  border-radius:10px !important;
-  color:var(--ink);
-}
+#scheduleTable input, .scheduleHeader select, .chargesSelect, .gateCard input{  background:var(--field) !important;  border:1px solid var(--field-bd) !important;  border-radius:10px !important;  color:var(--ink);}
 input{ height:46px; }
 input:focus, select:focus,
-#scheduleTable input:focus, .chargesSelect:focus, .gateCard input:focus{
-  border-color:var(--brand) !important;
-  box-shadow:0 0 0 3px rgba(15,118,110,.14) !important;
-  outline:none;
-}
+#scheduleTable input:focus, .chargesSelect:focus, .gateCard input:focus{  border-color:var(--brand) !important;  box-shadow:0 0 0 3px rgba(15,118,110,.14) !important;  outline:none;}
 input::placeholder{ color:var(--faint); }
-
 /* Result value boxes — soft tinted (was loud red/blue) */
 .bigValue{ border-radius:12px; box-shadow:none; font-variant-numeric:tabular-nums; }
 .bigValue.red{  background:var(--tealTint); color:var(--tealInk); border:1px solid var(--tealBd); }
 .bigValue.blue{ background:var(--blueTint); color:var(--blueInk); border:1px solid var(--blueBd); }
 .bigValue.calculating{ opacity:.75; }
 .bigValue.calculating::before{ border-color:rgba(15,118,110,.30); border-top-color:var(--brand); }
-
 /* Summary rows — soft pill style */
 .summaryTable{ border-collapse:separate; border-spacing:0 6px; }
 .summaryTable td{ border:0; background:var(--row); height:38px; padding:8px 12px; font-size:13px; color:var(--muted); }
 .summaryTable td:first-child{ border-radius:8px 0 0 8px; }
 .summaryTable td:last-child{ border-radius:0 8px 8px 0; color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; }
-
 /* Buttons — refined teal */
-.addBulletPaymentButton,.rentalScheduleToggle{
-  height:44px; border-radius:10px; background:var(--brand);
-  font-size:12.5px; letter-spacing:.3px;
-  box-shadow:0 2px 8px rgba(15,118,110,.22);
-}
+.addBulletPaymentButton,.rentalScheduleToggle{  height:44px; border-radius:10px; background:var(--brand);  font-size:12.5px; letter-spacing:.3px;  box-shadow:0 2px 8px rgba(15,118,110,.22);}
 .addBulletPaymentButton:hover,.rentalScheduleToggle:hover{ background:var(--brand-700); }
-
 /* Bullet schedule table */
 #scheduleTable th{ background:var(--brand); border-color:#dbe7e4; letter-spacing:.3px; }
 #scheduleTable td{ border-color:#eef1f4; }
 .scheduleAction{ background:var(--brand) !important; border-radius:8px !important; }
 .scheduleAction.delete{ background:#e11d48 !important; }
-
 /* Charges card */
 .chargesHead{ border-bottom:2px solid var(--line); }
 .chargesTotal{ background:var(--brand); border-radius:8px; font-variant-numeric:tabular-nums; }
 .chargesTable td{ border-color:#eef1f4; color:var(--muted); }
 .chargesTable td:last-child{ color:var(--ink); }
 .chargesTable tr:hover td{ background:var(--row); }
-
 /* Rental schedule header */
 #rentalScheduleTable tr:first-child td{ background:var(--brand); }
-
 /* Access gate refine */
 .gate{ background:linear-gradient(135deg,var(--brand-700),var(--brand)); }
 .gateLogo{ color:var(--brand); }
 .gateBtn{ background:var(--brand); border-radius:10px; }
 .gateBtn:hover{ background:var(--brand-700); }
 .gateBtnLink{ color:var(--brand); }
-
-
 /*==================================================================
   COLOUR — reverted to yesterday's TEAL theme
   (The "PROFESSIONAL THEME (reference-matched, teal brand)" block above
    governs colours again: teal brand, teal-tint Monthly, blue-tint Residual.
    The blue/red overrides were removed.)
 ==================================================================*/
-
-
 /*----------------------------------------------------------------
   WIDE SCREENS (≥1100px): one row of EQUAL-WIDTH, EQUAL-HEIGHT
   cards — Facility | Bullet Schedule | Monthly+Residual | Charges.
@@ -1049,69 +366,32 @@ input::placeholder{ color:var(--faint); }
   items of .page, giving all four columns the same width.
 ----------------------------------------------------------------*/
 @media (min-width:1100px){
-
   /* All columns stretch to the SAME height (the tallest card), so no
      fixed pixel height can be overflowed by the browser's fonts. Each
      card is a flex column and its bottom button pins to the card bottom
      — so ADD BULLET PAYMENT and SHOW RENTAL SCHEDULE always line up. */
-  .page{
-    width:100%;
-    max-width:1480px;
-    display:grid;
-    grid-template-columns:repeat(4, 1fr);
-    gap:12px;
-    align-items:stretch;
-  }
-
+  .page{    width:100%;    max-width:1480px;    display:grid;    grid-template-columns:repeat(4, 1fr);    gap:12px;    align-items:stretch;  }
   .header{ grid-column:1 / -1; width:auto; margin-bottom:0; }
-
   /* cards inside .main become direct grid items of .page */
   .main,
-  .main.schedule-hidden{
-    display:contents;
-    height:auto;
-  }
-
+  .main.schedule-hidden{    display:contents;    height:auto;  }
   /* when the Bullet Payment card is hidden, use 3 equal columns */
-  .page:has(.main.schedule-hidden){
-    width:100%;
-    max-width:1480px;
-    grid-template-columns:repeat(3, 1fr);
-  }
+  .page:has(.main.schedule-hidden){    width:100%;    max-width:1480px;    grid-template-columns:repeat(3, 1fr);  }
   .page:has(.main.schedule-hidden) .header{ width:auto; }
-
   /* every card fills the (stretched) row height, no fixed height */
   .facility,
   .scheduleCard,
   .main>div:last-child,
-  #chargesSection{
-    width:auto !important;
-    height:auto !important;
-    min-height:0;
-    align-self:stretch;
-  }
-
+  #chargesSection{    width:auto !important;    height:auto !important;    min-height:0;    align-self:stretch;  }
   .facility{ display:flex; flex-direction:column; }
-
   /* Bullet schedule card scrolls inside its own space */
   .scheduleCard{ display:flex; flex-direction:column; }
   .scheduleTableContainer{ flex:1; min-height:0; height:auto; }
-
   /* Monthly + Residual = two EQUAL halves that fill the column */
-  .main>div:last-child{
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-  }
+  .main>div:last-child{    display:flex;    flex-direction:column;    gap:14px;  }
   .main>div:last-child>div:nth-child(2){ display:none; } /* spacer */
   .summary,
-  .bulk{
-    display:flex;
-    flex-direction:column;
-    flex:1 1 0;
-    min-height:0;
-    height:auto;
-  }
+  .bulk{    display:flex;    flex-direction:column;    flex:1 1 0;    min-height:0;    height:auto;  }
   .summary .cardTitle,
   .bulk .cardTitle{ margin-bottom:10px; }
   .bigValue{ margin-bottom:10px; flex-shrink:0; }
@@ -1119,15 +399,9 @@ input::placeholder{ color:var(--faint); }
   .summaryTable td{ height:30px; }
   /* pin the SHOW RENTAL SCHEDULE button to the card bottom */
   .rentalScheduleButtonWrapper{ margin-top:auto; padding-top:10px; }
-
-  #chargesSection{
-    margin-top:0;
-    display:flex;
-    flex-direction:column;
-    overflow:auto;
-  }
+  
+  #chargesSection{    margin-top:0;    display:flex;    flex-direction:column;    overflow:auto;  }
   #rentalScheduleSection{ grid-column:1 / -1; margin-top:0; }
-
   /* charges fits its narrower column */
   #chargesSection .cardTitle{ font-size:17px; }
   #chargesSection .chargesTotal{ font-size:24px; }
@@ -1135,40 +409,13 @@ input::placeholder{ color:var(--faint); }
   #chargesSection .chargesTable td:last-child{ width:42%; }
   #chargesSection .chargesSelect{ height:30px; font-size:12px; }
 }
-
-
 /*==================================================================
   THEME v3 — Charges total as a big light-red box
   (consistent with the Monthly Rental / Rental with Residual boxes)
 ==================================================================*/
-.chargesHead{
-  flex-direction:column;
-  align-items:stretch;
-  gap:10px;
-  border-bottom:0;
-  padding-bottom:0;
-  margin-bottom:12px;
-}
+.chargesHead{  flex-direction:column;  align-items:stretch;  gap:10px;  border-bottom:0;  padding-bottom:0;  margin-bottom:12px;}
 .chargesHead .cardTitle{ margin:0; font-size:19px; }
-
-.chargesTotal{
-  display:block;
-  width:100%;
-  box-sizing:border-box;
-  text-align:center;
-  background:#ecfaf7;
-  color:#0b6a62;
-  border:1px solid #cdece7;
-  border-radius:12px;
-  font-size:26px;
-  font-weight:700;
-  padding:14px 12px;
-  box-shadow:none;
-  white-space:nowrap;
-  font-variant-numeric:tabular-nums;
-}
-
-
+.chargesTotal{  display:block;  width:100%;  box-sizing:border-box;  text-align:center;  background:#ecfaf7;  color:#0b6a62;  border:1px solid #cdece7;  border-radius:12px;  font-size:26px;  font-weight:700;  padding:14px 12px;  box-shadow:none;  white-space:nowrap;  font-variant-numeric:tabular-nums;}
 /*==================================================================
   BULLET PAYMENT SCHEDULE — hide the "TO" column for
   MANUAL SCHEDULE; show it only for SLABBED SCHEDULE.
@@ -1176,47 +423,32 @@ input::placeholder{ color:var(--faint); }
 ==================================================================*/
 #scheduleTable.hide-to th:nth-child(2),
 #scheduleTable.hide-to td:nth-child(2){ display:none; }
-
 #scheduleTable.hide-to th:nth-child(1),
 #scheduleTable.hide-to td:nth-child(1){ width:40%; }
-
 #scheduleTable.hide-to th:nth-child(3),
 #scheduleTable.hide-to td:nth-child(3){ width:60%; }
-
-
 /*==================================================================
   CENTRAL FINANCE THEME + result-amount red + equal headers
   + wider schedule inputs  (appended override — wins by source order)
 ==================================================================*/
-
 /* CF brand: deep forest green, with an orange accent (CF letters). */
 :root{
   --brand:#1c5e3a; --brand-600:#17502f; --brand-700:#123f25;
   --accent:#f5a623;
 }
-
 /* (4) Big result amounts — Monthly Rental, Residual, Total Charges — RED */
 .bigValue.red,
-.bigValue.blue{
-  background:#f6faf7; color:#d8261c; border:1px solid #dce8e0;
-}
+.bigValue.blue{  background:#f6faf7; color:#d8261c; border:1px solid #dce8e0;}
 .bigValue{ color:#d8261c; }
-.chargesTotal{
-  background:#f6faf7 !important; color:#d8261c !important;
-  border:1px solid #dce8e0 !important;
-}
-
+.chargesTotal{  background:#f6faf7 !important; color:#d8261c !important;  border:1px solid #dce8e0 !important;}
 /* (2) All card headers the SAME font size */
 .cardTitle,
 .scheduleTitle,
 .chargesHead .cardTitle{ font-size:18px !important; }
-
 /* keep the calculating spinner tinted to the brand */
 .bigValue.calculating::before{ border-color:rgba(28,94,58,.30); border-top-color:var(--brand); }
-
 /* small orange accent on the header edge (CF look) */
 .header{ border-bottom:3px solid var(--accent); }
-
 /* (1) Schedule card — wider so FROM/TO/AMOUNT fit ~10 digits */
 @media (min-width:1100px){
   .page{ grid-template-columns:1fr 1.4fr 1fr 1fr; }
@@ -1227,14 +459,7 @@ input::placeholder{ color:var(--faint); }
 #scheduleTable input{ font-size:14px; min-width:0; }
 #scheduleTable td:nth-child(3){ width:56%; }
 .scheduleAmountCell input{ min-width:9ch; }   /* ~10 numeric digits */
-
 /* (3) Both action buttons pinned to the bottom of the Charges card */
-.chargesButtons{
-  margin-top:auto;
-  padding-top:14px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
+.chargesButtons{  margin-top:auto;  padding-top:14px;  display:flex;  flex-direction:column;  gap:8px;}
 .chargesButtons .addBulletPaymentButton,
 .chargesButtons .rentalScheduleToggle{ width:100%; margin:0; }
