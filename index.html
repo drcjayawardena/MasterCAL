@@ -2,13 +2,9 @@
 <html lang="en">
 
 <head>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-
   <title>MasterCAL Pro</title>
-
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007b83">
   <meta name="mobile-web-app-capable" content="yes">
@@ -16,14 +12,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MasterCAL">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-
   <link rel="stylesheet" href="styles.css">
-
 </head>
 
-
 <body>
-
 <!-- ACCESS GATE (register / pending / blocked) -->
 <div id="gate" class="gate" style="display:none">
   <div class="gateCard">
@@ -31,21 +23,15 @@
     <div id="gateBody"></div>
   </div>
 </div>
-
 <!-- LOADING OVERLAY -->
 <div id="loading" class="loading" style="display:none">
   <div class="spinner"></div>
   <div class="loadingText" id="loadingText">Loading…</div>
 </div>
-
 <div class="offlineBar" id="offlineBar">
   You are offline — calculations need an internet connection. The app will keep working once you reconnect.
 </div>
-
-
 <div class="page">
-
-
   <!-- HEADER -->
   <div class="header">
     <div style="width:300px;">
@@ -53,71 +39,51 @@
       <span>Vehicle Leasing Rental Calculator</span>
     </div>
   </div>
-
-
   <!-- MAIN CONTENT -->
   <div class="main">
-
-
     <!-- FACILITY DETAILS -->
     <div class="facility">
-
       <div class="cardTitle">FACILITY DETAILS</div>
-
       <div class="field">
         <label>PRODUCT TYPE</label>
         <select id="productType"></select>
       </div>
-
       <div class="field">
         <label id="lblFacilityAmount">FACILITY AMOUNT</label>
         <input id="facilityAmount" type="number" inputmode="decimal">
       </div>
-
       <div class="field">
         <label id="lblBic">BIC</label>
         <input id="bic" type="number" inputmode="decimal">
       </div>
-
       <div class="field">
         <label id="lblInsurance">INSURANCE</label>
         <input id="insurance" type="number" inputmode="decimal">
       </div>
-
       <div class="field">
         <label id="lblStampDuty">STAMP DUTY</label>
         <select id="stampDuty"></select>
       </div>
-
       <div class="field">
         <label id="lblIrr">IRR (%)</label>
         <input id="irr" type="number" inputmode="decimal">
       </div>
-
       <div class="field">
         <label id="lblPeriod">PERIOD</label>
         <input id="period" type="number" inputmode="numeric">
       </div>
-
     </div>
-
-
     <!-- BULLET PAYMENT SCHEDULE -->
     <div class="scheduleCard" id="scheduleCard">
-
       <div class="scheduleHeader">
-
         <div class="cardTitle scheduleTitle">BULLET PAYMENT</div>
-
         <div class="scheduleControls">
           <select id="scheduleType">
             <option value="MANUAL SCHEDULE">MANUAL SCHEDULE</option>
             <option value="SLABBED SCHEDULE">SLABBED SCHEDULE</option>
           </select>
         </div>
-
       </div>
-
       <div class="scheduleTableContainer">
         <table id="scheduleTable">
           <thead>
@@ -130,66 +96,47 @@
           <tbody id="scheduleBody"></tbody>
         </table>
       </div>
-
     </div>
-
-
     <!-- SUMMARY -->
     <div>
-
       <!-- MONTHLY RENTAL -->
       <div class="summary">
-
         <div class="cardTitle">MONTHLY RENTAL</div>
-
         <div class="bigValue red">
           <span id="monthlyRental">0.00</span>
         </div>
-
         <table class="summaryTable">
           <tr><td>RATE/100,000</td><td id="rate100"></td></tr>
           <tr><td>TOTAL INTEREST</td><td id="totalInterest"></td></tr>
           <tr><td>TOTAL PAYBLE</td><td id="totalPaid"></td></tr>
         </table>
-
       </div>
-
       <div style="height:14px"></div>
 
       <!-- RENTAL WITH RESIDUAL -->
       <div class="bulk">
-
         <div class="cardTitle">RESIDUAL RENTALl</div>
-
         <div class="bigValue blue">
           <span id="lastMonthRental">0.00</span>
         </div>
-
         <table class="summaryTable">
           <tr><td>RESIDUAL VALUE</td><td id="bulkAmount"></td></tr>
           <tr><td>TOTAL INTEREST</td><td id="lastMonthInterest"></td></tr>
           <tr><td>TOTAL PAYBLE</td><td id="lastMonthTotalPaid"></td></tr>
         </table>
-
       </div>
-
     </div>
-
-
   </div>
   <!-- END .main -->
-
-
   <!-- CHARGES CALCULATION (J1:L14) -->
   <div id="chargesSection" class="chargesCard">
     <div class="chargesHead">
       <span class="cardTitle" id="chargesTitle">TOTAL CHARGES</span>
       <span class="chargesTotal" id="chargesTotal">0.00</span>
-    </div>
+    </div>    
     <table class="chargesTable">
       <tbody id="chargesBody"></tbody>
     </table>
-
     <!-- Both action buttons live at the bottom of the charges card -->
     <div class="chargesButtons">
       <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
@@ -200,8 +147,6 @@
       </button>
     </div>
   </div>
-
-
   <!-- RENTAL SCHEDULE -->
   <div id="rentalScheduleSection" class="rentalScheduleSection">
     <div class="rentalScheduleTableContainer">
@@ -211,11 +156,8 @@
     </div>
   </div>
 
-
 </div>
 <!-- END .page -->
-
-
 <script src="app.js"></script>
 
 <script>
