@@ -41,9 +41,11 @@ function getUserId() {
 
 function getEmail() { return lsGet("mastercal_email") || ""; }
 function getName()  { return lsGet("mastercal_name")  || ""; }
-function setIdentity(email, name) {
+function getPhone() { return lsGet("mastercal_phone") || ""; }
+function setIdentity(email, name, phone) {
   lsSet("mastercal_email", email);
   lsSet("mastercal_name", name || "");
+  if (phone !== undefined) lsSet("mastercal_phone", phone || "");
 }
 
 
@@ -136,34 +138,6 @@ let scheduleBusy = false;
    INIT
 ========================================================= */
 
-/* =========================================================
-   APP CLOSE / PAGE EXIT
-   Keep J13 unchanged and clear ONLY J14 in the user's Sheet.
-   sendBeacon is used because normal async fetch() may be cancelled
-   when the page is being closed.
-========================================================= */
-function clearSecondRmvOnClose() {
-  const email = getEmail();
-  if (!email || !navigator.sendBeacon) return;
-
-  const payload = JSON.stringify({
-    action: "setRmvType",
-    args: ["", "J14"],
-    userId: getUserId(),
-    email: email,
-    name: getName()
-  });
-
-  try {
-    const blob = new Blob([payload], { type: "text/plain;charset=utf-8" });
-    navigator.sendBeacon(API_URL, blob);
-  } catch (e) {
-    console.error("J14 CLOSE RESET ERROR:", e);
-  }
-}
-
-window.addEventListener("pagehide", clearSecondRmvOnClose);
-
 document.addEventListener("DOMContentLoaded", init);
 
 function init() {
@@ -173,6 +147,7 @@ function init() {
   bindInputs();
   setupBulletPaymentButton();
   setupRentalScheduleToggle();
+  setupTabs();
 
   /* Gate: need an email before doing anything. */
   if (!getEmail()) { showRegister(); return; }
@@ -195,8 +170,6 @@ function loadApp() {
 
       if (result.dropdowns) {
         fillSelect("productType", result.dropdowns.productTypes || []);
-        const productType = document.getElementById("productType");
-        if (productType) productType.value = "REG CAR";
         fillSelect("stampDuty",
           (result.stampDuty || result.dropdowns.stampDuty) || []);
         RMV_TYPES = result.dropdowns.rmvTypes || RMV_TYPES;
@@ -226,31 +199,176 @@ function gateBody() { return document.getElementById("gateBody"); }
 
 function hideGate() { const g = gateEl(); if (g) g.style.display = "none"; }
 
+/* -------- Register dispatcher --------
+   Picks the WhatsApp OTP flow only if the backend has WhatsApp
+   configured; otherwise falls back to the classic email request.
+   Cached after the first check so it is instant afterwards.        */
+var _authMode = null;   /* "whatsapp" | "email" | null (unknown) */
+
 function showRegister() {
+  const g = gateEl(); if (!g) return;
+  g.style.display = "flex";
+
+  if (_authMode === "whatsapp") { showRegisterWhatsApp(); return; }
+  if (_authMode === "email")    { showRegisterEmail(); return; }
+
+  /* Ask the backend which registration method to show. */
+  gateBody().innerHTML = '<h2>Register</h2><p>Loading…</p>';
+  api("getAuthMode")
+    .then(function (d) { _authMode = (d && d.mode === "whatsapp") ? "whatsapp" : "email"; })
+    .catch(function () { _authMode = "email"; })   /* safe default */
+    .then(function () {
+      if (_authMode === "whatsapp") showRegisterWhatsApp();
+      else showRegisterEmail();
+    });
+}
+
+/* -------- Classic email registration (fallback) -------- */
+function showRegisterEmail() {
   const g = gateEl(); if (!g) return;
   g.style.display = "flex";
   gateBody().innerHTML =
     '<h2>Request Access</h2>' +
     '<p>App එක පාවිච්චි කරන්න, ඔයාගේ email එක දාලා access request කරන්න. ' +
     'Admin approve කරාට පස්සේ පාවිච්චි කරන්න පුළුවන්.</p>' +
-    '<input id="gateName" type="text" placeholder="Your name">' +
-    '<input id="gateEmail" type="email" placeholder="Your email">' +
+    '<input id="gateName" type="text" placeholder="Your name" value="' + escapeHtml(getName()) + '">' +
+    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your email" value="' + escapeHtml(getEmail()) + '">' +
     '<button id="gateSubmit" class="gateBtn">Request Access</button>' +
     '<div id="gateErr" class="gateErr"></div>';
-  document.getElementById("gateSubmit").addEventListener("click", submitRegister);
+  document.getElementById("gateSubmit").addEventListener("click", submitRegisterEmail);
+  document.getElementById("gateEmail").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") submitRegisterEmail();
+  });
 }
 
-function submitRegister() {
+function submitRegisterEmail() {
   const email = (document.getElementById("gateEmail").value || "").trim();
   const name  = (document.getElementById("gateName").value || "").trim();
   const err   = document.getElementById("gateErr");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    err.textContent = "හරි email එකක් දාන්න.";
-    return;
-  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
   setIdentity(email.toLowerCase(), name);
   err.textContent = "";
   loadApp();   /* backend registers as PENDING and returns the status */
+}
+
+/* -------- WhatsApp OTP registration: enter details + request a code -------- */
+function showRegisterWhatsApp() {
+  const g = gateEl(); if (!g) return;
+  g.style.display = "flex";
+  gateBody().innerHTML =
+    '<h2>Register</h2>' +
+    '<p>ඔයාගේ WhatsApp number එකට verification code එකක් එනවා. ' +
+    'Code එක verify කරාට පස්සේ app එක පාවිච්චි කරන්න පුළුවන්.</p>' +
+    '<input id="gateName" type="text" placeholder="Your name" value="' + escapeHtml(getName()) + '">' +
+    '<input id="gatePhone" type="tel" inputmode="tel" placeholder="WhatsApp number (e.g. 0771234567)" value="' + escapeHtml(getPhone()) + '">' +
+    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your email" value="' + escapeHtml(getEmail()) + '">' +
+    '<button id="gateSend" class="gateBtn">Send Code</button>' +
+    '<div id="gateErr" class="gateErr"></div>';
+  document.getElementById("gateSend").addEventListener("click", requestCode);
+
+  /* Enter key on the last field triggers send. */
+  document.getElementById("gateEmail").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") requestCode();
+  });
+}
+
+function requestCode() {
+  const name  = (document.getElementById("gateName").value || "").trim();
+  const phone = (document.getElementById("gatePhone").value || "").trim();
+  const email = (document.getElementById("gateEmail").value || "").trim();
+  const err   = document.getElementById("gateErr");
+  const btn   = document.getElementById("gateSend");
+
+  if (!name)  { err.textContent = "ඔයාගේ නම දාන්න."; return; }
+  if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "හරි WhatsApp number එකක් දාන්න."; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
+
+  err.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+
+  api("requestWhatsAppCode", [phone, name, email])
+    .then(function (data) {
+      /* Remember what they typed, then move to the code screen. */
+      setIdentity(email.toLowerCase(), name, (data && data.phone) || phone);
+      showVerify();
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "Send Code";
+      err.textContent = e.message || "Code එක යවන්න බැරි වුණා.";
+    });
+}
+
+
+/* -------- STEP 2: enter the 6-digit code + verify -------- */
+function showVerify() {
+  const g = gateEl(); if (!g) return;
+  g.style.display = "flex";
+  gateBody().innerHTML =
+    '<h2>Enter Code</h2>' +
+    '<p>WhatsApp එකට ආපු 6-ඉලක්කම් code එක දාන්න.</p>' +
+    '<div class="gateMuted">' + escapeHtml(getPhone()) + '</div>' +
+    '<input id="gateCode" type="text" inputmode="numeric" maxlength="6" ' +
+      'autocomplete="one-time-code" placeholder="______" class="gateCode">' +
+    '<button id="gateVerify" class="gateBtn">Verify</button>' +
+    '<button id="gateResend" class="gateBtnLink">Resend code</button>' +
+    '<button id="gateEditNum" class="gateBtnLink">Change details</button>' +
+    '<div id="gateErr" class="gateErr"></div>';
+
+  const codeEl = document.getElementById("gateCode");
+  codeEl.focus();
+  codeEl.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") verifyCode();
+  });
+  document.getElementById("gateVerify").addEventListener("click", verifyCode);
+  document.getElementById("gateResend").addEventListener("click", resendCode);
+  document.getElementById("gateEditNum").addEventListener("click", showRegister);
+}
+
+function verifyCode() {
+  const code = (document.getElementById("gateCode").value || "").trim();
+  const err  = document.getElementById("gateErr");
+  const btn  = document.getElementById("gateVerify");
+
+  if (code.replace(/[^\d]/g, "").length < 6) { err.textContent = "6-ඉලක්කම් code එක දාන්න."; return; }
+
+  err.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Verifying…";
+
+  api("verifyWhatsAppCode", [getPhone(), code])
+    .then(function (data) {
+      const status = (data && data.status) || "APPROVED";
+      if (status === "APPROVED") {
+        loadApp();            /* verified + approved -> straight in */
+      } else {
+        showGate(status);     /* APPROVAL mode -> pending screen    */
+      }
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "Verify";
+      err.textContent = e.message || "Code එක verify කරන්න බැරි වුණා.";
+    });
+}
+
+function resendCode() {
+  const err = document.getElementById("gateErr");
+  const link = document.getElementById("gateResend");
+  link.style.pointerEvents = "none";
+  link.textContent = "Sending…";
+  api("requestWhatsAppCode", [getPhone(), getName(), getEmail()])
+    .then(function () {
+      err.textContent = "";
+      link.textContent = "Code sent ✓";
+      setTimeout(function () { link.textContent = "Resend code"; link.style.pointerEvents = ""; }, 3000);
+    })
+    .catch(function (e) {
+      link.textContent = "Resend code";
+      link.style.pointerEvents = "";
+      err.textContent = e.message || "Resend බැරි වුණා.";
+    });
 }
 
 function showGate(status) {
@@ -277,7 +395,7 @@ function showGate(status) {
     '<button id="gateSwitch" class="gateBtnLink">Use a different email</button>';
   document.getElementById("gateRetry").addEventListener("click", loadApp);
   document.getElementById("gateSwitch").addEventListener("click", function () {
-    setIdentity("", "");
+    setIdentity("", "", "");
     showRegister();
   });
 }
@@ -300,38 +418,12 @@ function setupBulletPaymentButton() {
   nb.addEventListener("click", function () {
     const card = document.getElementById("scheduleCard");
     if (!card) return;
-
     const hidden = window.getComputedStyle(card).display === "none";
-
-    /*
-       SHOW/HIDE is only a visibility action.
-       It must never clear FROM / AMOUNT values.
-       Clearing is a separate, explicit operation.
-    */
-    if (hidden) {
-      showScheduleCard();
-    } else {
-      hideScheduleCard();
-      clearScheduleUI();
-    }
+    if (hidden) showScheduleCard();
+    else hideScheduleCard();
+    /* Clear the bullet schedule (FROM & AMOUNT) on every manual toggle. */
+    clearScheduleUI();
   });
-
-  const clearButton = document.getElementById("clearScheduleButton");
-  if (clearButton) {
-    const nc = clearButton.cloneNode(true);
-    clearButton.parentNode.replaceChild(nc, clearButton);
-
-    nc.addEventListener("click", function () {
-      if (scheduleBusy) return;
-
-      const confirmed = window.confirm(
-        "Clear all Bullet Payment Schedule FROM and AMOUNT values?\n\nThis action cannot be undone."
-      );
-      if (!confirmed) return;
-
-      clearScheduleUI();
-    });
-  }
 
   hideScheduleCard();
 }
@@ -399,30 +491,8 @@ function bindInputs() {
   const scheduleType = document.getElementById("scheduleType");
   if (scheduleType) {
     scheduleType.addEventListener("change", function () {
-      const previousType = scheduleType.dataset.previousValue || scheduleType.value;
-      const newType = scheduleType.value;
-
-      /* Changing schedule mode clears the stored bullet schedule on the
-         server, so ask for confirmation before making that destructive change. */
-      if (previousType && previousType !== newType) {
-        const confirmed = window.confirm(
-          "Changing the schedule type will clear the existing Bullet Payment Schedule (FROM & AMOUNT).\n\n" +
-          "Do you want to continue?"
-        );
-
-        if (!confirmed) {
-          scheduleType.value = previousType;
-          applyScheduleMode();
-          return;
-        }
-      }
-
-      scheduleType.dataset.previousValue = newType;
-      saveScheduleType(newType);
+      saveScheduleType(this.value);
     });
-
-    /* Keep the last successfully selected type for confirmation/revert. */
-    scheduleType.dataset.previousValue = scheduleType.value;
   }
 }
 
@@ -516,11 +586,7 @@ function saveScheduleType(scheduleType) {
     .catch(function (error) {
       console.error("SCHEDULE TYPE ERROR:", error);
       alert("Schedule Type could not be changed.\n\n" + error.message);
-      if (select) {
-        select.value = select.dataset.previousValue || select.value;
-        select.disabled = false;
-        applyScheduleMode();
-      }
+      if (select) select.disabled = false;
     });
 }
 
@@ -772,27 +838,13 @@ function bindScheduleRowEvents(row) {
 
   const fromInput = row.querySelector('input[data-type="from"]');
   if (fromInput) {
-    const saveExistingFrom = function (input) {
-      /*
-         New rows are drafts. Typing/blur/Enter must NOT write FROM to the
-         sheet until the row's ADD button is clicked. Existing rows (DELETE
-         button) may still be edited and saved normally.
-      */
-      const actionButton = row.querySelector(".scheduleAction");
-      const isSavedRow = actionButton && actionButton.textContent.trim().toUpperCase() === "DELETE";
-      if (!isSavedRow) return;
-
-      updateFrom(Number(input.dataset.index), input.value);
-    };
-
     fromInput.addEventListener("blur", function () {
-      saveExistingFrom(this);
+      updateFrom(Number(this.dataset.index), this.value);
     });
-
     fromInput.addEventListener("keydown", function (event) {
       if (event.key === "Enter") {
         event.preventDefault();
-        saveExistingFrom(this);
+        updateFrom(Number(this.dataset.index), this.value);
       }
     });
   }
@@ -1177,4 +1229,217 @@ function escapeHtml(input) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+
+/* =========================================================
+   THREE-WHEEL (3W) TAB
+   Reads the separate 3W sheet in the user's copy. Inputs are
+   column B (dropdown options come from the sheet); outputs are
+   column C. Changing an input recomputes on the sheet and
+   re-renders (so dependent dropdowns refresh too).
+========================================================= */
+
+var tw_built = false;
+var tw_loaded = false;
+
+const TW_INPUT_LABELS = {
+  B2: "MAKE", B3: "VEHICLE NO", B4: "GRADE", B5: "EXPOSURE & MIN IRR",
+  B10: "FACILITY AMOUNT", B11: "BIC ( % )", B12: "INSURANCE", B13: "RMV CHARGES",
+  B14: "PERIOD", B15: "IRR", B22: "CRIB CHARGES", B23: "RMV CHARGES"
+};
+
+/* These 3W inputs are ALWAYS dropdowns (MAKE, VEHICLE NO, GRADE,
+   INSURANCE, RMV rental, RMV initial). The rest are number inputs. */
+const TW_DROPDOWN_CELLS = ["B2", "B3", "B4", "B12", "B13", "B23"];
+
+function setupTabs() {
+  const tabs = document.querySelectorAll(".tab");
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () {
+      const which = this.dataset.tab;
+      document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("active"); });
+      this.classList.add("active");
+      const vp = document.getElementById("vehiclePanel");
+      const tp = document.getElementById("threewheelPanel");
+      if (which === "threewheel") {
+        if (vp) vp.hidden = true;
+        if (tp) tp.hidden = false;
+        if (!tw_loaded) load3W();
+      } else {
+        if (tp) tp.hidden = true;
+        if (vp) vp.hidden = false;
+      }
+    });
+  });
+}
+
+function load3W() {
+  const l = document.getElementById("twLoading");
+  if (l) { l.style.display = "block"; l.textContent = "Loading three-wheel calculator…"; }
+  api("get3W")
+    .then(function (data) {
+      if (l) l.style.display = "none";
+      tw_loaded = true;
+      if (!tw_built) { build3W(data); tw_built = true; }
+      render3W(data);
+    })
+    .catch(function (e) {
+      if (l) l.textContent = "Could not load three-wheel calculator: " + e.message;
+      console.error("3W load error:", e);
+    });
+}
+
+function twField(cell, data) {
+  const info = data.inputs[cell] || {};
+  const wrap = document.createElement("div");
+  wrap.className = "field";
+
+  const lab = document.createElement("label");
+  lab.id = "twlbl_" + cell;
+  lab.textContent = TW_INPUT_LABELS[cell] || cell;
+  wrap.appendChild(lab);
+
+  let el;
+  const forceSelect = TW_DROPDOWN_CELLS.indexOf(cell) !== -1;
+  if (forceSelect || (info.options && info.options.length)) {
+    el = document.createElement("select");
+    el.addEventListener("change", function () { set3WValue(cell, this.value); });
+  } else {
+    el = document.createElement("input");
+    el.type = "text";
+    el.setAttribute("inputmode", "decimal");
+    el.addEventListener("blur", function () { set3WValue(cell, this.value); });
+    el.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") { ev.preventDefault(); this.blur(); }
+    });
+  }
+  el.id = "tw_" + cell;
+  wrap.appendChild(el);
+  return wrap;
+}
+
+function twOutRow(label, id) {
+  return '<tr><td>' + label + '</td><td id="' + id + '"></td></tr>';
+}
+
+function build3W(data) {
+  const grid = document.getElementById("twGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  /* Card 1 — Valuation & Exposure */
+  const c1 = document.createElement("div");
+  c1.className = "tw-card";
+  c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
+  ["B2", "B3", "B4", "B5"].forEach(function (cell) { c1.appendChild(twField(cell, data)); });
+  c1.insertAdjacentHTML("beforeend",
+    '<table class="summaryTable" style="margin-top:12px">' +
+    twOutRow("CF Valuation", "tw_cfValuation") +
+    twOutRow("Max Facility Value", "tw_maxFacility") +
+    twOutRow("Total Capitalized", "tw_totCapVal") +
+    '</table>');
+  grid.appendChild(c1);
+
+  /* Card 2 — Rental -> Monthly Rental */
+  const c2 = document.createElement("div");
+  c2.className = "tw-card";
+  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
+    '<div class="bigValue red"><span id="tw_monthlyRental">0.00</span></div>';
+  ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
+  grid.appendChild(c2);
+
+  /* Card 3 — Initial Charges */
+  const c3 = document.createElement("div");
+  c3.className = "tw-card";
+  c3.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
+    '<div class="bigValue red"><span id="tw_chargesTotal">0.00</span></div>';
+  ["B22", "B23"].forEach(function (cell) { c3.appendChild(twField(cell, data)); });
+  c3.insertAdjacentHTML("beforeend",
+    '<table class="summaryTable" style="margin-top:12px">' +
+    twOutRow("Crib Charges", "tw_cribCharge") +
+    twOutRow("RMV Charges", "tw_rmvCharge") +
+    twOutRow("Insurance", "tw_insCharge") +
+    twOutRow("Valuation Charges", "tw_valCharge") +
+    twOutRow("Service Charges", "tw_svcCharge") +
+    twOutRow("VAT 18.00%", "tw_vat") +
+    '</table>');
+  grid.appendChild(c3);
+
+  /* Card 4 — Totals */
+  const c4 = document.createElement("div");
+  c4.className = "tw-card";
+  c4.innerHTML = '<div class="cardTitle">Totals</div>' +
+    '<table class="summaryTable">' +
+    twOutRow("Total Capitalized", "tw_totCapital") +
+    twOutRow("Total Paid", "tw_totPaid") +
+    twOutRow("Total Interest", "tw_totInterest") +
+    twOutRow("Rate / 100,000", "tw_rate100") +
+    twOutRow("Flat Rate", "tw_flatRate") +
+    '</table>';
+  grid.appendChild(c4);
+}
+
+function render3W(data) {
+  if (!data) return;
+
+  const lb10 = document.getElementById("twlbl_B10");
+  if (lb10 && data.labelFacility) lb10.textContent = data.labelFacility;
+
+  const inputs = data.inputs || {};
+  Object.keys(inputs).forEach(function (cell) {
+    const info = inputs[cell];
+    const el = document.getElementById("tw_" + cell);
+    if (!el) return;
+    if (el.tagName === "SELECT") {
+      const cur = String(info.value == null ? "" : info.value);
+      const opts = info.options || [];
+      el.innerHTML = "";
+      /* keep the current value selectable even if it's not in the list */
+      if (cur !== "" && opts.indexOf(cur) === -1) {
+        const o0 = document.createElement("option");
+        o0.value = cur; o0.textContent = cur;
+        el.appendChild(o0);
+      }
+      opts.forEach(function (opt) {
+        const o = document.createElement("option");
+        o.value = opt; o.textContent = opt;
+        el.appendChild(o);
+      });
+      el.value = cur;
+    } else if (document.activeElement !== el) {
+      el.value = info.value;
+    }
+  });
+
+  const o = data.out || {};
+  const set = function (id, v) {
+    const e = document.getElementById(id);
+    if (e) e.textContent = (v == null ? "" : v);
+  };
+  set("tw_cfValuation", o.cfValuation);
+  set("tw_maxFacility", o.maxFacility);
+  set("tw_totCapVal", (data.totalCapPct ? data.totalCapPct + "  ·  " : "") + (o.totCapVal || ""));
+  set("tw_monthlyRental", o.monthlyRental);
+  set("tw_chargesTotal", o.chargesTotal);
+  set("tw_cribCharge", o.cribCharge);
+  set("tw_rmvCharge", o.rmvCharge);
+  set("tw_insCharge", o.insCharge);
+  set("tw_valCharge", o.valCharge);
+  set("tw_svcCharge", o.svcCharge);
+  set("tw_vat", o.vat);
+  set("tw_totCapital", o.totCapital);
+  set("tw_totPaid", o.totPaid);
+  set("tw_totInterest", o.totInterest);
+  set("tw_rate100", o.rate100);
+  set("tw_flatRate", o.flatRate);
+}
+
+function set3WValue(cell, value) {
+  api("set3W", [cell, value])
+    .then(function (data) { render3W(data); })
+    .catch(function (e) {
+      console.error("3W set error:", e);
+      alert("Could not update the three-wheel value.\n\n" + e.message);
+    });
 }
