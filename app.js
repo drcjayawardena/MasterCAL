@@ -1490,13 +1490,11 @@ function build3W(data) {
   ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
   grid.appendChild(c2);
 
-  /* Card 3 — Initial Charges (totals at the bottom) */
+  /* Card 3 — Initial Charges: TOTAL tile -> summary rows -> inputs at bottom */
   const c3 = document.createElement("div");
   c3.className = "tw-card";
   c3.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
-    twBigRow("TOTAL CHARGES", "tw_chargesTotal");
-  ["B22", "B23"].forEach(function (cell) { c3.appendChild(twField(cell, data)); });
-  c3.insertAdjacentHTML("beforeend",
+    twBigRow("TOTAL CHARGES", "tw_chargesTotal") +
     '<table class="summaryTable">' +
     twOutRow("Crib Charges", "tw_cribCharge") +
     twOutRow("RMV Charges", "tw_rmvCharge") +
@@ -1506,7 +1504,13 @@ function build3W(data) {
     twOutRow("VAT 18.00%", "tw_vat") +
     twOutRow("Total Capitalized", "tw_totCapital") +
     twOutRow("Flat Rate", "tw_flatRate") +
-    '</table>');
+    '</table>';
+  /* Only the RMV CHARGES (B23) input sits below the summary.
+     CRIB CHARGES (B22) input is intentionally hidden per the layout. */
+  const c3inputs = document.createElement("div");
+  c3inputs.className = "tw-card-inputs";
+  ["B23"].forEach(function (cell) { c3inputs.appendChild(twField(cell, data)); });
+  c3.appendChild(c3inputs);
   grid.appendChild(c3);
 }
 

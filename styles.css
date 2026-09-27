@@ -380,6 +380,9 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 /* spacing for the 3W summary tables (replaces old inline styles) */
 .tw-card .summaryTable{ margin-top:12px; }
 
+/* Initial-Charges input block sits below the summary table */
+.tw-card-inputs{ margin-top:14px; }
+
 /* the "PAYMENT DETAIL" sub-heading inside a 3W card */
 .tw-card .tw-subtitle{ margin-top:18px; }
 
