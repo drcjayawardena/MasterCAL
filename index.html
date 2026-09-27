@@ -68,7 +68,6 @@
   <!-- MAIN CONTENT -->
   <div class="main">
 
-
     <!-- FACILITY DETAILS -->
     <div class="facility">
 
@@ -116,16 +115,13 @@
     <div class="scheduleCard" id="scheduleCard">
 
       <div class="scheduleHeader">
-
         <div class="cardTitle scheduleTitle">Bullet Payment Schedule</div>
-
         <div class="scheduleControls">
           <select id="scheduleType">
             <option value="MANUAL SCHEDULE">MANUAL SCHEDULE</option>
             <option value="SLABBED SCHEDULE">SLABBED SCHEDULE</option>
           </select>
         </div>
-
       </div>
 
       <div class="scheduleTableContainer">
@@ -149,40 +145,29 @@
 
       <!-- MONTHLY RENTAL -->
       <div class="summary">
-
-        <div class="tw-bigrow">
-          <div class="tw-biglabel">MONTHLY RENTAL</div>
-          <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
-        </div>
-
+        <div class="cardTitle">Monthly Rental</div>
+        <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
         <table class="summaryTable">
           <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
           <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
           <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
         </table>
-
       </div>
 
       <div style="height:14px"></div>
 
       <!-- RENTAL WITH RESIDUAL -->
       <div class="bulk">
-
-        <div class="tw-bigrow">
-          <div class="tw-biglabel">RENTAL WITH RESIDUAL</div>
-          <div class="bigValue red"><span id="lastMonthRental">0.00</span></div>
-        </div>
-
+        <div class="cardTitle">Rental with Residual</div>
+        <div class="bigValue blue"><span id="lastMonthRental">0.00</span></div>
         <table class="summaryTable">
           <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
           <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
           <tr><td>Total Paid</td><td id="lastMonthTotalPaid"></td></tr>
         </table>
-
       </div>
 
     </div>
-
 
   </div>
   <!-- END .main -->
@@ -190,10 +175,9 @@
 
   <!-- CHARGES CALCULATION (J1:L14) -->
   <div id="chargesSection" class="chargesCard">
-    <div class="cardTitle">Charges Calculation</div>
-    <div class="tw-bigrow">
-      <div class="tw-biglabel">TOTAL CHARGES</div>
-      <div class="bigValue red"><span id="chargesTotal">0.00</span></div>
+    <div class="chargesHead">
+      <span class="cardTitle" id="chargesTitle">Charges Calculation</span>
+      <span class="chargesTotal" id="chargesTotal">0.00</span>
     </div>
     <table class="chargesTable">
       <tbody id="chargesBody"></tbody>

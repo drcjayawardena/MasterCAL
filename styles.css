@@ -413,37 +413,46 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 ===================================================================== */
 @media (min-width:1100px){
 
-  /* Vehicle panel: 3 columns —
-       col 1 = Facility (row 1) + Monthly & Residual (row 2)
-       col 2 = Bullet Schedule (spans both rows)
-       col 3 = Charges (spans both rows)                          */
+  /* Vehicle panel: 4-column row — Facility | Schedule(wide) | Monthly+Residual | Charges */
   #vehiclePanel{
     display:grid;
-    grid-template-columns:1fr 1.2fr 1fr;
+    grid-template-columns:1fr 1.4fr 1fr 1fr;
     gap:12px;
-    align-items:start;
+    align-items:stretch;
   }
+  #vehiclePanel:has(.main.schedule-hidden){ grid-template-columns:repeat(3, 1fr); }
+
   .main,
   .main.schedule-hidden{ display:contents; }
 
-  .facility{ grid-column:1; grid-row:1; display:flex; flex-direction:column; margin-bottom:0; }
-  .main>div:last-child{ grid-column:1; grid-row:2; display:flex; flex-direction:column; gap:12px; margin:0; }
-  .scheduleCard{ grid-column:2; grid-row:1 / span 2; display:flex; flex-direction:column; margin-bottom:0; }
-  #chargesSection{ grid-column:3; grid-row:1 / span 2; margin:0; display:flex; flex-direction:column; }
-  #rentalScheduleSection{ grid-column:1 / -1; grid-row:3; margin-top:0; }
+  .facility,
+  .scheduleCard,
+  .main>div:last-child,
+  #chargesSection{ margin-bottom:0; align-self:stretch; min-height:0; }
 
+  .facility{ display:flex; flex-direction:column; }
+  .scheduleCard{ display:flex; flex-direction:column; }
   .scheduleTableContainer{ flex:1; min-height:0; }
-  .main>div:last-child>div:nth-child(2){ display:none; }   /* the spacer div */
-  .summary, .bulk{ display:flex; flex-direction:column; }
+
+  .main>div:last-child{ display:flex; flex-direction:column; gap:14px; }
+  .main>div:last-child>div:nth-child(2){ display:none; }   /* spacer */
+  .summary,
+  .bulk{ display:flex; flex-direction:column; flex:1 1 0; min-height:0; }
+  .summary .cardTitle,
+  .bulk .cardTitle{ margin-bottom:10px; }
+  .bigValue{ margin-bottom:10px; flex-shrink:0; }
   .summaryTable{ border-spacing:0 4px; }
   .summaryTable td{ height:30px; }
 
-  /* schedule hidden -> 2 columns (facility/summary | charges) */
-  #vehiclePanel:has(.main.schedule-hidden){ grid-template-columns:1fr 1fr; }
-  #vehiclePanel:has(.main.schedule-hidden) #chargesSection{ grid-column:2; }
-
+  #chargesSection{ overflow:auto; }
   #chargesSection .cardTitle{ font-size:17px; }
+  #chargesSection .chargesTotal{ font-size:24px; }
   #chargesSection .chargesTable td{ font-size:12.5px; padding:8px 6px; }
+
+  #rentalScheduleSection{ grid-column:1 / -1; margin-top:0; }
+
+  /* three-wheel stays 3 cards across */
+  .tw-grid{ grid-template-columns:repeat(3, 1fr); align-items:start; }
 
   /* three-wheel: three cards across (Totals now inside Initial Charges) */
   .tw-grid{ grid-template-columns:repeat(3, 1fr); align-items:start; }
