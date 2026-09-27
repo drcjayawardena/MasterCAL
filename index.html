@@ -1,254 +1,1729 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-
-  <title>MasterCAL Pro</title>
-
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007b83">
-  <meta name="mobile-web-app-capable" content="yes">
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VehicleHub</title>
+  <meta name="theme-color" content="#1f3a5f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MasterCAL">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    :root {
+      --bg: #f3f5f8; --card: #ffffff; --text: #1b2430; --muted: #687384; --line: #e2e6eb;
+      --primary: #14213d; --primary-2: #1a66e0; --accent: #1f8a5b; --wa: #1fae55;
+      --warn: #b86e00; --bad: #b23b3b; --buyer: #4c7ee8; --seller: #e0912f; --chip: #eef2f7;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.45 system-ui, -apple-system, "Segoe UI", "Noto Sans Sinhala", "Iskoola Pota", sans-serif; }
+    a { color: inherit; }
+    h2 { font-size: 17px; margin: 22px 0 10px; }
+    .muted { color: var(--muted); font-size: 13px; }
 
-  <link rel="stylesheet" href="styles.css">
+    /* ---------- Header / nav ---------- */
+    header { background: var(--primary); color: #fff; position: sticky; top: 0; z-index: 10; }
+    .hbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 8px; }
+    .brand { font-weight: 600; font-size: 18px; display: flex; align-items: center; gap: 10px; letter-spacing: .2px; }
+    .brand b { color: #6aa5ff; font-weight: 700; }
+    .brand-logo { width: 38px; height: 38px; border-radius: 50%; background: #fff; flex: none; }
+    .ic { width: 1.15em; height: 1.15em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;
+      stroke-linejoin: round; vertical-align: -0.2em; flex: none; }
+    .ic.h { color: var(--primary-2); }
+    nav button { display: flex; align-items: center; gap: 10px; }
+    .navcount:empty { display: none; }
+    .navcount { font-style: normal; background: #e0912f; color: #fff; font-size: 11px; font-weight: 700;
+      border-radius: 99px; padding: 1px 7px; margin-left: auto; }
+    .badge.warn { background: #fff3dc; color: #9a5b00; }
+    .toast { display: flex; align-items: center; gap: 8px; }
+    /* ---------- Vehicle thumbnails ---------- */
+    .vrow { display: flex; gap: 12px; align-items: flex-start; }
+    .vrow > div:last-child { min-width: 0; flex: 1; }
+    .vthumb { width: 96px; height: 72px; border-radius: 10px; flex: none; background: linear-gradient(135deg, #eef3fb, #dde6f3);
+      background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center;
+      color: #9fb0c8; overflow: hidden; border: 1px solid var(--line); }
+    .vthumb .ic { width: 38px; height: 38px; stroke-width: 1.5; }
+    .vthumb.has { cursor: pointer; }
+    .vthumb.loaded .ic { display: none; }
+    .vthumb.lg { width: 120px; height: 90px; }
+    .login-logo { width: 100%; max-width: 280px; align-self: center; display: block; margin: 0 auto 4px; }
+    .login-logo.small { max-width: 200px; }
+    .grid.wide { grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); }
+    .login .link { font: inherit; }
+    .deal { border-left: 4px solid var(--accent); display: flex; flex-direction: column; gap: 10px; }
+    .deal .dh { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .deal .dh .ok { color: var(--accent); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .deal .price { font-weight: 700; font-size: 17px; }
+    .deal .party { background: #f6f8fb; border-radius: 8px; padding: 8px 10px; }
+    .deal .party .lbl { font-size: 12px; color: var(--muted); margin-bottom: 2px; display: flex; align-items: center; gap: 5px; }
+    .verwarn { position: fixed; right: 16px; bottom: 16px; max-width: 420px; z-index: 60; background: #fff4e5;
+      color: #7a4d00; border: 1px solid #f3d9a4; border-radius: 12px; padding: 12px 14px; font-size: 14px;
+      gap: 10px; align-items: flex-start; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .verwarn .ic { color: #c77700; margin-top: 2px; }
+    .loaderr { text-align: center; padding: 40px 16px; grid-column: 1 / -1; color: var(--muted); }
+    .loaderr .ic { width: 40px; height: 40px; color: var(--bad); stroke-width: 1.6; }
+    .loaderr b { display: block; color: var(--text); margin: 10px 0 6px; font-size: 16px; }
+    .approve-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .btn.red { background: #fbe9e9; color: var(--bad); }
+    .who { font-size: 13px; opacity: .85; display: flex; gap: 10px; align-items: center; }
+    .who button { background: rgba(255,255,255,.15); color: #fff; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+    nav { display: flex; gap: 2px; overflow-x: auto; padding: 0 10px; scrollbar-width: none; }
+    nav::-webkit-scrollbar { display: none; }
+    nav button { background: none; border: 0; color: #cfd9e6; padding: 10px 12px; font-size: 14px; cursor: pointer;
+      white-space: nowrap; border-bottom: 3px solid transparent; }
+    nav button.on { color: #fff; border-bottom-color: #6aa5ff; font-weight: 600; }
 
+    main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+    .fbnav { display: flex; align-items: center; gap: 10px; color: #cfd9e6; text-decoration: none; padding: 10px 12px;
+      font-size: 14px; white-space: nowrap; border-radius: 6px; }
+    .fbnav:hover { color: #fff; background: rgba(24,119,242,.25); }
+    .fbnav .ic { color: #6aa5ff; }
+    .fblogin { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; padding: 9px;
+      border-radius: 8px; background: #e7f0fe; color: #1877f2; font-weight: 600; font-size: 14px; text-decoration: none; }
+    .fblogin:hover { background: #d6e6fd; }
+
+    /* ---------- Desktop: left sidebar ---------- */
+    @media (min-width: 900px) {
+      header { position: fixed; top: 0; left: 0; bottom: 0; width: 210px; display: flex; flex-direction: column; }
+      .hbar { flex-direction: column; align-items: flex-start; padding: 18px 16px; gap: 10px;
+        border-bottom: 1px solid rgba(255,255,255,.12); }
+      .who { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .who .uname { display: inline; }
+      nav { flex-direction: column; padding: 10px 8px; gap: 4px; overflow: visible; flex: 1; }
+      nav button { text-align: left; border-bottom: 0; border-left: 3px solid transparent; border-radius: 6px;
+        padding: 11px 12px; font-size: 15px; width: 100%; }
+      nav button:hover { background: rgba(255,255,255,.08); color: #fff; }
+      nav button.on { background: rgba(255,255,255,.12); border-left-color: #6aa5ff; }
+      .fbnav { margin-top: auto; padding: 11px 12px 11px 15px; font-size: 15px; border-top: 1px solid rgba(255,255,255,.12); border-radius: 0; }
+      main { margin-left: 210px; max-width: none; padding: 20px 28px; }
+      main > * { max-width: 1200px; }
+    }
+
+    /* ---------- Common ---------- */
+    .btn { border: 0; border-radius: 8px; padding: 9px 14px; font-size: 14px; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--chip); color: var(--text); }
+    .btn:disabled { opacity: .55; cursor: wait; }
+    .btn.primary { background: var(--primary); color: #fff; }
+    .btn.green { background: var(--accent); color: #fff; }
+    .btn.wa { background: var(--wa); color: #fff; }
+    .btn.sm { padding: 6px 10px; font-size: 13px; }
+    .btn.big { padding: 14px 18px; font-size: 15px; flex: 1; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+    .narrow { max-width: 760px; margin: 0 auto; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+    .toolbar input, .toolbar select { flex: 1 1 150px; min-width: 0; }
+    input, select, textarea { font: inherit; font-size: 15px; padding: 9px 10px; border: 1px solid var(--line);
+      border-radius: 8px; background: #fff; color: var(--text); width: 100%; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #a9c6f5; border-color: #7fa7e6; }
+    textarea { min-height: 60px; resize: vertical; }
+    label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+    label.f.req span::after { content: ' *'; color: var(--bad); }
+    .form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .form .full { grid-column: 1 / -1; }
+    .sec { grid-column: 1 / -1; font-weight: 600; font-size: 13px; color: var(--primary-2); border-bottom: 1px solid var(--line);
+      padding-bottom: 4px; margin-top: 6px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--primary); white-space: nowrap; }
+    .badge.ok { background: #e6f4ec; color: var(--accent); }
+    .badge.off { background: #f4e7e7; color: var(--bad); }
+    .empty, .loading { text-align: center; color: var(--muted); padding: 36px 0; grid-column: 1 / -1; }
+
+    /* ---------- Loading animations ---------- */
+    /* Spinner shown wherever the app says "Loading…" */
+    .loading { display: flex; flex-direction: column; align-items: center; gap: 14px; font-size: 14px; }
+    .loading::before { content: ''; width: 42px; height: 42px; border-radius: 50%;
+      border: 4px solid #dbe5f4; border-top-color: var(--primary-2); border-right-color: var(--primary-2);
+      animation: vh-spin .8s linear infinite; }
+    @keyframes vh-spin { to { transform: rotate(360deg); } }
+
+    /* Thin progress bar at the very top while the server is working */
+    #netbar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 200; pointer-events: none;
+      opacity: 0; transition: opacity .2s; overflow: hidden; }
+    #netbar.on { opacity: 1; }
+    #netbar::before { content: ''; position: absolute; top: 0; bottom: 0; width: 40%;
+      background: linear-gradient(90deg, transparent, #6aa5ff, var(--primary-2), transparent);
+      animation: vh-slide 1.1s ease-in-out infinite; }
+    @keyframes vh-slide { from { left: -40%; } to { left: 100%; } }
+
+    /* Buttons show a small spinner while their action is running */
+    .btn:disabled { position: relative; color: transparent !important; opacity: .9; cursor: wait; }
+    .btn:disabled .ic { opacity: 0; }
+    .btn:disabled::after { content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px;
+      margin: -8px 0 0 -8px; border-radius: 50%; border: 2px solid rgba(128,140,160,.35);
+      border-top-color: #5a6b85; animation: vh-spin .7s linear infinite; }
+    .btn.primary:disabled::after, .btn.green:disabled::after { border-color: rgba(255,255,255,.35); border-top-color: #fff; }
+
+    /* Skeleton cards while lists load */
+    .skel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+      display: flex; gap: 12px; }
+    .skel i { display: block; border-radius: 8px;
+      background: linear-gradient(90deg, #eef2f7 25%, #f7f9fc 50%, #eef2f7 75%); background-size: 200% 100%;
+      animation: vh-shimmer 1.2s ease-in-out infinite; }
+    .skel .sq { width: 96px; height: 72px; flex: none; }
+    .skel .lines { flex: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+    .skel .ln { height: 12px; }
+    @keyframes vh-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    /* Start-up splash with the logo */
+    .splash { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+    .splash img { width: 120px; height: 120px; border-radius: 50%; background: #fff;
+      box-shadow: 0 8px 30px rgba(20,33,61,.15); animation: vh-pulse 1.4s ease-in-out infinite; }
+    .splash .dots { display: flex; gap: 6px; }
+    .splash .dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--primary-2);
+      animation: vh-dot 1s ease-in-out infinite; }
+    .splash .dots span:nth-child(2) { animation-delay: .15s; }
+    .splash .dots span:nth-child(3) { animation-delay: .3s; }
+    .splash .muted { font-size: 14px; }
+    @keyframes vh-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes vh-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .loading::before, #netbar::before, .skel i, .splash img, .splash .dots span, .btn:disabled::after { animation-duration: 3s; }
+    }
+    .chipbar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+    .chipbar .badge { font-size: 13px; padding: 4px 10px; }
+    .chipbar button { border: 0; background: none; cursor: pointer; color: var(--bad); font-size: 13px; }
+    .check { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); flex: 0 0 auto; }
+    .check input { width: auto; }
+
+    /* ---------- Stat tiles ---------- */
+    .tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+    .tile b { display: block; font-size: 26px; line-height: 1.1; }
+    .tile span { font-size: 13px; color: var(--muted); }
+
+    /* ---------- Record cards ---------- */
+    .rec { display: flex; flex-direction: column; gap: 6px; }
+    .rec .top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .rec .title { font-weight: 600; }
+    .rec .sub { font-size: 13px; color: var(--muted); }
+    .rec .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .rec.buyer { border-left: 4px solid var(--buyer); }
+    .rec.seller { border-left: 4px solid var(--seller); }
+
+    /* ---------- Match cards ---------- */
+    .match { display: flex; flex-direction: column; gap: 10px; }
+    .match .top { display: flex; justify-content: space-between; align-items: center; }
+    .score { font-weight: 700; font-size: 22px; }
+    .score.hi { color: var(--accent); } .score.mid { color: var(--warn); } .score.lo { color: var(--bad); }
+    .reasons { display: flex; gap: 4px; flex-wrap: wrap; }
+    .reasons span { font-size: 12px; background: #eef7f2; color: var(--accent); padding: 2px 7px; border-radius: 6px; }
+    .side { border-left: 3px solid var(--line); padding-left: 10px; }
+    .side.b { border-color: var(--buyer); } .side.s { border-color: var(--seller); }
+    .side h4 { margin: 0 0 2px; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .side .main { font-weight: 600; }
+    .side .sub { font-size: 13px; color: var(--muted); }
+    .side .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .medit { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+    .medit textarea { grid-column: 1 / -1; min-height: 42px; font-size: 14px; }
+    .medit select, .medit input { font-size: 14px; padding: 7px 8px; }
+    .meta { font-size: 12px; color: var(--muted); }
+    .officer { background: #f4f6fb; border-radius: 8px; padding: 8px 10px; margin-top: 6px; }
+    .officer .lbl { font-size: 12px; color: var(--muted); }
+    .officer .nm { font-weight: 600; }
+    .mine-tag { font-size: 11px; background: #e6f4ec; color: var(--accent); padding: 1px 6px; border-radius: 6px; margin-left: 4px; }
+    .utable { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .utable td, .utable th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    .utable input, .utable select { padding: 6px 8px; font-size: 14px; }
+    .utable select { min-width: 90px; }
+    .utable .check input { width: auto; }
+    .uwrap { overflow-x: auto; }
+    .photo-pick { display: flex; flex-direction: column; gap: 6px; }
+    /* ---------- Photo blur editor ---------- */
+    .pe-back { position: fixed; inset: 0; background: rgba(10,16,24,.82); z-index: 100; display: flex;
+      align-items: center; justify-content: center; padding: 12px; }
+    .pe { background: var(--card); border-radius: 12px; padding: 14px; width: min(960px, 100%); max-height: 100%;
+      display: flex; flex-direction: column; gap: 10px; overflow: auto; }
+    .pe h3 { margin: 0; font-size: 16px; }
+    .pe canvas { max-width: 100%; max-height: 68vh; align-self: center; touch-action: none; cursor: crosshair;
+      border-radius: 8px; background: #000; }
+    .pe .row { justify-content: flex-end; }
+    .gal-img { max-width: 100%; max-height: 70vh; align-self: center; border-radius: 8px; background: #000; min-height: 120px; }
+    .gal-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .login .link { background: none; border: 0; color: var(--primary-2); cursor: pointer; font-size: 14px; text-decoration: underline; padding: 4px; }
+    .login .ok { color: var(--accent); font-size: 14px; }
+    .savedbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+      border-left: 4px solid var(--accent); margin-bottom: 4px; }
+    .savedbar .t { font-weight: 600; font-size: 16px; }
+    .savedbar .row { flex: 0 1 auto; }
+    .ext { background: #fff4e0; color: #7a4d00; }
+    .extbox { background: #fffaf0; border: 1px solid #f3e1bb; border-radius: 10px; padding: 10px 12px; margin-top: 12px; }
+    .extbox .lbl { font-size: 13px; color: #7a4d00; margin-bottom: 6px; }
+    .notice { background: #fff6e5; border: 1px solid #f3d9a4; color: #7a4d00; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
+
+    /* ---------- Login ---------- */
+    .login { max-width: 360px; margin: 12vh auto 0; padding: 0 16px; }
+    .login .card { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .login h1 { margin: 0; font-size: 22px; color: var(--primary); }
+    .err { color: var(--bad); font-size: 14px; min-height: 18px; }
+
+    .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #1b2430; color: #fff;
+      padding: 10px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none;
+      z-index: 50; max-width: 90vw; text-align: center; }
+    .toast.show { opacity: 1; } .toast.bad { background: var(--bad); }
+
+    @media (max-width: 520px) {
+      main { padding: 12px; }
+      .grid, .grid.wide { grid-template-columns: 1fr; }
+      .who .uname { display: none; }
+    }
+  </style>
 </head>
-
-
 <body>
+  <img id="vmLogoWide" hidden alt="" src="data:image/jpeg;base64,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">
+  <img id="vmLogoRound" hidden alt="" src="data:image/png;base64,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">
+  <div id="netbar"></div>
+  <div id="app"><div class="loading">Loading…</div></div>
+  <script>
+    // Start-up splash (logo + animated dots) while the app connects
+    (function () {
+      var logo = document.getElementById('vmLogoRound');
+      document.getElementById('app').innerHTML = '<div class="splash"><img alt="" src="' + (logo ? logo.getAttribute('src') : '') +
+        '"><div class="dots"><span></span><span></span><span></span></div><div class="muted">Loading VehicleHub…</div></div>';
+    })();
+  </script>
+  <script>
+    // Safety net: if anything goes wrong, show the error on the page instead of a blank screen.
+    window.addEventListener('error', function (e) {
+      if (window.__vmStarted) return; // only for start-up problems
+      var app = document.getElementById('app');
+      if (app) app.innerHTML = '<div style="max-width:640px;margin:10vh auto;padding:16px;background:#fff;border:1px solid #e2e6eb;border-radius:12px;font:14px system-ui">' +
+        '<b style="color:#b23b3b">The app could not start.</b><br><br>' +
+        String(e.message || e.error || 'Unknown error').replace(/</g, '&lt;') +
+        (e.lineno ? ' (line ' + e.lineno + ')' : '') +
+        '<br><br>Usually this means <b>Index.html</b> / <b>index.html</b> was not copied completely. Copy the whole file again, save, and (for Apps Script) deploy a New version.</div>';
+    });
+  </script>
 
-<!-- ACCESS GATE (register / pending / blocked) -->
-<div id="gate" class="gate" style="display:none">
-  <div class="gateCard">
-    <div class="gateLogo">MasterCAL</div>
-    <div id="gateBody"></div>
-  </div>
-</div>
+  <script src="config.js"></script>
+  <script>
+    /* ============================================================
+     *  WEBSITE MODE (GitHub Pages)
+     *  The Apps Script web app URL (ends with /exec) is read from config.js,
+     *  so index.html can be replaced in future updates without editing it.
+     *  (You may also paste the URL below instead.)
+     *  Inside Apps Script this block is ignored automatically.
+     * ============================================================ */
+    window.VM_API_URL = window.VM_API_URL || 'PASTE_YOUR_WEB_APP_URL_HERE';
 
-<!-- LOADING OVERLAY -->
-<div id="loading" class="loading" style="display:none">
-  <div class="spinner"></div>
-  <div class="loadingText" id="loadingText">Loading…</div>
-</div>
+    (function () {
+      if (window.google && google.script && google.script.run) return; // running inside Apps Script
+      window.__vmWebsite = true;
+      // Same interface as google.script.run, but talks to the Apps Script API with fetch()
+      function runner(ok, fail) {
+        return new Proxy({}, {
+          get: function (_, name) {
+            if (name === 'withSuccessHandler') return function (f) { return runner(f, fail); };
+            if (name === 'withFailureHandler') return function (f) { return runner(ok, f); };
+            return function () {
+              var args = Array.prototype.slice.call(arguments);
+              var url = window.VM_API_URL;
+              if (!url || url.indexOf('/exec') < 0) {
+                if (fail) fail(new Error('API URL is not set. Create config.js on GitHub with your Apps Script web app URL (see the setup guide).'));
+                return;
+              }
+              fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // "simple" request → no CORS pre-flight
+                body: JSON.stringify({ fn: name, args: args })
+              })
+                .then(function (r) { if (!r.ok) throw new Error('Server error ' + r.status); return r.json(); })
+                .then(function (d) {
+                  if (d && d.ok) { if (ok) ok(d.result); }
+                  else if (fail) fail(new Error((d && d.error) || 'Unknown server error'));
+                })
+                .catch(function (err) {
+                  if (!fail) return;
+                  var m = String(err && err.message || err);
+                  if (/Failed to fetch|NetworkError|Load failed|JSON/i.test(m)) {
+                    m = 'Cannot reach the server. Check your internet connection, the API URL, and that the Apps Script deployment is set to "Anyone".';
+                  }
+                  fail(new Error(m));
+                });
+            };
+          }
+        });
+      }
+      window.google = { script: { run: runner(null, null) } };
 
-<div class="offlineBar" id="offlineBar">
-  You are offline — calculations need an internet connection. The app will keep working once you reconnect.
-</div>
-
-
-<div class="page">
-
-
-  <!-- HEADER -->
-  <div class="header">
-    <div style="width:300px;">
-      <h1>MasterCAL</h1>
-      <span>Vehicle Leasing Rental Calculator</span>
-    </div>
-  </div>
-
-  <!-- TABS -->
-  <div class="tabBar">
-    <button type="button" class="tab active" data-tab="vehicle">🚗 Vehicle Lease</button>
-    <button type="button" class="tab" data-tab="threewheel">🛺 Three-Wheel</button>
-  </div>
-
-
-  <!-- ============ VEHICLE PANEL ============ -->
-  <div id="vehiclePanel">
-
-
-  <!-- MAIN CONTENT -->
-  <div class="main">
-
-
-    <!-- FACILITY DETAILS -->
-    <div class="facility">
-
-      <div class="cardTitle">Facility Details</div>
-
-      <div class="field">
-        <label>PRODUCT TYPE</label>
-        <select id="productType"></select>
-      </div>
-
-      <div class="field">
-        <label id="lblFacilityAmount">FACILITY AMOUNT</label>
-        <input id="facilityAmount" type="number" inputmode="decimal">
-      </div>
-
-      <div class="field">
-        <label id="lblBic">BIC</label>
-        <input id="bic" type="number" inputmode="decimal">
-      </div>
-
-      <div class="field">
-        <label id="lblInsurance">INSURANCE</label>
-        <input id="insurance" type="number" inputmode="decimal">
-      </div>
-
-      <div class="field">
-        <label id="lblStampDuty">STAMP DUTY</label>
-        <select id="stampDuty"></select>
-      </div>
-
-      <div class="field">
-        <label id="lblIrr">IRR (%)</label>
-        <input id="irr" type="number" inputmode="decimal">
-      </div>
-
-      <div class="field">
-        <label id="lblPeriod">PERIOD</label>
-        <input id="period" type="number" inputmode="numeric">
-      </div>
-
-    </div>
-
-
-    <!-- BULLET PAYMENT SCHEDULE -->
-    <div class="scheduleCard" id="scheduleCard">
-
-      <div class="scheduleHeader">
-
-        <div class="cardTitle scheduleTitle">Bullet Payment Schedule</div>
-
-        <div class="scheduleControls">
-          <select id="scheduleType">
-            <option value="MANUAL SCHEDULE">MANUAL SCHEDULE</option>
-            <option value="SLABBED SCHEDULE">SLABBED SCHEDULE</option>
-          </select>
-        </div>
-
-      </div>
-
-      <div class="scheduleTableContainer">
-        <table id="scheduleTable">
-          <thead>
-            <tr>
-              <th>FROM</th>
-              <th>TO</th>
-              <th>AMOUNT</th>
-            </tr>
-          </thead>
-          <tbody id="scheduleBody"></tbody>
-        </table>
-      </div>
-
-    </div>
-
-
-    <!-- SUMMARY -->
-    <div>
-
-      <!-- MONTHLY RENTAL -->
-      <div class="summary">
-
-        <div class="cardTitle">Monthly Rental</div>
-
-        <div class="bigValue red">
-          <span id="monthlyRental">0.00</span>
-        </div>
-
-        <table class="summaryTable">
-          <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
-          <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
-          <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
-        </table>
-
-      </div>
-
-      <div style="height:14px"></div>
-
-      <!-- RENTAL WITH RESIDUAL -->
-      <div class="bulk">
-
-        <div class="cardTitle">Rental with Residual</div>
-
-        <div class="bigValue blue">
-          <span id="lastMonthRental">0.00</span>
-        </div>
-
-        <table class="summaryTable">
-          <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
-          <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
-          <tr><td>Total Paid</td><td id="lastMonthTotalPaid"></td></tr>
-        </table>
-
-      </div>
-
-    </div>
-
-
-  </div>
-  <!-- END .main -->
-
-
-  <!-- CHARGES CALCULATION (J1:L14) -->
-  <div id="chargesSection" class="chargesCard">
-    <div class="chargesHead">
-      <span class="cardTitle" id="chargesTitle">Charges Calculation</span>
-      <span class="chargesTotal" id="chargesTotal">0.00</span>
-    </div>
-    <table class="chargesTable">
-      <tbody id="chargesBody"></tbody>
-    </table>
-
-    <!-- Both action buttons live at the bottom of the charges card -->
-    <div class="chargesButtons">
-      <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
-        ADD BULLET PAYMENT
-      </button>
-      <button type="button" id="rentalScheduleToggle" class="rentalScheduleToggle">
-        SHOW RENTAL SCHEDULE
-      </button>
-    </div>
-  </div>
-
-
-  <!-- RENTAL SCHEDULE -->
-  <div id="rentalScheduleSection" class="rentalScheduleSection">
-    <div class="rentalScheduleTableContainer">
-      <table id="rentalScheduleTable">
-        <tbody id="rentalScheduleBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  </div>
-  <!-- ============ END VEHICLE PANEL ============ -->
-
-
-  <!-- ============ THREE-WHEEL PANEL (built by app.js) ============ -->
-  <div id="threewheelPanel" hidden>
-    <div id="twLoading" class="twLoading">Loading three-wheel calculator…</div>
-    <div id="twGrid" class="tw-grid"></div>
-  </div>
-
-
-</div>
-<!-- END .page -->
-
-
-<script src="app.js"></script>
+      // Installable app (Add to Home screen)
+      if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+      }
+    })();
+  </script>
+  <div class="toast" id="toast"></div>
 
 <script>
-  /* Register the service worker (PWA install + offline shell). */
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function (e) {
-        console.warn("SW registration failed:", e);
-      });
-    });
+/* ============================================================
+ *  STATE + UTILS
+ * ============================================================ */
+const S = { token: null, user: null, lists: {}, master: [], view: '', params: {},
+            rec: {}, buyers: [], vehicles: [], matches: [], mIndex: {}, thumbs: {} };
+
+const $ = id => document.getElementById(id);
+
+/* ============================================================
+ *  ICONS — clean line icons (inline SVG, no external files)
+ * ============================================================ */
+const ICONS = {
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  userPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>',
+  car: '<path d="M5 17H3v-4.5l2.2-5A2 2 0 0 1 7 6.3h10a2 2 0 0 1 1.8 1.2l2.2 5V17h-2"/><line x1="9" y1="17" x2="15" y2="17"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><line x1="3.5" y1="12.5" x2="20.5" y2="12.5"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  settings: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  award: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>',
+  message: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  left: '<polyline points="15 18 9 12 15 6"/>',
+  right: '<polyline points="9 18 15 12 9 6"/>',
+  undo: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  pin: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  note: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  mobile: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  alert: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  tag: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  external: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
+  approve: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+  ban: '<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>',
+  newItem: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+  facebook: '<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>'
+};
+const ic = (name, cls) => '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+/** Status values may contain symbols (e.g. "Deal ✅") — show them as plain words. */
+const isDealStatus = s => String(s || '').replace(/[^A-Za-z0-9]/g, '').toLowerCase() === 'deal';
+const dealStatus = () => (S.lists.MATCH_STATUS || []).find(isDealStatus) || 'Deal ✅';
+const statusLabel = s => String(s == null ? '' : s).replace(/[^\p{L}\p{N}\s\-\/().,]/gu, '').replace(/\s+/g, ' ').trim();
+/** The brand logo is kept in a hidden <img> in the page body. */
+const logoSrc = id => { const el = document.getElementById(id); return el ? el.getAttribute('src') : ''; };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[\s_\-\/]+/g, '');
+const uniq = a => [...new Set(a.filter(Boolean))].sort((x, y) => x.localeCompare(y));
+const lk = v => (v === '' || v == null) ? '-' : 'Rs. ' + v + ' Lakhs';
+
+function store(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+function stored(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+
+let toastTimer;
+function toast(msg, bad) {
+  const t = $('toast'); t.innerHTML = ic(bad ? 'alert' : 'check') + '<span>' + esc(msg) + '</span>'; t.className = 'toast show' + (bad ? ' bad' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast', bad ? 4000 : 2400);
+}
+
+/** Server API call. On error, shows a toast and returns null. */
+/** If a page was still loading when a request failed, show the error with a retry button. */
+function showLoadError(msg) {
+  const main = $('main');
+  if (!main) return;
+  const holders = main.querySelectorAll('.loading, .skel');
+  if (!holders.length) return;
+  const box = document.createElement('div');
+  box.className = 'loaderr';
+  box.innerHTML = ic('alert') + '<b>Could not load this page</b><div>' + esc(msg) + '</div>' +
+    '<div style="margin-top:14px"><button class="btn primary" onclick="go(S.view, S.params)">' + ic('refresh') + ' Try again</button></div>';
+  const first = holders[0];
+  const parent = first.parentNode;
+  holders.forEach(h => h.remove());
+  parent.appendChild(box);
+}
+
+/* ---------- Network activity indicator ---------- */
+let netCount = 0;
+function netStart() { netCount++; const b = $('netbar'); if (b) b.classList.add('on'); }
+function netEnd() { netCount = Math.max(0, netCount - 1); const b = $('netbar'); if (b && !netCount) b.classList.remove('on'); }
+/** Placeholder cards shown while a list is loading. */
+function skeleton(n) {
+  return Array.from({ length: n || 4 }, () =>
+    '<div class="skel"><i class="sq"></i><div class="lines"><i class="ln" style="width:70%"></i><i class="ln" style="width:45%"></i><i class="ln" style="width:85%"></i></div></div>').join('');
+}
+
+function call(action, payload) {
+  netStart();
+  return new Promise(resolve => {
+    google.script.run
+      .withSuccessHandler(r => { netEnd(); resolve(r); })
+      .withFailureHandler(err => {
+        netEnd();
+        const msg = String((err && err.message) || err);
+        if (msg.indexOf('SESSION_EXPIRED') > -1) { toast('Session expired — please log in again', true); logout(true); }
+        else {
+          const clean = msg.replace(/^Error:\s*/, '').replace(/^Exception:\s*/, '');
+          toast(clean, true);
+          showLoadError(clean);
+        }
+        resolve(null);
+      })
+      .api(S.token, action, payload || {});
+  });
+}
+
+function waNum(p) {
+  let d = String(p || '').replace(/\D/g, '');
+  if (d.startsWith('0')) d = '94' + d.slice(1); else if (d.length === 9) d = '94' + d;
+  return d;
+}
+function phoneBtns(phone, waText) {
+  if (!phone) return '';
+  return `<a class="btn sm primary" href="tel:${esc(phone)}">${ic('phone')} ${esc(phone)}</a>
+          <a class="btn sm wa" target="_blank" href="https://wa.me/${waNum(phone)}${waText ? '?text=' + encodeURIComponent(waText) : ''}">${ic('message')} WhatsApp</a>`;
+}
+function opts(list, value, blank) {
+  return (blank !== undefined ? `<option value="">${esc(blank)}</option>` : '') +
+    (list || []).map(x => `<option value="${esc(x)}" ${String(x) === String(value) ? 'selected' : ''}>${esc(statusLabel(x))}</option>`).join('');
+}
+function fmtDT(v) { return v ? String(v).replace('T', ' ').slice(0, 16) : ''; }
+function carName(v) { return [v.make, v.model, v.year].filter(Boolean).join(' '); }
+function wantName(b) {
+  const w = [b.make, b.model].filter(Boolean).join(' ') || (b.vehicle_type ? 'Any ' + b.vehicle_type : 'Any vehicle');
+  const y = (b.year_from || b.year_to) ? ` (${b.year_from || '…'}–${b.year_to || '…'})` : '';
+  return w + y;
+}
+/* ============================================================
+ *  SEARCH ON ikman.lk / riyasewana.com
+ *  Only builds a search link and opens the site in a new tab —
+ *  nothing is copied from those websites into this app.
+ * ============================================================ */
+const slugify = s => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+// Our vehicle types → the category names used in each site's URLs
+const RS_TYPE = { 'car': 'cars', 'suv / jeep': 'suvs', 'van': 'vans', 'cab / pickup': 'pickups',
+  'motorcycle': 'motorcycles', 'three wheeler': 'three-wheels', 'lorry': 'lorries' };
+const RS_WANTED = 'https://riyasewana.com/wanted.php';
+const IK_TYPE = { 'car': 'cars', 'van': 'vans', 'motorcycle': 'motorbikes-scooters' };
+
+/** o = buyer (uses year_from/year_to) or vehicle (uses year). */
+function extSearchUrls(o, isBuyer) {
+  const type = String(o.vehicle_type || '').trim().toLowerCase();
+  const mk = slugify(o.make), md = slugify(o.model);
+  let yf = isBuyer ? o.year_from : o.year, yt = isBuyer ? o.year_to : o.year;
+  if (yf && !yt) yt = new Date().getFullYear();
+  if (yt && !yf) yf = 1980;
+
+  // riyasewana.com/search/<type>/<make>/<model>/<from>-<to>
+  let rs = 'https://riyasewana.com/search';
+  const rt = RS_TYPE[type];
+  if (rt) {
+    rs += '/' + rt;
+    if (mk) { rs += '/' + mk; if (md) { rs += '/' + md; if (yf && yt) rs += '/' + yf + '-' + yt; } }
   }
+
+  // ikman.lk/en/ads/sri-lanka/<category>/<make>/<model>  (or keyword search)
+  let ik;
+  const it = IK_TYPE[type];
+  // ikman uses its own spellings for multi-word names (e.g. "wagonr"), so those use keyword search
+  const simple = !/-/.test(mk) && !/-/.test(md);
+  if (it && simple) {
+    ik = 'https://ikman.lk/en/ads/sri-lanka/' + it + (mk ? '/' + mk + (md ? '/' + md : '') : '');
+  } else {
+    const q = slugify([o.make, o.model].filter(Boolean).join(' ') || o.vehicle_type || 'vehicles');
+    ik = 'https://ikman.lk/en/ads/q/sri-lanka/' + q;
+  }
+  return { ikman: ik, riyasewana: rs };
+}
+
+/** Small buttons for cards. */
+function extButtons(o, isBuyer) {
+  if (!o || (!o.make && !o.vehicle_type)) return '';
+  const u = extSearchUrls(o, isBuyer);
+  const tip = isBuyer ? 'Find vehicles for this buyer' : 'Compare market prices for this vehicle';
+  return `<a class="btn sm ext" target="_blank" rel="noopener" title="${tip}" href="${esc(u.ikman)}">${ic('external')} ikman</a>
+          <a class="btn sm ext" target="_blank" rel="noopener" title="${tip}" href="${esc(u.riyasewana)}">${ic('external')} Riyasewana</a>`;
+}
+
+/** Bigger box for the results page after saving a call. */
+function extBox(o, isBuyer) {
+  if (!o || (!o.make && !o.vehicle_type)) return '';
+  const u = extSearchUrls(o, isBuyer);
+  // Note: keep URLs out of nested template literals — Apps Script's HTML service
+  // mistakes the "//" in them for a comment and breaks the page.
+  const wanted = isBuyer ? '' :
+    '<a class="btn ext" target="_blank" rel="noopener" href="' + RS_WANTED + '">' + ic('users') + ' Riyasewana wanted ads</a>';
+  const hint = isBuyer
+    ? `Look for more vehicles for this buyer${o.max_budget ? ' (budget ' + esc(lk(o.max_budget)) + ')' : ''}. If you find a good one, call the seller and add it as a Vehicle with their permission.`
+    : `Check what similar vehicles sell for, or look for people who want to buy one.`;
+  return `<div class="extbox">
+    <div class="lbl">${ic('globe')} ${isBuyer ? 'Search other websites' : 'Market check on other websites'} — ${hint}</div>
+    <div class="row">
+      <a class="btn ext" target="_blank" rel="noopener" href="${esc(u.ikman)}">${ic('external')} ikman.lk</a>
+      <a class="btn ext" target="_blank" rel="noopener" href="${esc(u.riyasewana)}">${ic('external')} Riyasewana</a>
+      ${wanted}
+    </div>
+  </div>`;
+}
+
+/* ---------- WhatsApp message helpers (Sinhala) ---------- */
+const lkSi = v => (v === '' || v == null) ? '' : 'රු. ලක්ෂ ' + v;
+function wantSi(b) {
+  const w = [b.make, b.model].filter(Boolean).join(' ') || b.vehicle_type || 'වාහනයක්';
+  const y = (b.year_from || b.year_to) ? ` (${b.year_from || ''}–${b.year_to || ''})` : '';
+  return w + y;
+}
+
+/* ============================================================
+ *  VEHICLE THUMBNAILS — loaded in the background, cached per session
+ * ============================================================ */
+function thumbHtml(v, big) {
+  const has = Number(v.photo_count) > 0;
+  const cached = S.thumbs[v.vehicle_id];
+  const style = cached ? ` style="background-image:url('${cached}')"` : '';
+  return `<div class="vthumb${big ? ' lg' : ''}${has ? ' has' : ''}${cached ? ' loaded' : ''}" data-thumb="${esc(v.vehicle_id)}" data-has="${has ? 1 : 0}"${style}
+    ${has ? `onclick="openGallery('${esc(v.vehicle_id)}')" title="View photos"` : ''}>${ic('car')}</div>`;
+}
+let thumbTimer = null, thumbBusy = false;
+function queueThumbs() { clearTimeout(thumbTimer); thumbTimer = setTimeout(loadThumbs, 60); }
+async function loadThumbs() {
+  if (thumbBusy || !S.token) return;
+  const els = Array.from(document.querySelectorAll('.vthumb[data-has="1"]:not(.loaded)'));
+  els.forEach(el => { const u = S.thumbs[el.dataset.thumb]; if (u) setThumb(el, u); });
+  const need = [...new Set(els.map(el => el.dataset.thumb).filter(id => !(id in S.thumbs)))].slice(0, 30);
+  if (!need.length) return;
+  thumbBusy = true;
+  need.forEach(id => S.thumbs[id] = '');            // mark as requested
+  const r = await call('getThumbs', { ids: need });
+  thumbBusy = false;
+  if (!r) return;
+  Object.keys(r.thumbs || {}).forEach(id => S.thumbs[id] = r.thumbs[id]);
+  document.querySelectorAll('.vthumb[data-has="1"]:not(.loaded)').forEach(el => {
+    const u = S.thumbs[el.dataset.thumb]; if (u) setThumb(el, u);
+  });
+  queueThumbs(); // more on screen?
+}
+function setThumb(el, url) { el.style.backgroundImage = "url('" + url + "')"; el.classList.add('loaded'); }
+new MutationObserver(queueThumbs).observe(document.getElementById('app'), { childList: true, subtree: true });
+
+/** Small 4:3 cover image made in the browser from the first uploaded photo. */
+function makeThumb(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const W = 360, H = 270, c = document.createElement('canvas'); c.width = W; c.height = H;
+      const r = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+      const w = img.naturalWidth * r, h = img.naturalHeight * r;
+      c.getContext('2d').drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.78));
+    };
+    img.onerror = () => resolve('');
+    img.src = dataUrl;
+  });
+}
+
+function photoLink(v) {
+  return Number(v.photo_count) > 0 && v.vehicle_id
+    ? `<button type="button" class="btn sm" onclick="openGallery('${esc(v.vehicle_id)}')">${ic('camera')} Photos (${esc(v.photo_count)})</button>` : '';
+}
+
+/* ------------------------------------------------------------
+ *  IN-APP PHOTO VIEWER — photos load through the app, so nobody
+ *  is ever sent to Google Drive (no access to other folders).
+ * ------------------------------------------------------------ */
+const G = { vehicleId: '', photos: [], i: 0, cache: {}, canDelete: false };
+
+async function openGallery(vehicleId) {
+  Object.assign(G, { vehicleId, photos: [], i: 0, canDelete: false });
+  const back = document.createElement('div');
+  back.className = 'pe-back'; back.id = 'gal';
+  back.innerHTML = `<div class="pe">
+    <div class="gal-bar"><h3 id="gal_t">${ic('camera')} ${esc(vehicleId)} — loading…</h3>
+      <button class="btn" onclick="closeGallery()">${ic('x')} Close</button></div>
+    <img id="gal_img" class="gal-img" alt="">
+    <div class="gal-bar">
+      <button class="btn" onclick="galMove(-1)">${ic('left')} Prev</button>
+      <span id="gal_n" class="muted"></span>
+      <span class="row">
+        <button class="btn" id="gal_del" style="display:none;color:var(--bad)" onclick="galDelete(this)">${ic('trash')} Delete</button>
+        <button class="btn" onclick="galMove(1)">Next ▶</button>
+      </span>
+    </div></div>`;
+  back.addEventListener('click', e => { if (e.target === back) closeGallery(); });
+  document.body.appendChild(back);
+  document.addEventListener('keydown', galKeys);
+  const r = await call('listPhotos', { vehicleId });
+  if (!r || !$('gal')) return;
+  G.photos = r.photos; G.canDelete = r.canDelete;
+  $('gal_del').style.display = G.canDelete ? '' : 'none';
+  $('gal_t').innerHTML = ic('camera') + ' ' + esc(vehicleId + (S.rec[vehicleId] ? ' — ' + carName(S.rec[vehicleId]) : ''));
+  galShow();
+}
+function closeGallery() { const g = $('gal'); if (g) g.remove(); document.removeEventListener('keydown', galKeys); }
+function galKeys(e) { if (e.key === 'Escape') closeGallery(); if (e.key === 'ArrowLeft') galMove(-1); if (e.key === 'ArrowRight') galMove(1); }
+function galMove(d) { if (!G.photos.length) return; G.i = (G.i + d + G.photos.length) % G.photos.length; galShow(); }
+async function galLoad(i) {
+  const p = G.photos[i]; if (!p) return null;
+  if (!G.cache[p.id]) {
+    G.cache[p.id] = call('getPhoto', { vehicleId: G.vehicleId, fileId: p.id }).then(r => r && r.data);
+  }
+  return G.cache[p.id];
+}
+async function galShow() {
+  if (!$('gal')) return;
+  if (!G.photos.length) { $('gal_n').textContent = 'No photos'; $('gal_img').removeAttribute('src'); return; }
+  const i = G.i;
+  $('gal_n').textContent = `${i + 1} / ${G.photos.length} — loading…`;
+  const data = await galLoad(i);
+  if (!$('gal') || G.i !== i) return;
+  if (data) $('gal_img').src = data;
+  $('gal_n').textContent = `${i + 1} / ${G.photos.length}`;
+  if (G.photos.length > 1) galLoad((i + 1) % G.photos.length); // pre-load next
+}
+async function galDelete(btn) {
+  const p = G.photos[G.i];
+  if (!p || !confirm('Delete this photo?')) return;
+  btn.disabled = true;
+  const r = await call('deletePhoto', { vehicleId: G.vehicleId, fileId: p.id });
+  btn.disabled = false;
+  if (!r) return;
+  G.photos.splice(G.i, 1); G.i = Math.max(0, Math.min(G.i, G.photos.length - 1));
+  if (S.rec[G.vehicleId]) S.rec[G.vehicleId].photo_count = r.photo_count;
+  Object.values(S.mIndex).forEach(m => { if (m.vehicle.vehicle_id === G.vehicleId) m.vehicle.photo_count = r.photo_count; });
+  if ($('v_photo_link') && S.params.id === G.vehicleId) $('v_photo_link').innerHTML = photoLink(S.rec[G.vehicleId]) || '<span class="muted">No photos yet</span>';
+  toast('Photo deleted');
+  delete S.thumbs[G.vehicleId];
+  galShow();
+}
+
+/** Shrinks a photo in the browser before upload (max 1600px JPEG) so uploads are fast. */
+function resizeImage(file, max, quality) {
+  max = max || 1600; quality = quality || 0.82;
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read ' + file.name)); };
+    img.src = url;
+  });
+}
+
+async function uploadPhotos(vehicleId, files) {
+  files = Array.from(files || []).slice(0, 10);
+  let last = null, done = 0;
+  for (let i = 0; i < files.length; i++) {
+    let data;
+    try { data = await resizeImage(files[i]); } catch (e) { toast(e.message, true); continue; }
+    data = await blurEditor(data, i + 1, files.length);   // let the officer hide the number plate
+    if (!data) continue;                                   // photo skipped
+    toast(`Uploading photo ${i + 1} of ${files.length}…`);
+    const thumb = await makeThumb(data);
+    const r = await call('uploadPhoto', { vehicleId, data, thumb });
+    if (r) { last = r; done++; }
+  }
+  if (last) { toast(`${done} photo(s) uploaded`); delete S.thumbs[vehicleId]; }
+  return last;
+}
+
+/* ------------------------------------------------------------
+ *  NUMBER-PLATE BLUR EDITOR
+ *  Drag a box over the number plate (or anything private) → that area is pixelated.
+ *  The blur is baked into the JPEG before upload, so the original is never sent.
+ *  Resolves with the edited image (data URL), or null if the photo is skipped.
+ * ------------------------------------------------------------ */
+function blurEditor(dataUrl, n, total) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const back = document.createElement('div');
+      back.className = 'pe-back';
+      back.innerHTML = `<div class="pe">
+        <h3>${ic('camera')} Photo ${n} of ${total} — drag a box over the number plate to blur it</h3>
+        <div class="muted">You can draw several boxes (plate, faces, documents). Nothing is uploaded until you press Upload.</div>
+        <canvas id="pe_c"></canvas>
+        <div class="row">
+          <button class="btn" id="pe_undo">${ic('undo')} Undo</button>
+          <button class="btn" id="pe_skip">${ic('x')} Skip this photo</button>
+          <button class="btn green" id="pe_ok">${ic('upload')} Upload</button>
+        </div></div>`;
+      document.body.appendChild(back);
+
+      const c = back.querySelector('#pe_c'), ctx = c.getContext('2d');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const boxes = [];
+      let start = null, cur = null;
+
+      const redraw = () => {
+        ctx.drawImage(img, 0, 0);
+        boxes.forEach(b => pixelate(ctx, b));
+        if (start && cur) {
+          ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = Math.max(3, c.width / 300);
+          ctx.setLineDash([12, 8]);
+          ctx.strokeRect(start.x, start.y, cur.x - start.x, cur.y - start.y);
+          ctx.setLineDash([]);
+        }
+      };
+      const pos = e => {
+        const r = c.getBoundingClientRect();
+        return { x: (e.clientX - r.left) * c.width / r.width, y: (e.clientY - r.top) * c.height / r.height };
+      };
+      c.addEventListener('pointerdown', e => { c.setPointerCapture(e.pointerId); start = cur = pos(e); });
+      c.addEventListener('pointermove', e => { if (start) { cur = pos(e); redraw(); } });
+      c.addEventListener('pointerup', () => {
+        if (start && cur) {
+          const b = { x: Math.min(start.x, cur.x), y: Math.min(start.y, cur.y),
+                      w: Math.abs(cur.x - start.x), h: Math.abs(cur.y - start.y) };
+          if (b.w > 8 && b.h > 8) boxes.push(b);
+        }
+        start = cur = null; redraw();
+      });
+      redraw();
+
+      const close = val => { back.remove(); resolve(val); };
+      back.querySelector('#pe_undo').onclick = () => { boxes.pop(); redraw(); };
+      back.querySelector('#pe_skip').onclick = () => close(null);
+      back.querySelector('#pe_ok').onclick = () => { start = cur = null; redraw(); close(c.toDataURL('image/jpeg', 0.85)); };
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/** Strong mosaic over a box — irreversible once saved as JPEG. */
+function pixelate(ctx, b) {
+  const x = Math.max(0, Math.round(b.x)), y = Math.max(0, Math.round(b.y));
+  const w = Math.min(ctx.canvas.width - x, Math.round(b.w)), h = Math.min(ctx.canvas.height - y, Math.round(b.h));
+  if (w < 2 || h < 2) return;
+  const block = Math.max(10, Math.round(Math.min(w, h) / 4));
+  const t = document.createElement('canvas');
+  t.width = Math.max(1, Math.ceil(w / block)); t.height = Math.max(1, Math.ceil(h / block));
+  const tc = t.getContext('2d');
+  tc.drawImage(ctx.canvas, x, y, w, h, 0, 0, t.width, t.height);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(t, 0, 0, t.width, t.height, x, y, w, h);
+  ctx.restore();
+}
+
+/** Officer contact block — shown instead of another officer's customer. */
+function officerBlock(o, waText, label) {
+  o = o || {};
+  return `<div class="officer">
+    <div class="lbl">${ic('shield')} ${esc(label || 'Contact through officer')}</div>
+    <div class="nm">${esc(o.name || 'Unknown officer')}</div>
+    <div class="actions">${o.phone ? phoneBtns(o.phone, waText) : '<span class="muted">No phone number saved for this officer</span>'}</div>
+  </div>`;
+}
+function statusBadge(s, okList) {
+  const cls = okList.includes(s) ? 'ok' : (s === 'Pending' ? 'warn' : 'off');
+  return `<span class="badge ${cls}">${esc(statusLabel(s) || '-')}</span>`;
+}
+
+/* ============================================================
+ *  BOOT / AUTH
+ * ============================================================ */
+async function boot() {
+  S.token = stored('vm_token');
+  if (!S.token) return renderLogin();
+  if (!document.querySelector('#app .splash')) $('app').innerHTML = '<div class="loading">Loading…</div>';
+  const r = await call('init');
+  if (!r) return renderLogin();
+  applyInit(r);
+}
+
+const APP_VERSION = '3.3';   // must match APP.VERSION in Code.gs
+
+function applyInit(r) {
+  S.user = r.user; S.lists = r.lists; S.master = r.master;
+  renderShell();
+  checkVersions(r.versions);
+  go('dashboard');
+}
+
+/** Warns clearly when the three files are from different updates. */
+function checkVersions(v) {
+  const msgs = [];
+  if (!v) msgs.push('<b>Code.gs</b> on Apps Script is out of date.');
+  else {
+    if (v.code !== APP_VERSION) msgs.push(v.code > APP_VERSION || !APP_VERSION
+      ? 'This page (<b>index.html</b>) is older than the server. Upload the latest index.html.'
+      : '<b>Code.gs</b> on Apps Script is out of date (server ' + esc(v.code) + ', page ' + APP_VERSION + ').');
+    if (v.matching !== v.code) msgs.push('<b>Matching.gs</b> on Apps Script is out of date — paste the latest Matching.gs.');
+  }
+  const box = $('verwarn');
+  if (!box) return;
+  box.innerHTML = msgs.length ? ic('alert') + '<div>' + msgs.join('<br>') +
+    '<br><span class="muted">After updating Apps Script files: Deploy → Manage deployments → Edit → New version → Deploy.</span></div>' : '';
+  box.style.display = msgs.length ? 'flex' : 'none';
+}
+
+function renderLogin() {
+  $('app').innerHTML = `
+    <div class="login"><form class="card" onsubmit="doLogin(event)">
+      <img class="login-logo" src="${logoSrc('vmLogoWide')}" alt="VehicleHub">
+      <div class="muted" style="text-align:center">Officer portal — match vehicle buyers with sellers</div>
+      <label class="f"><span>Username</span><input id="lg_u" autocomplete="username" required></label>
+      <label class="f"><span>Password</span><input id="lg_p" type="password" autocomplete="current-password" required></label>
+      <div class="err" id="lg_err"></div>
+      <div class="ok" id="lg_ok"></div>
+      <button class="btn primary big" id="lg_btn">Login</button>
+      <div id="lg_reg" style="text-align:center;display:none">New officer? <button type="button" class="link" onclick="renderRegister()">Create an account</button></div>
+      <a class="fblogin" href="${FACEBOOK_URL}" target="_blank" rel="noopener">${ic('facebook')} Follow VehicleHub on Facebook</a>
+    </form></div>`;
+  $('lg_u').focus();
+  google.script.run.withSuccessHandler(open => { if (open && $('lg_reg')) $('lg_reg').style.display = ''; }).registrationOpen();
+}
+
+function renderRegister() {
+  $('app').innerHTML = `
+    <div class="login"><form class="card" onsubmit="doRegister(event)">
+      <img class="login-logo small" src="${logoSrc('vmLogoWide')}" alt="VehicleHub">
+      <h1>${ic('userPlus')} Create an account</h1>
+      <div class="muted">After you register, the admin must approve your account before you can log in.</div>
+      <label class="f req"><span>Full name</span><input id="rg_n" required autocomplete="name"></label>
+      <label class="f req"><span>Mobile number</span><input id="rg_p" type="tel" inputmode="tel" placeholder="07XXXXXXXX" required autocomplete="tel"></label>
+      <label class="f req"><span>Email <span class="muted">(for new-match alerts)</span></span><input id="rg_e" type="email" required autocomplete="email" placeholder="name@gmail.com"></label>
+      <label class="f req"><span>Username</span><input id="rg_u" required pattern="[a-zA-Z0-9._\-]{3,}" autocomplete="username" placeholder="e.g. kasun"></label>
+      <label class="f req"><span>Password</span><input id="rg_pw" type="password" minlength="6" required autocomplete="new-password"></label>
+      <label class="f req"><span>Confirm password</span><input id="rg_pw2" type="password" minlength="6" required autocomplete="new-password"></label>
+      <div class="err" id="rg_err"></div>
+      <button class="btn primary big" id="rg_btn">Register</button>
+      <div style="text-align:center"><button type="button" class="link" onclick="renderLogin()">${ic('left')} Back to login</button></div>
+    </form></div>`;
+  $('rg_n').focus();
+}
+
+function doRegister(e) {
+  e.preventDefault();
+  $('rg_err').textContent = '';
+  if ($('rg_pw').value !== $('rg_pw2').value) { $('rg_err').textContent = 'Passwords do not match'; return; }
+  const btn = $('rg_btn'); btn.disabled = true; netStart();
+  google.script.run
+    .withSuccessHandler(r => {
+      netEnd();
+      const uname = $('rg_u').value;
+      renderLogin();
+      $('lg_u').value = uname; $('lg_p').focus();
+      $('lg_ok').textContent = r.needsApproval
+        ? 'Registration sent. You can log in once the admin approves your account.'
+        : 'Account created. You can log in now.';
+    })
+    .withFailureHandler(err => {
+      netEnd();
+      $('rg_err').textContent = String(err.message || err).replace(/^Error:\s*/, '');
+      btn.disabled = false;
+    })
+    .register({ full_name: $('rg_n').value, phone: $('rg_p').value, email: $('rg_e').value, username: $('rg_u').value, password: $('rg_pw').value });
+}
+
+function doLogin(e) {
+  e.preventDefault();
+  const btn = $('lg_btn'); btn.disabled = true; $('lg_err').textContent = ''; netStart();
+  google.script.run
+    .withSuccessHandler(async r => {
+      netEnd();
+      S.token = r.token; store('vm_token', r.token);
+      const init = await call('init');
+      if (init) applyInit(init); else btn.disabled = false;
+    })
+    .withFailureHandler(err => {
+      netEnd();
+      $('lg_err').textContent = String(err.message || err).replace(/^Error:\s*/, '');
+      btn.disabled = false;
+    })
+    .login($('lg_u').value, $('lg_p').value);
+}
+
+function logout(silent) {
+  if (!silent && S.token) google.script.run.api(S.token, 'logout', {});
+  S.token = null; store('vm_token', null);
+  renderLogin();
+}
+
+/* ============================================================
+ *  SHELL + ROUTER
+ * ============================================================ */
+const TABS = [
+  ['dashboard', 'home', 'Dashboard'], ['newcall', 'phone', 'New Call'], ['buyers', 'user', 'Buyers'],
+  ['vehicles', 'car', 'Vehicles'], ['matches', 'link', 'Matches'], ['deals', 'award', 'Deals'], ['approvals', 'approve', 'Approvals', 'admin'],
+  ['settings', 'settings', 'Settings']
+];
+
+// VehicleHub Facebook page (split so no "//" appears inside a template literal)
+const FACEBOOK_URL = 'https:/' + '/www.facebook.com/profile.php?id=61593573333056';
+
+function renderShell() {
+  $('app').innerHTML = `
+    <header>
+      <div class="hbar">
+        <div class="brand"><img class="brand-logo" src="${logoSrc('vmLogoRound')}" alt=""><span>Vehicle<b>Hub</b></span></div>
+        <div class="who"><span class="uname">${ic('user')} <span id="unameText">${esc(S.user.full_name)}</span></span><button onclick="logout()">${ic('logout')} Logout</button></div>
+      </div>
+      <nav id="nav">${TABS.filter(t => !t[3] || S.user.role === 'admin').map(t =>
+        `<button data-v="${t[0]}" onclick="go('${t[0]}')">${ic(t[1])}<span>${t[2]}</span><em class="navcount" id="nc_${t[0]}"></em></button>`).join('')}
+        <a class="fbnav" href="${FACEBOOK_URL}" target="_blank" rel="noopener">${ic('facebook')}<span>Facebook</span></a></nav>
+    </header>
+    <main id="main"></main>
+    <div id="verwarn" class="verwarn" style="display:none"></div>`;
+}
+
+function setMain(html) { $('main').innerHTML = html; }
+
+function go(view, params) {
+  S.view = view; S.params = params || {};
+  const tab = { buyerForm: 'buyers', vehicleForm: 'vehicles', results: 'newcall' }[view] || view;
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === tab));
+  window.scrollTo(0, 0);
+  ({ dashboard: viewDashboard, newcall: viewNewCall, buyers: viewBuyers, vehicles: viewVehicles,
+     matches: viewMatches, settings: viewSettings, buyerForm: viewBuyerForm, vehicleForm: viewVehicleForm,
+     results: viewResults, approvals: viewApprovals, deals: viewDeals
+  })[view]();
+}
+
+/* ============================================================
+ *  DASHBOARD
+ * ============================================================ */
+async function viewDashboard() {
+  setMain('<div class="loading">Loading…</div>');
+  const d = await call('dashboard');
+  if (!d || S.view !== 'dashboard') return;
+  const s = d.stats;
+  registerMatches(d.topNew);
+  setNavCount('approvals', d.pendingVehicles);
+  setMain(`
+    ${d.pendingVehicles ? `<div class="notice">${ic('approve')} ${d.pendingVehicles} vehicle(s) waiting for your approval — <a href="#" onclick="go('approvals');return false">review now</a>.</div>` : ''}
+    ${d.pendingUsers ? `<div class="notice">${ic('users')} ${d.pendingUsers} new user(s) waiting for approval — <a href="#" onclick="go('settings');return false">review in Settings → Users</a>.</div>` : ''}
+    ${!S.user.email ? `<div class="notice">${ic('message')} Add your email in <a href="#" onclick="go('settings');return false">Settings</a> to get an email when a new match is found for your customers.</div>` : ''}
+    ${!S.user.phone ? `<div class="notice">${ic('mobile')} Add your phone number in <a href="#" onclick="go('settings');return false">Settings</a> so other officers can contact you about matches.</div>` : ''}
+    <div class="tiles">
+      <div class="tile" onclick="go('buyers')"><b>${s.activeBuyers}</b><span>${ic('user')} Active buyers</span></div>
+      <div class="tile" onclick="go('vehicles')"><b>${s.availableVehicles}</b><span>${ic('car')} Available vehicles</span></div>
+      <div class="tile" onclick="go('matches')"><b>${s.newMatches}</b><span>${ic('star')} New matches</span></div>
+      <div class="tile" onclick="go('matches')"><b>${s.inProgress}</b><span>${ic('clock')} In progress</span></div>
+      <div class="tile" onclick="go('deals')"><b>${s.dealsThisMonth}</b><span>${ic('award')} Deals this month</span></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary big" onclick="go('newcall')">${ic('phone')} Add a new call</button>
+    </div>
+    <h2>${ic('star', 'h')} Top new matches</h2>
+    <div class="grid">${d.topNew.map(matchCard).join('') || '<div class="empty">No new matches</div>'}</div>`);
+}
+
+/* ============================================================
+ *  NEW CALL (phone lookup first)
+ * ============================================================ */
+function viewNewCall() {
+  setMain(`
+    <div class="card narrow">
+      <h2 style="margin-top:0">${ic('phone', 'h')} New Call</h2>
+      <p class="muted">Search the phone number first — you'll see if this person has called before.</p>
+      <form class="row" onsubmit="doLookup(event)">
+        <input id="lk_phone" type="tel" inputmode="tel" placeholder="07XXXXXXXX" required style="flex:1 1 200px">
+        <button class="btn primary">${ic('search')} Search</button>
+      </form>
+      <div id="lk_res"></div>
+    </div>`);
+  $('lk_phone').focus();
+}
+
+async function doLookup(e) {
+  e.preventDefault();
+  $('lk_res').innerHTML = '<div class="loading">Searching…</div>';
+  const r = await call('lookupPhone', { phone: $('lk_phone').value });
+  if (!r) { $('lk_res').innerHTML = ''; return; }
+  r.buyers.forEach(b => S.rec[b.buyer_id] = b);
+  r.vehicles.forEach(v => S.rec[v.vehicle_id] = v);
+  const found = r.buyers.length + r.vehicles.length;
+  $('lk_res').innerHTML = `
+    <h2>${found ? `${ic('search', 'h')} ${found} record(s) found for this number` : `${ic('newItem', 'h')} No previous records for this number`}</h2>
+    ${found ? `<div class="grid">${r.buyers.map(buyerCard).join('')}${r.vehicles.map(vehicleCard).join('')}</div>` : ''}
+    <h2>What is this call about?</h2>
+    <div class="row">
+      <button class="btn big" style="background:#e8effd;color:#1d3f8f" onclick="go('buyerForm',{phone:'${esc(r.phone)}'})">${ic('user')} Wants to buy a vehicle</button>
+      <button class="btn big" style="background:#fdf1e2;color:#8a4b00" onclick="go('vehicleForm',{phone:'${esc(r.phone)}'})">${ic('car')} Has a vehicle to sell</button>
+    </div>`;
+}
+
+/* ============================================================
+ *  VEHICLE TYPE → MAKE → MODEL pickers
+ * ============================================================ */
+function makesFor(type) {
+  return uniq(S.master.filter(m => !type || norm(m.vehicle_type) === norm(type)).map(m => m.make));
+}
+function modelsFor(type, make) {
+  return uniq(S.master.filter(m => (!type || norm(m.vehicle_type) === norm(type)) &&
+    (!make || norm(m.make) === norm(make))).map(m => m.model));
+}
+function updateMakes(p) {
+  $(p + '_dl_make').innerHTML = makesFor($(p + '_vehicle_type').value).map(x => `<option value="${esc(x)}">`).join('');
+  updateModels(p);
+}
+function updateModels(p) {
+  $(p + '_dl_model').innerHTML = modelsFor($(p + '_vehicle_type').value, $(p + '_make').value)
+    .map(x => `<option value="${esc(x)}">`).join('');
+}
+function vehiclePickers(p, r, anyLabel) {
+  const req = !anyLabel;
+  return `
+    <label class="f ${req ? 'req' : ''}"><span>Vehicle type</span>
+      <select id="${p}_vehicle_type" onchange="updateMakes('${p}')" ${req ? 'required' : ''}>${opts(S.lists.VEHICLE_TYPE, r.vehicle_type, anyLabel || '— Select —')}</select></label>
+    <label class="f ${req ? 'req' : ''}"><span>Make (Brand)</span>
+      <input id="${p}_make" list="${p}_dl_make" value="${esc(r.make)}" oninput="updateModels('${p}')" placeholder="${anyLabel ? 'Any' : 'e.g. Toyota'}" ${req ? 'required' : ''}>
+      <datalist id="${p}_dl_make"></datalist></label>
+    <label class="f ${req ? 'req' : ''}"><span>Model</span>
+      <input id="${p}_model" list="${p}_dl_model" value="${esc(r.model)}" placeholder="${anyLabel ? 'Any' : 'e.g. Aqua'}" ${req ? 'required' : ''}>
+      <datalist id="${p}_dl_model"></datalist></label>`;
+}
+function fld(p, name, label, value, attrs, cls) {
+  return `<label class="f ${cls || ''}"><span>${label}</span><input id="${p}_${name}" value="${esc(value)}" ${attrs || ''}></label>`;
+}
+function sel(p, name, label, list, value, blank, cls) {
+  return `<label class="f ${cls || ''}"><span>${label}</span><select id="${p}_${name}">${opts(list, value, blank)}</select></label>`;
+}
+function collect(p, fields) {
+  const o = {}; fields.forEach(f => { const el = $(p + '_' + f); o[f] = el ? el.value.trim() : ''; }); return o;
+}
+
+/* ============================================================
+ *  BUYER FORM
+ * ============================================================ */
+const BUYER_FIELDS = ['name', 'phone', 'phone2', 'vehicle_type', 'make', 'model', 'year_from', 'year_to',
+  'min_budget', 'max_budget', 'fuel', 'transmission', 'district', 'notes', 'status'];
+
+function viewBuyerForm() {
+  const id = S.params.id;
+  const b = id ? (S.rec[id] || {}) : { phone: S.params.phone || '', status: 'Active' };
+  const yr = new Date().getFullYear();
+  setMain(`
+    <div class="card narrow">
+      <h2 style="margin-top:0" id="bf_title">${id ? ic('edit', 'h') + ' Buyer edit — ' + esc(id) : ic('user', 'h') + ' New Buyer'}</h2>
+      <form class="form" onsubmit="saveBuyer(event)">
+        <div class="sec">${ic('user')} Details</div>
+        ${fld('b', 'name', 'Name', b.name, 'required', 'req')}
+        ${fld('b', 'phone', 'Phone', b.phone, 'type="tel" inputmode="tel" required', 'req')}
+
+        <div class="sec">${ic('car')} Vehicle wanted <span class="muted">(leave blank = any)</span></div>
+        ${vehiclePickers('b', b, 'Any')}
+        ${fld('b', 'year_from', 'Year (from)', b.year_from, `type="number" min="1970" max="${yr + 1}" placeholder="2014"`)}
+        ${fld('b', 'year_to', 'Year (to)', b.year_to, `type="number" min="1970" max="${yr + 1}" placeholder="${yr}"`)}
+
+        <div class="sec">${ic('tag')} Budget (in Lakhs)</div>
+        ${fld('b', 'min_budget', 'Minimum (Lakhs)', b.min_budget, 'type="number" step="0.1" min="0" placeholder="50"')}
+        ${fld('b', 'max_budget', 'Maximum (Lakhs)', b.max_budget, 'type="number" step="0.1" min="0" placeholder="65" required', 'req')}
+        ${id ? sel('b', 'status', 'Status', S.lists.BUYER_STATUS, b.status) : ''}
+
+        <div class="full row"><button class="btn green big" id="b_save">${ic('save')} Save & view matches</button></div>
+        ${id && S.user.role === 'admin' ? `<div class="full row"><button type="button" class="btn red" onclick="deleteRecord('buyer','${esc(id)}')">${ic('trash')} Delete this buyer</button></div>` : ''}
+      </form>
+    </div>
+    <div id="afterSave"></div>`);
+  updateMakes('b');
+  if (id) showRecordMatches({ buyerId: id }, 'Vehicles matching this buyer');
+}
+
+async function saveBuyer(e) {
+  e.preventDefault();
+  const d = collect('b', BUYER_FIELDS);
+  d.buyer_id = S.params.id || '';
+  // Fields removed from the form: keep an existing buyer's Phone 2 and notes;
+  // district / fuel / transmission stay blank (= any), so no hidden filter limits matching.
+  const old = d.buyer_id ? (S.rec[d.buyer_id] || {}) : {};
+  d.phone2 = old.phone2 || '';
+  d.notes = old.notes || '';
+  const btn = $('b_save'); btn.disabled = true;
+  const r = await call('saveBuyer', d);
+  btn.disabled = false;
+  if (!r) return;
+  S.rec[r.id] = r.buyer;
+  if (r.master) S.master = r.master;
+  toast('Saved — ' + r.id);
+  S.lastMatches = r.matches;
+  go('results', { kind: 'buyer', id: r.id });   // hide the call details, show only the matches
+}
+
+/** Admin: delete a buyer / vehicle and all of its matches. */
+async function deleteRecord(kind, id) {
+  const what = kind === 'buyer' ? 'buyer' : 'vehicle';
+  const extra = kind === 'buyer' ? '' : ' Its photos will be moved to the Google Drive trash.';
+  if (!confirm(`Delete ${what} ${id} permanently?\n\nAll matches of this ${what} will be deleted too.${extra}\n\nThis cannot be undone.`)) return;
+  const r = await call('deleteRecord', { kind: kind, id: id });
+  if (!r) return;
+  delete S.rec[id];
+  toast(`Deleted ${id} (${r.matchesDeleted} match${r.matchesDeleted === 1 ? '' : 'es'} removed)`);
+  go(kind === 'buyer' ? 'buyers' : 'vehicles');
+}
+
+/* ============================================================
+ *  VEHICLE FORM
+ * ============================================================ */
+const VEHICLE_FIELDS = ['owner_name', 'owner_phone', 'phone2', 'vehicle_type', 'make', 'model', 'year', 'price',
+  'mileage', 'fuel', 'transmission', 'color', 'district', 'condition', 'notes', 'status'];
+
+function viewVehicleForm() {
+  const id = S.params.id;
+  const v = id ? (S.rec[id] || {}) : { owner_phone: S.params.phone || '', status: 'Available' };
+  const yr = new Date().getFullYear();
+  setMain(`
+    <div class="card narrow">
+      <h2 style="margin-top:0" id="vf_title">${id ? ic('edit', 'h') + ' Vehicle edit — ' + esc(id) : ic('car', 'h') + ' New Vehicle for Sale (Seller)'}</h2>
+      <form class="form" onsubmit="saveVehicle(event)">
+        <div class="sec">${ic('user')} Owner</div>
+        ${fld('v', 'owner_name', 'Name', v.owner_name, 'required', 'req')}
+        ${fld('v', 'owner_phone', 'Phone', v.owner_phone, 'type="tel" inputmode="tel" required', 'req')}
+
+        <div class="sec">${ic('car')} Vehicle</div>
+        ${vehiclePickers('v', v)}
+        ${fld('v', 'year', 'Year (YOM)', v.year, `type="number" min="1970" max="${yr + 1}" placeholder="2015"`)}
+        ${sel('v', 'condition', 'Condition', S.lists.CONDITION, v.condition, '— Select —')}
+        ${fld('v', 'color', 'Color', v.color, 'placeholder="White"')}
+
+        <div class="sec">${ic('tag')} Price</div>
+        ${fld('v', 'price', 'Expected price (Lakhs)', v.price, 'type="number" step="0.1" min="0" placeholder="62.5" required', 'req')}
+        ${!id ? '' : (S.user.role === 'admin'
+            ? sel('v', 'status', 'Status', S.lists.VEHICLE_STATUS, v.status)
+            : (v.status === 'Pending' || v.status === 'Rejected'
+                ? `<label class="f"><span>Status</span><div>${statusBadge(v.status, [])} <span class="muted">${v.status === 'Rejected' ? 'Saving again sends it back for approval' : 'Waiting for admin approval'}</span></div></label>`
+                : sel('v', 'status', 'Status', (S.lists.VEHICLE_STATUS || []).filter(x => x !== 'Pending' && x !== 'Rejected'), v.status)))}
+
+        <div class="sec">${ic('camera')} Photos</div>
+        <div class="full photo-pick">
+          <div id="v_photo_link">${photoLink(v) || '<span class="muted">No photos yet</span>'}</div>
+          <input type="file" id="v_photos" accept="image/*" multiple>
+          <span class="muted">Choose up to 10 photos. When you press Save, each photo opens so you can blur the number plate before it is uploaded.</span>
+        </div>
+        <div class="full row"><button class="btn green big" id="v_save">${ic('save')} Save & view matches</button></div>
+        ${id && S.user.role === 'admin' ? `<div class="full row"><button type="button" class="btn red" onclick="deleteRecord('vehicle','${esc(id)}')">${ic('trash')} Delete this vehicle</button></div>` : ''}
+      </form>
+    </div>
+    <div id="afterSave"></div>`);
+  updateMakes('v');
+  if (id) showRecordMatches({ vehicleId: id }, 'Buyers matching this vehicle');
+}
+
+async function saveVehicle(e) {
+  e.preventDefault();
+  const d = collect('v', VEHICLE_FIELDS);
+  d.vehicle_id = S.params.id || '';
+  // Fields removed from the form: keep whatever an existing vehicle already has
+  // (notes also hold the admin's rejection reason).
+  const old = d.vehicle_id ? (S.rec[d.vehicle_id] || {}) : {};
+  ['phone2', 'district', 'mileage', 'fuel', 'transmission', 'notes'].forEach(f => { d[f] = old[f] == null ? '' : String(old[f]); });
+  const btn = $('v_save'); btn.disabled = true;
+  const r = await call('saveVehicle', d);
+  btn.disabled = false;
+  if (!r) return;
+  S.rec[r.id] = r.vehicle;
+  if (r.master) S.master = r.master;
+  toast('Saved — ' + r.id);
+  const files = $('v_photos') && $('v_photos').files ? Array.from($('v_photos').files) : [];
+  S.lastMatches = r.matches;
+  delete S.thumbs[r.id];
+  go('results', { kind: 'vehicle', id: r.id, pending: r.pending });   // hide the call details, show only the matches
+  if (files.length) {
+    const up = await uploadPhotos(r.id, files);
+    if (up) {
+      Object.assign(S.rec[r.id], up);
+      if (S.view === 'results' && S.params.id === r.id) renderResults();
+    }
+  }
+}
+
+/* ============================================================
+ *  RESULTS AFTER SAVING A CALL — only the matches are shown
+ * ============================================================ */
+function viewResults() {
+  renderResults();
+}
+function renderResults() {
+  const p = S.params, rec = S.rec[p.id] || {};
+  const isBuyer = p.kind === 'buyer';
+  const list = S.lastMatches || [];
+  registerMatches(list);
+  const what = isBuyer ? 'matching vehicle' : 'matching buyer';
+  setMain(`
+    <div class="card savedbar">
+      <div class="vrow">${!isBuyer ? thumbHtml(rec) : ''}<div>
+        <div class="t">${ic(p.pending ? 'clock' : 'check', 'h')} ${isBuyer ? 'Buyer' : 'Vehicle'} ${esc(p.id)} ${p.pending ? 'saved — waiting for admin approval' : 'saved'}</div>
+        <div class="muted">${p.pending ? 'Matching starts as soon as an admin approves this vehicle.' : list.length ? `${list.length} ${what}${list.length > 1 ? 's' : ''} found` : `No ${what}s yet — you'll see them here and on the Dashboard when one is added`}</div>
+      </div></div>
+      <div class="row">
+        <button class="btn" onclick="go('${isBuyer ? 'buyerForm' : 'vehicleForm'}',{id:'${esc(p.id)}'})">${ic('edit')} Edit details</button>
+        ${!isBuyer && photoLink(rec) ? photoLink(rec) : ''}
+        <button class="btn primary" onclick="go('newcall')">${ic('phone')} Add new call</button>
+      </div>
+    </div>
+    ${extBox(rec, isBuyer)}
+    ${p.pending ? '' : `<h2>${ic('link', 'h')} ${isBuyer ? 'Matching vehicles' : 'Matching buyers'} (${list.length})</h2>`}
+    ${p.pending ? '' : `<div class="grid">${list.map(m => matchCard(m, isBuyer ? 'vehicle' : 'buyer')).join('') ||
+      '<div class="empty">No matches yet</div>'}</div>`}
+    <div class="row" style="margin-top:18px">
+      <button class="btn primary big" onclick="go('newcall')">${ic('phone')} Add new call</button>
+    </div>`);
+}
+
+async function showRecordMatches(filter, title) {
+  $('afterSave').innerHTML = '<div class="loading">Loading matches…</div>';
+  const r = await call('getMatches', filter);
+  if (r && $('afterSave')) renderRecordMatches(r.matches, title);
+}
+function renderRecordMatches(list, title) {
+  registerMatches(list);
+  $('afterSave').innerHTML = `<h2>${ic('link', 'h')} ${title} (${list.length})</h2>
+    <div class="grid">${list.map(matchCard).join('') || '<div class="empty">No matches yet. New records are auto-matched as soon as they are added.</div>'}</div>`;
+}
+
+/* ============================================================
+ *  BUYERS LIST
+ * ============================================================ */
+async function viewBuyers() {
+  setMain(`
+    <div class="toolbar">
+      <input id="f_q" placeholder="Search name, phone, model or ID" oninput="renderBuyers()">
+      <select id="f_st" onchange="renderBuyers()">${opts(S.lists.BUYER_STATUS, 'Active', 'All statuses')}</select>
+      <button class="btn primary" onclick="go('buyerForm',{})">+ Buyer</button>
+    </div>
+    <div id="list" class="grid">${skeleton(4)}</div>`);
+  const r = await call('listBuyers');
+  if (!r || S.view !== 'buyers') return;
+  S.buyers = r.buyers; r.buyers.forEach(b => S.rec[b.buyer_id] = b);
+  renderBuyers();
+}
+function renderBuyers() {
+  const q = norm($('f_q').value), st = $('f_st').value;
+  const list = S.buyers.filter(b => (!st || b.status === st) &&
+    (!q || norm([b.buyer_id, b.name, b.phone, b.phone2, b.make, b.model, b.district].join(' ')).includes(q)));
+  $('list').innerHTML = list.map(buyerCard).join('') || '<div class="empty">No buyers</div>';
+}
+function buyerCard(b) {
+  if (b.masked) {
+    return `<div class="card rec buyer">
+      <div class="top"><div><div class="title">${ic('user')} Buyer ${esc(b.buyer_id)}</div><div class="muted">Registered by another officer</div></div>
+        ${statusBadge(b.status, ['Active'])}</div>
+      <div>${ic('search')} ${esc(wantName(b))} · Budget ${esc(lk(b.max_budget))}</div>
+      <div class="actions">${extButtons(b, true)}</div>
+      ${officerBlock(b.officer, `ආයුබෝවන් ${b.officer && b.officer.name || ''}, ඔබ යටතේ ලියාපදිංචි කර ඇති ${wantSi(b)} සොයන ගැනුම්කරුවෙකු ගැන මට ඇමතුමක් ලැබුණා.`)}
+    </div>`;
+  }
+  return `<div class="card rec buyer">
+    <div class="top"><div><div class="title">${esc(b.name)}</div><div class="muted">${esc(b.buyer_id)} · ${esc(fmtDT(b.created_at).slice(0, 10))}</div></div>
+      ${statusBadge(b.status, ['Active'])}</div>
+    <div>${ic('search')} ${esc(wantName(b))}</div>
+    <div class="sub">Budget: ${b.min_budget ? esc(b.min_budget) + '–' : ''}${esc(lk(b.max_budget))}${b.fuel ? ' · ' + esc(b.fuel) : ''}${b.transmission ? ' · ' + esc(b.transmission) : ''}${b.district ? ' · ' + ic('pin') + ' ' + esc(b.district) : ''}</div>
+    ${b.notes ? `<div class="sub">${ic('note')} ${esc(b.notes)}</div>` : ''}
+    <div class="actions">
+      <button class="btn sm" onclick="go('buyerForm',{id:'${esc(b.buyer_id)}'})">${ic('edit')} Edit</button>
+      ${extButtons(b, true)}
+      <button class="btn sm" onclick="go('matches',{buyerId:'${esc(b.buyer_id)}'})">${ic('link')} Matches${b.matchCount !== undefined ? ' (' + b.matchCount + ')' : ''}</button>
+      ${phoneBtns(b.phone)}
+    </div>
+    ${!b.mine && b.officer ? `<div class="muted">${ic('shield')} Officer: ${esc(b.officer.name)}</div>` : ''}
+    </div>`;
+}
+
+/* ============================================================
+ *  VEHICLES LIST
+ * ============================================================ */
+async function viewVehicles() {
+  setMain(`
+    <div class="toolbar">
+      <input id="f_q" placeholder="Search name, phone, make, model or ID" oninput="renderVehicles()">
+      <select id="f_st" onchange="renderVehicles()">${opts(S.lists.VEHICLE_STATUS, 'Available', 'All statuses')}</select>
+      <select id="f_ty" onchange="renderVehicles()">${opts(S.lists.VEHICLE_TYPE, '', 'All types')}</select>
+      <button class="btn primary" onclick="go('vehicleForm',{})">+ Vehicle</button>
+    </div>
+    <div id="list" class="grid">${skeleton(4)}</div>`);
+  const r = await call('listVehicles');
+  if (!r || S.view !== 'vehicles') return;
+  S.vehicles = r.vehicles; r.vehicles.forEach(v => S.rec[v.vehicle_id] = v);
+  renderVehicles();
+}
+function renderVehicles() {
+  const q = norm($('f_q').value), st = $('f_st').value, ty = $('f_ty').value;
+  const list = S.vehicles.filter(v => (!st || v.status === st) && (!ty || v.vehicle_type === ty) &&
+    (!q || norm([v.vehicle_id, v.owner_name, v.owner_phone, v.phone2, v.make, v.model, v.district].join(' ')).includes(q)));
+  $('list').innerHTML = list.map(vehicleCard).join('') || '<div class="empty">No vehicles</div>';
+}
+function vehicleCard(v) {
+  if (v.masked) {
+    return `<div class="card rec seller">
+      <div class="vrow">${thumbHtml(v)}<div>
+      <div class="top"><div><div class="title">${esc(carName(v))} — ${esc(lk(v.price))}</div><div class="muted">${esc(v.vehicle_id)} · Registered by another officer</div></div>
+        ${statusBadge(v.status, ['Available'])}</div>
+      <div class="sub">${[v.mileage ? v.mileage + ' km' : '', v.fuel, v.transmission, v.condition, v.district].filter(Boolean).map(esc).join(' · ')}</div>
+      </div></div>
+      <div class="actions">${photoLink(v)}${extButtons(v, false)}</div>
+      ${officerBlock(v.officer, `ආයුබෝවන් ${v.officer && v.officer.name || ''}, ඔබ යටතේ ලියාපදිංචි කර ඇති ${carName(v)} වාහනය ගැන මට ඇමතුමක් ලැබුණා.`)}
+    </div>`;
+  }
+  return `<div class="card rec seller">
+    <div class="vrow">${thumbHtml(v)}<div>
+    <div class="top"><div><div class="title">${esc(carName(v))} — ${esc(lk(v.price))}</div><div class="muted">${esc(v.vehicle_id)} · ${esc(v.vehicle_type)}</div></div>
+      ${statusBadge(v.status, ['Available'])}</div>
+    <div class="sub">${[v.mileage ? v.mileage + ' km' : '', v.fuel, v.transmission, v.condition, v.color, v.district].filter(Boolean).map(esc).join(' · ')}</div>
+    <div class="sub">${ic('user')} ${esc(v.owner_name)}</div>
+    </div></div>
+    ${v.notes ? `<div class="sub">${ic('note')} ${esc(v.notes)}</div>` : ''}
+    <div class="actions">
+      <button class="btn sm" onclick="go('vehicleForm',{id:'${esc(v.vehicle_id)}'})">${ic('edit')} Edit</button>
+      ${extButtons(v, false)}
+      ${photoLink(v)}
+      <button class="btn sm" onclick="go('matches',{vehicleId:'${esc(v.vehicle_id)}'})">${ic('link')} Matches${v.matchCount !== undefined ? ' (' + v.matchCount + ')' : ''}</button>
+      ${phoneBtns(v.owner_phone)}
+    </div>
+    ${!v.mine && v.officer ? `<div class="muted">${ic('shield')} Officer: ${esc(v.officer.name)}</div>` : ''}
+    </div>`;
+}
+
+/* ============================================================
+ *  CLOSED DEALS — full details
+ * ============================================================ */
+async function viewDeals() {
+  const month = S.params.month || '';
+  setMain(`<div class="toolbar">
+      <h2 style="margin:0;flex:1 1 auto">${ic('award', 'h')} Closed deals</h2>
+      <select id="d_month" onchange="go('deals',{month:this.value})" style="flex:0 1 220px"><option>Loading…</option></select>
+    </div>
+    <div class="tiles" id="d_sum"></div>
+    <div id="list" class="grid wide" style="margin-top:12px">${skeleton(3)}</div>`);
+  const r = await call('listDeals', { month });
+  if (!r || S.view !== 'deals') return;
+  const label = m => { if (m === 'all') return 'All time'; const d = new Date(m + '-01T00:00:00');
+    return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); };
+  const thisMonth = new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 7);
+  const months = [...new Set([thisMonth].concat(r.months))].sort().reverse();
+  $('d_month').innerHTML = months.map(m => `<option value="${m}" ${m === r.month ? 'selected' : ''}>${label(m)}</option>`).join('') +
+    `<option value="all" ${r.month === 'all' ? 'selected' : ''}>All time</option>`;
+  $('d_sum').innerHTML = `
+    <div class="tile"><b>${r.deals.length}</b><span>${ic('award')} Deals — ${esc(label(r.month))}</span></div>
+    <div class="tile"><b>${esc(r.total)}</b><span>${ic('tag')} Total value (Lakhs)</span></div>`;
+  r.deals.forEach(d => { if (d.vehicle && d.vehicle.vehicle_id) S.rec[d.vehicle.vehicle_id] = Object.assign(S.rec[d.vehicle.vehicle_id] || {}, d.vehicle); });
+  $('list').innerHTML = r.deals.map(dealCard).join('') ||
+    `<div class="empty">${ic('award')} No closed deals for ${esc(label(r.month))}</div>`;
+}
+
+function dealCard(d) {
+  const v = d.vehicle || {}, b = d.buyer;
+  const seller = v.masked
+    ? `<div class="party"><div class="lbl">${ic('shield')} Seller's officer</div><b>${esc(v.officer ? v.officer.name : '')}</b>
+         <div class="actions">${v.officer && v.officer.phone ? phoneBtns(v.officer.phone) : ''}</div></div>`
+    : `<div class="party"><div class="lbl">${ic('car')} Seller (owner)</div><b>${esc(v.owner_name || '-')}</b>
+         <div class="actions">${phoneBtns(v.owner_phone)}</div>
+         ${!v.mine && v.officer ? `<div class="muted">${ic('shield')} Officer: ${esc(v.officer.name)}</div>` : ''}</div>`;
+  const buyer = !b ? `<div class="party"><div class="lbl">${ic('user')} Buyer</div><span class="muted">Marked as sold directly — no buyer match recorded</span></div>`
+    : b.masked
+      ? `<div class="party"><div class="lbl">${ic('shield')} Buyer's officer</div><b>${esc(b.officer ? b.officer.name : '')}</b>
+           <div class="muted">Wanted: ${esc(wantName(b))} · Budget ${esc(lk(b.max_budget))}</div>
+           <div class="actions">${b.officer && b.officer.phone ? phoneBtns(b.officer.phone) : ''}</div></div>`
+      : `<div class="party"><div class="lbl">${ic('user')} Buyer · ${esc(b.buyer_id)}</div><b>${esc(b.name || '-')}</b>
+           <div class="muted">Wanted: ${esc(wantName(b))} · Budget ${esc(lk(b.max_budget))}${b.district ? ' · ' + esc(b.district) : ''}</div>
+           <div class="actions">${phoneBtns(b.phone)}</div>
+           ${!b.mine && b.officer ? `<div class="muted">${ic('shield')} Officer: ${esc(b.officer.name)}</div>` : ''}</div>`;
+  return `<div class="card deal">
+    <div class="dh"><span class="ok">${ic('check')} Deal closed</span>
+      <span class="muted">${ic('clock')} ${esc(d.closedAt)}${d.closedBy ? ' · by ' + esc(d.closedBy) : ''}</span></div>
+    <div class="vrow">${thumbHtml(v, true)}<div>
+      <div class="title" style="font-weight:600">${esc(carName(v) || '-')}</div>
+      <div class="price">${esc(lk(v.price))}</div>
+      <div class="sub">${[v.vehicle_id, v.vehicle_type, v.mileage ? v.mileage + ' km' : '', v.fuel, v.transmission, v.condition, v.color, v.district].filter(Boolean).map(esc).join(' · ')}</div>
+      ${d.score != null ? `<div class="muted">Match score ${esc(d.score)}%</div>` : ''}
+    </div></div>
+    ${seller}
+    ${buyer}
+    ${d.notes ? `<div class="sub">${ic('note')} ${esc(d.notes)}</div>` : ''}
+    <div class="actions">${photoLink(v)}</div>
+  </div>`;
+}
+
+/* ============================================================
+ *  VEHICLE APPROVALS (admins)
+ * ============================================================ */
+async function viewApprovals() {
+  setMain(`<h2 style="margin-top:0">${ic('approve', 'h')} Vehicles waiting for approval</h2>
+    <p class="muted">Vehicles added by officers are not matched until you approve them. Check the details and photos first.</p>
+    <div id="list" class="grid wide">${skeleton(3)}</div>`);
+  const r = await call('listVehicles');
+  if (!r || S.view !== 'approvals') return;
+  r.vehicles.forEach(v => S.rec[v.vehicle_id] = v);
+  const list = r.vehicles.filter(v => v.status === 'Pending');
+  setNavCount('approvals', list.length);
+  $('list').innerHTML = list.map(approvalCard).join('') ||
+    `<div class="empty">${ic('check')} Nothing to approve right now</div>`;
+}
+function approvalCard(v) {
+  const id = esc(v.vehicle_id);
+  return `<div class="card rec seller" id="ap_${id}">
+    <div class="vrow">${thumbHtml(v, true)}<div>
+      <div class="top"><div><div class="title">${esc(carName(v))} — ${esc(lk(v.price))}</div>
+        <div class="muted">${id} · ${esc(v.vehicle_type)} · added ${esc(fmtDT(v.created_at))}</div></div>
+        ${statusBadge(v.status, [])}</div>
+      <div class="sub">${[v.mileage ? v.mileage + ' km' : '', v.fuel, v.transmission, v.condition, v.color, v.district].filter(Boolean).map(esc).join(' · ')}</div>
+      <div class="sub">${ic('user')} ${esc(v.owner_name || '')} ${v.owner_phone ? '· ' + esc(v.owner_phone) : ''}</div>
+      <div class="sub">${ic('shield')} Officer: ${esc(v.officer ? v.officer.name : v.created_by || '')}</div>
+      ${v.notes ? `<div class="sub">${ic('note')} ${esc(v.notes)}</div>` : ''}
+    </div></div>
+    <div class="actions">${photoLink(v) || `<span class="muted">${ic('camera')} No photos</span>`}${extButtons(v, false)}</div>
+    <div class="approve-bar">
+      <button class="btn green" onclick="decideVehicle('${id}', true, this)">${ic('approve')} Approve</button>
+      <button class="btn red" onclick="decideVehicle('${id}', false, this)">${ic('ban')} Reject</button>
+      <button class="btn" onclick="go('vehicleForm',{id:'${id}'})">${ic('edit')} Edit</button>
+    </div>
+  </div>`;
+}
+async function decideVehicle(id, approve, btn) {
+  let note = '';
+  if (!approve) {
+    note = prompt('Reason for rejecting (the officer will see this in the notes):', '');
+    if (note === null) return;
+  }
+  btn.disabled = true;
+  const r = await call('approveVehicle', { vehicleId: id, approve, note });
+  btn.disabled = false;
+  if (!r) return;
+  if (S.rec[id]) S.rec[id].status = r.status;
+  toast(approve ? `Approved — ${r.matches} matching buyer(s) found` : 'Vehicle rejected');
+  const card = $('ap_' + id); if (card) card.remove();
+  const left = document.querySelectorAll('[id^="ap_"]').length;
+  setNavCount('approvals', left);
+  if (!left && $('list')) $('list').innerHTML = `<div class="empty">${ic('check')} Nothing to approve right now</div>`;
+}
+function setNavCount(tab, n) { const el = $('nc_' + tab); if (el) el.textContent = n ? String(n) : ''; }
+
+/* ============================================================
+ *  MATCHES
+ * ============================================================ */
+async function viewMatches() {
+  const p = S.params;
+  const fr = S.rec[p.buyerId || p.vehicleId];
+  const label = fr ? (p.buyerId ? (fr.name || 'Buyer') : carName(fr)) + ' (' + (p.buyerId || p.vehicleId) + ')' : (p.buyerId || p.vehicleId);
+  setMain(`
+    ${p.buyerId || p.vehicleId ? `<div class="chipbar"><span class="badge">${ic(p.buyerId ? 'user' : 'car')} ${esc(label)}</span>
+      <button onclick="go('matches')">${ic('x')} Clear filter</button></div>` : ''}
+    <div class="toolbar">
+      <input id="m_q" placeholder="Search name, phone, model or ID" oninput="renderMatches()">
+      <select id="m_st" onchange="renderMatches()">${opts(S.lists.MATCH_STATUS, p.deals ? dealStatus() : '', 'All statuses')}</select>
+      <select id="m_min" onchange="renderMatches()">
+        <option value="0">Any score</option><option value="50" selected>50+</option>
+        <option value="70">70+</option><option value="85">85+</option></select>
+      <label class="check"><input type="checkbox" id="m_closed" onchange="loadMatches()" ${p.deals ? 'checked' : ''}> Show closed deals &amp; rejected</label>
+      <button class="btn" onclick="refreshAll(this)">${ic('refresh')} Re-match all</button>
+    </div>
+    <div id="list" class="grid">${skeleton(4)}</div>`);
+  loadMatches();
+}
+async function loadMatches() {
+  const p = S.params;
+  const r = await call('getMatches', { buyerId: p.buyerId || '', vehicleId: p.vehicleId || '',
+    minScore: 0, includeClosed: $('m_closed').checked });
+  if (!r || S.view !== 'matches') return;
+  S.matches = r.matches; registerMatches(r.matches);
+  renderMatches();
+}
+function renderMatches() {
+  const q = norm($('m_q').value), st = $('m_st').value, min = Number($('m_min').value);
+  const list = S.matches.filter(m => m.score >= min && (!st || m.status === st) &&
+    (!q || norm([m.matchId, m.buyer.buyer_id, m.buyer.name, m.buyer.phone, m.vehicle.vehicle_id,
+      m.vehicle.owner_name, m.vehicle.owner_phone, m.vehicle.make, m.vehicle.model,
+      m.buyer.officer && m.buyer.officer.name, m.vehicle.officer && m.vehicle.officer.name].join(' ')).includes(q)));
+  $('list').innerHTML = list.map(matchCard).join('') || '<div class="empty">No matches</div>';
+}
+async function refreshAll(btn) {
+  btn.disabled = true; toast('Matching…');
+  const r = await call('refreshMatches');
+  btn.disabled = false;
+  if (r) { toast(`${r.added} new, ${r.updated} updated`); loadMatches(); }
+}
+
+function registerMatches(list) { list.forEach(m => S.mIndex[m.matchId] = m); }
+
+/** only = 'vehicle' | 'buyer' → show just that side (used after saving a call). */
+function matchCard(m, only) {
+  const b = m.buyer, v = m.vehicle, id = esc(m.matchId);
+  const cls = m.score >= 80 ? 'hi' : m.score >= 60 ? 'mid' : 'lo';
+  const car = carName(v);
+  const waB = `ආයුබෝවන් ${b.name || ''}, ඔබ සොයන ආකාරයේ ${car} වාහනයක් විකිණීමට තිබෙනවා. මිල ${lkSi(v.price)}. වැඩි විස්තර අවශ්‍යද?`;
+  const waS = `ආයුබෝවන් ${v.owner_name || ''}, ඔබගේ ${car} වාහනය මිලදී ගැනීමට කැමති ගැනුම්කරුවෙක් සිටිනවා. එය තවමත් විකිණීමට තිබෙනවාද?`;
+  // Messages to the other officer (their customer is hidden)
+  const waBO = `ආයුබෝවන් ${b.officer && b.officer.name || ''}, ඔබගේ ගැනුම්කරු සොයන ${wantSi(b)} සඳහා ගැලපෙන වාහනයක් මා සතුව තිබෙනවා — ${car}, ${lkSi(v.price)}. ඔවුන් සම්බන්ධ කර දිය හැකිද?`;
+  const waSO = `ආයුබෝවන් ${v.officer && v.officer.name || ''}, ඔබගේ ${car} වාහනය (${lkSi(v.price)}) මිලදී ගැනීමට කැමති ගැනුම්කරුවෙක් මා සතුව සිටිනවා. එය තවමත් විකිණීමට තිබෙනවාද?`;
+  const mineTag = '<span class="mine-tag">Your customer</span>';
+  return `<div class="card match">
+    <div class="top"><span class="score ${cls}">${m.score}%</span>
+      <span class="badge">${esc(statusLabel(m.status))}</span></div>
+    <div class="reasons">${m.reasons.map(r => `<span>${esc(r)}</span>`).join('')}</div>
+    ${only === 'vehicle' ? '' : `<div class="side b">
+      <h4>${ic('user')} Buyer · ${esc(b.buyer_id)}${b.mine ? mineTag : ''}</h4>
+      ${b.masked ? '' : `<div class="main">${esc(b.name || '-')}</div>`}
+      <div class="sub">Looking for: ${esc(wantName(b))} · Budget ${esc(lk(b.max_budget))}${b.district ? ' · ' + ic('pin') + ' ' + esc(b.district) : ''}</div>
+      ${b.masked ? officerBlock(b.officer, waBO, 'Buyer\'s officer — contact the buyer through them')
+                 : `<div class="actions">${phoneBtns(b.phone, waB)}</div>`}
+    </div>`}
+    ${only === 'buyer' ? '' : `<div class="side s">
+      <div class="vrow">${thumbHtml(v)}<div>
+      <h4>${ic('car')} Vehicle · ${esc(v.vehicle_id)}${v.mine ? mineTag : ''}</h4>
+      <div class="main">${esc(car || '-')} — ${esc(lk(v.price))}</div>
+      <div class="sub">${[v.masked ? '' : v.owner_name, v.mileage ? v.mileage + ' km' : '', v.fuel, v.transmission, v.condition, v.district].filter(Boolean).map(esc).join(' · ')}</div>
+      </div></div>
+      ${photoLink(v) ? `<div class="actions">${photoLink(v)}</div>` : ''}
+      ${v.masked ? officerBlock(v.officer, waSO, 'Seller\'s officer — contact the seller through them')
+                 : `<div class="actions">${phoneBtns(v.owner_phone, waS)}</div>`}
+    </div>`}
+    <div class="medit">
+      <select id="ms_${id}">${opts(S.lists.MATCH_STATUS, m.status)}</select>
+      <button class="btn green sm" onclick="saveMatch('${id}', this)">Save</button>
+      <textarea id="mn_${id}" placeholder="Notes (e.g. Coming to inspect on Saturday)">${esc(m.notes)}</textarea>
+    </div>
+    <div class="meta">${id}${m.updatedAt ? ' · Update: ' + esc(m.updatedAt) : ''}</div>
+  </div>`;
+}
+
+async function saveMatch(id, btn) {
+  const status = $('ms_' + id).value, notes = $('mn_' + id).value;
+  if (isDealStatus(status) && !confirm('Mark this as a deal? The buyer will be set to Bought and the vehicle to Sold.')) return;
+  btn.disabled = true;
+  const r = await call('updateMatch', { matchId: id, status, notes });
+  btn.disabled = false;
+  if (!r) return;
+  const m = S.mIndex[id]; if (m) Object.assign(m, { status, notes });
+  toast(r.closed ? 'Deal saved! Buyer and vehicle closed' : 'Saved');
+  if (r.closed) go(S.view, S.params);
+}
+
+/* ============================================================
+ *  SETTINGS
+ * ============================================================ */
+function viewSettings() {
+  setMain(`
+    <div class="narrow">
+      <div class="card">
+        <h2 style="margin-top:0">${ic('shield', 'h')} My officer profile</h2>
+        <p class="muted">Other officers see this name and number when your customers match theirs.</p>
+        <form class="form" onsubmit="saveProfile(event)">
+          <label class="f req"><span>Display name</span><input id="pf_n" value="${esc(S.user.full_name)}" required></label>
+          <label class="f req"><span>Phone</span><input id="pf_p" type="tel" inputmode="tel" value="${esc(S.user.phone || '')}" placeholder="07XXXXXXXX" required></label>
+          <label class="f full"><span>Email for new-match alerts <span class="muted">(leave blank to turn alerts off)</span></span><input id="pf_e" type="email" value="${esc(S.user.email || '')}" placeholder="name@gmail.com"></label>
+          <div class="full row"><button class="btn primary">Save profile</button>
+            <button type="button" class="btn" id="pf_test" onclick="testEmail(this)">${ic('message')} Send test email</button></div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h2 style="margin-top:0">${ic('key', 'h')} Change password</h2>
+        <form class="form" onsubmit="changePw(event)">
+          <label class="f"><span>Current password</span><input type="password" id="pw_old" required></label>
+          <label class="f"><span>New password</span><input type="password" id="pw_new" minlength="6" required></label>
+          <div class="full"><button class="btn primary">Update</button></div>
+        </form>
+      </div>
+      ${S.user.role === 'admin' ? `
+      <div class="card" style="margin-top:14px">
+        <h2 style="margin-top:0">${ic('userPlus', 'h')} Add a new user</h2>
+        <form class="form" onsubmit="addUser(event)">
+          <label class="f"><span>Username</span><input id="nu_u" required pattern="[a-zA-Z0-9._\\-]{3,}"></label>
+          <label class="f"><span>Full name</span><input id="nu_n"></label>
+          <label class="f req"><span>Mobile number</span><input id="nu_ph" type="tel" inputmode="tel" placeholder="07XXXXXXXX" required></label>
+          <label class="f"><span>Email <span class="muted">(match alerts)</span></span><input id="nu_e" type="email" placeholder="name@gmail.com"></label>
+          <label class="f"><span>Password</span><input type="password" id="nu_p" minlength="6" required></label>
+          <label class="f"><span>Role</span><select id="nu_r"><option value="staff">Staff</option><option value="admin">Admin</option></select></label>
+          <div class="full"><button class="btn primary">Add user</button></div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h2 style="margin-top:0">${ic('users', 'h')} Users</h2>
+        <p class="muted">Edit a user's name, mobile number, role or status. Type a new password only if you want to reset it.</p>
+        <div class="uwrap" id="usersBox"><div class="loading">Loading…</div></div>
+      </div>` : ''}
+      <div class="card" style="margin-top:14px">
+        <h2 style="margin-top:0">${ic('car', 'h')} Add vehicle makes & models</h2>
+        <p class="muted">New makes/models typed in a vehicle form are also added automatically when you save.</p>
+        <form class="form" onsubmit="addMaster(event)">
+          <label class="f req"><span>Vehicle type</span><select id="mm_t" required>${opts(S.lists.VEHICLE_TYPE, '', '— Select —')}</select></label>
+          <label class="f req"><span>Make (Brand)</span><input id="mm_m" list="mm_dl" required placeholder="e.g. Toyota"><datalist id="mm_dl">${uniq(S.master.map(x => x.make)).map(x => `<option value="${esc(x)}">`).join('')}</datalist></label>
+          <label class="f full"><span>Models <span class="muted">(comma separated — leave blank to add only the make)</span></span>
+            <input id="mm_models" placeholder="e.g. Aqua, Axio, Vitz"></label>
+          <div class="full"><button class="btn primary">Add to list</button></div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h2 style="margin-top:0">${ic('info', 'h')} Editing dropdowns</h2>
+        <p class="muted">Lists such as District, Fuel and Status are in the <b>DROPDOWN_LISTS</b> sheet of the Google Sheet.
+        Make/Model are in the <b>VEHICLE_MASTER</b> sheet. Refresh this page after making changes.</p>
+      </div>
+    </div>`);
+  if (S.user.role === 'admin') loadUsers();
+}
+
+async function loadUsers() {
+  const r = await call('listUsers');
+  if (!r || !$('usersBox')) return;
+  $('usersBox').innerHTML = `<table class="utable">
+    <tr><th>Username</th><th>Name</th><th>Mobile</th><th>Email</th><th>Role</th><th>Active</th><th>Reset password</th><th></th></tr>
+    ${r.users.map(u => { const k = esc(u.username); return `<tr>
+      <td><b>${k}</b>${u.pending ? ' <span class="badge warn">Pending</span>' : ''}</td>
+      <td><input id="u_n_${k}" value="${esc(u.full_name)}"></td>
+      <td><input id="u_p_${k}" type="tel" value="${esc(u.phone)}" placeholder="07XXXXXXXX" style="min-width:120px"></td>
+      <td><input id="u_e_${k}" type="email" value="${esc(u.email)}" placeholder="(no alerts)" style="min-width:170px"></td>
+      <td><select id="u_r_${k}">${opts(['staff', 'admin'], u.role)}</select></td>
+      <td><label class="check"><input type="checkbox" id="u_a_${k}" ${u.active ? 'checked' : ''}>${u.pending ? ' Approve' : ''}</label></td>
+      <td><input id="u_pw_${k}" type="password" placeholder="(unchanged)" minlength="6"></td>
+      <td><button class="btn green sm" onclick="saveUser('${k}', this)">Save</button></td></tr>`; }).join('')}
+  </table>`;
+}
+async function saveUser(k, btn) {
+  btn.disabled = true;
+  const r = await call('updateUser', { username: k, full_name: $('u_n_' + k).value, phone: $('u_p_' + k).value, email: $('u_e_' + k).value,
+    role: $('u_r_' + k).value, active: $('u_a_' + k).checked, newPassword: $('u_pw_' + k).value });
+  btn.disabled = false;
+  if (r) { toast('User updated'); loadUsers(); }
+}
+async function addMaster(e) {
+  e.preventDefault();
+  const r = await call('addMaster', { vehicle_type: $('mm_t').value, make: $('mm_m').value, models: $('mm_models').value });
+  if (!r) return;
+  S.master = r.master;
+  toast(r.added ? `Added ${r.added} item(s) to the list` : 'Already in the list');
+  $('mm_models').value = '';
+}
+async function saveProfile(e) {
+  e.preventDefault();
+  const r = await call('updateProfile', { full_name: $('pf_n').value, phone: $('pf_p').value, email: $('pf_e').value });
+  if (!r) return;
+  S.user.full_name = r.full_name; S.user.phone = r.phone; S.user.email = r.email;
+  $('unameText').textContent = r.full_name;
+  toast('Profile saved');
+}
+async function testEmail(btn) {
+  if (($('pf_e').value || '').trim().toLowerCase() !== (S.user.email || '')) { toast('Save your profile first', true); return; }
+  btn.disabled = true;
+  const r = await call('testEmail');
+  btn.disabled = false;
+  if (r) toast('Test email sent to ' + r.email);
+}
+async function changePw(e) {
+  e.preventDefault();
+  const r = await call('changePassword', { oldPassword: $('pw_old').value, newPassword: $('pw_new').value });
+  if (r) { toast('Password changed'); e.target.reset(); }
+}
+async function addUser(e) {
+  e.preventDefault();
+  const r = await call('addUser', { username: $('nu_u').value, full_name: $('nu_n').value,
+    password: $('nu_p').value, role: $('nu_r').value, phone: $('nu_ph').value, email: $('nu_e').value });
+  if (r) { toast('User added'); e.target.reset(); loadUsers(); }
+}
+
+boot();
+window.__vmStarted = true;
 </script>
-
 </body>
-
 </html>
