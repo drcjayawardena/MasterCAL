@@ -639,6 +639,24 @@ function showOutputs(result) {
 
   if (result.labels) applyLabels(result.labels);
   if (result.charges) renderCharges(result.charges);
+  if (result.enabled) applyEnabled(result.enabled);
+}
+
+
+/* Enable/disable BIC, INSURANCE, STAMP DUTY inputs based on the
+   sheet flags Q6:Q8 (backend returns { bic, insurance, stampDuty }).
+   A "NO" flag disables the field; anything else keeps it editable.
+   FACILITY AMOUNT, IRR and PERIOD are never affected. */
+function applyEnabled(flags) {
+  if (!flags) return;
+  var map = { bic: flags.bic, insurance: flags.insurance, stampDuty: flags.stampDuty };
+  Object.keys(map).forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var on = (map[id] !== false);   /* default enabled */
+    el.disabled = !on;
+    el.classList.toggle("is-disabled", !on);
+  });
 }
 
 
