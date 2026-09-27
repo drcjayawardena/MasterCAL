@@ -640,13 +640,15 @@ function showOutputs(result) {
   if (result.labels) applyLabels(result.labels);
   if (result.charges) renderCharges(result.charges);
   if (result.enabled) applyEnabled(result.enabled);
+  applyExpress(result.express);
 }
 
 
 /* Enable/disable BIC, INSURANCE, STAMP DUTY inputs based on the
    sheet flags Q6:Q8 (backend returns { bic, insurance, stampDuty }).
    A "NO" flag disables the field; anything else keeps it editable.
-   FACILITY AMOUNT, IRR and PERIOD are never affected. */
+   A disabled field must show BLANK (its value is cleared).
+   FACILITY AMOUNT, IRR and PERIOD are never affected here. */
 function applyEnabled(flags) {
   if (!flags) return;
   var map = { bic: flags.bic, insurance: flags.insurance, stampDuty: flags.stampDuty };
@@ -656,7 +658,24 @@ function applyEnabled(flags) {
     var on = (map[id] !== false);   /* default enabled */
     el.disabled = !on;
     el.classList.toggle("is-disabled", !on);
+    if (!on) el.value = "";         /* disabled -> value must be blank */
   });
+}
+
+
+/* Express rule: when the sheet's N1 = "Express", PERIOD is locked at 12.
+   Otherwise PERIOD is a normal editable field. */
+function applyExpress(express) {
+  var p = document.getElementById("period");
+  if (!p) return;
+  if (express) {
+    p.value = "12";
+    p.disabled = true;
+    p.classList.add("is-disabled");
+  } else {
+    p.disabled = false;
+    p.classList.remove("is-disabled");
+  }
 }
 
 
