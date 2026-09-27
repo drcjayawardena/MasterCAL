@@ -1577,6 +1577,15 @@ function render3W(data) {
   set("tw_totInterest", o.totInterest);
   set("tw_rate100", o.rate100);
   set("tw_flatRate", o.flatRate);
+
+  /* When the sheet's F13 == "YES", disable the RMV CHARGES input in the
+     charges card (B23). */
+  const rmvEl = document.getElementById("tw_B23");
+  if (rmvEl) {
+    const dis = !!data.rmvDisabled;
+    rmvEl.disabled = dis;
+    rmvEl.classList.toggle("is-disabled", dis);
+  }
 }
 
 /* Show / hide the 3W calculating spinner over the grid. */
