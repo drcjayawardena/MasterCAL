@@ -375,6 +375,12 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 }
 .tw-bigrow .bigValue{ flex:1 1 auto; margin:0; }
 
+/* spacing for the 3W summary tables (replaces old inline styles) */
+.tw-card .summaryTable{ margin-top:12px; }
+
+/* the "PAYMENT DETAIL" sub-heading inside a 3W card */
+.tw-card .tw-subtitle{ margin-top:18px; }
+
 /* read-only display field (kept for any future use) */
 .tw-readonly{ background:var(--row); color:var(--ink); font-weight:700; cursor:default; }
 .tw-readonly:focus{ box-shadow:none; border-color:var(--field-bd); }

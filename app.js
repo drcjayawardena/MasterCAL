@@ -1380,32 +1380,32 @@ function build3W(data) {
   if (!grid) return;
   grid.innerHTML = "";
 
-  /* Card 1 — Valuation & Exposure */
+  /* Card 1 — Valuation & Exposure (+ PAYMENT DETAIL block) */
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
   ["B2", "B3"].forEach(function (cell) { c1.appendChild(twField(cell, data)); });
   c1.insertAdjacentHTML("beforeend",
-    '<table class="summaryTable" style="margin-top:12px">' +
+    '<table class="summaryTable">' +
     twOutRow("Maximum Exposure", "tw_maxExposure") +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
-    '</table>');
-  grid.appendChild(c1);
-
-  /* Card 2 — Rental Calculation */
-  const c2 = document.createElement("div");
-  c2.className = "tw-card";
-  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
-    twBigRow("MONTHLY RENTAL", "tw_monthlyRental");
-  ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
-  c2.insertAdjacentHTML("beforeend",
-    '<table class="summaryTable" style="margin-top:12px">' +
+    '</table>' +
+    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
+    '<table class="summaryTable">' +
     twOutRow("Exposure", "tw_exposurePct") +
     twOutRow("Total Paid", "tw_totPaid") +
     twOutRow("Total Interest", "tw_totInterest") +
     twOutRow("Rate / 100,000", "tw_rate100") +
     '</table>');
+  grid.appendChild(c1);
+
+  /* Card 2 — Rental Calculation (inputs only) */
+  const c2 = document.createElement("div");
+  c2.className = "tw-card";
+  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
+    twBigRow("MONTHLY RENTAL", "tw_monthlyRental");
+  ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
   grid.appendChild(c2);
 
   /* Card 3 — Initial Charges (totals at the bottom) */
@@ -1415,7 +1415,7 @@ function build3W(data) {
     twBigRow("TOTAL CHARGES", "tw_chargesTotal");
   ["B22", "B23"].forEach(function (cell) { c3.appendChild(twField(cell, data)); });
   c3.insertAdjacentHTML("beforeend",
-    '<table class="summaryTable" style="margin-top:12px">' +
+    '<table class="summaryTable">' +
     twOutRow("Crib Charges", "tw_cribCharge") +
     twOutRow("RMV Charges", "tw_rmvCharge") +
     twOutRow("Insurance", "tw_insCharge") +
