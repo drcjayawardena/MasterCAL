@@ -647,16 +647,28 @@ function showOutputs(result) {
 
 /* Append the capitalized amount to the BIC / INSURANCE / STAMP DUTY
    labels (like the 3W tab). amounts = [E6 bic, E7 insurance, E8 stamp].
-   Only appended when the amount is a non-zero number. Runs AFTER
-   applyLabels, which resets each label text first (so no accumulation). */
+   IDEMPOTENT: rebuilds from each label's clean base text every time, so
+   repeated renders (e.g. calcInputs, which returns no labels) never stack
+   the amount over and over. Only appends when the amount is non-zero. */
 function applyCapAmounts(amounts) {
   if (!amounts) return;
-  var map = { lblBic: amounts[0], lblInsurance: amounts[1], lblStampDuty: amounts[2] };
+  /* Only BIC (E6) and STAMP DUTY (E8) show their amount on Vehicle Lease.
+     INSURANCE (E7) is intentionally left as a plain label. */
+  var map = { lblBic: amounts[0], lblStampDuty: amounts[2] };
   Object.keys(map).forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
+
+    /* Clean base label: prefer the one stored by applyLabels; otherwise
+       strip any already-appended "  -  <number>" suffixes (one or many). */
+    var base = el.dataset.baseLabel;
+    if (base == null) {
+      base = el.textContent.replace(/(\s+-\s+[\d.,]+)+\s*$/, "").trim();
+      el.dataset.baseLabel = base;
+    }
+
     var v = map[id];
-    if (nonZeroAmt(v)) el.textContent = el.textContent + "  -  " + String(v).trim();
+    el.textContent = nonZeroAmt(v) ? (base + "  -  " + String(v).trim()) : base;
   });
 }
 
@@ -793,6 +805,7 @@ function applyLabels(labels) {
     /* Skip empty or sheet-error values -> keep the default label. */
     if (el && val != null && String(val).trim() !== "" && !isSheetError(val)) {
       el.textContent = val;
+      el.dataset.baseLabel = String(val);   /* clean base for applyCapAmounts */
     }
   });
 }
@@ -843,6 +856,23 @@ function drawSchedule(rows) {
   });
 
   applyScheduleMode();
+  refreshMonthlyTitle();
+}
+
+
+/* Heading swaps to "MONTHLY RENTAL WITH BULLET" whenever any bullet-payment
+   row has a value (FROM or AMOUNT); otherwise it stays "Monthly Rental".
+   CSS uppercases it. Call this after any schedule change. */
+function refreshMonthlyTitle() {
+  var title = document.getElementById("monthlyRentalTitle");
+  if (!title) return;
+  var filled = false;
+  var inputs = document.querySelectorAll(
+    '#scheduleBody input[data-type="from"], #scheduleBody input[data-type="amount"]');
+  inputs.forEach(function (el) {
+    if (String(el.value == null ? "" : el.value).trim() !== "") filled = true;
+  });
+  title.textContent = filled ? "Monthly Rental with Bullet" : "Monthly Rental";
 }
 
 
@@ -979,6 +1009,7 @@ function addScheduleRowUI(index) {
       }
 
       addNextEmptyScheduleRow(Number(index));
+      refreshMonthlyTitle();
     })
     .catch(function (error) {
       scheduleBusy = false;
@@ -1053,6 +1084,7 @@ function deleteScheduleRowUI(index) {
       if (result.to) updateAllToValues(result.to);
 
       ensureAddRow();
+      refreshMonthlyTitle();
     })
     .catch(function (error) {
       scheduleBusy = false;
@@ -1077,6 +1109,7 @@ function updateFrom(index, newValue) {
       if (result.monthlyRental !== undefined) text("monthlyRental", result.monthlyRental);
       if (result.outputs) showOutputs(result.outputs);
       if (result.to) updateAllToValues(result.to);
+      refreshMonthlyTitle();
     })
     .catch(function (error) {
       console.error("FROM ERROR:", error);
@@ -1096,6 +1129,7 @@ function updateAmount(index, newValue) {
       if (result.monthlyRental !== undefined) text("monthlyRental", result.monthlyRental);
       if (result.outputs) showOutputs(result.outputs);
       if (result.to) updateAllToValues(result.to);
+      refreshMonthlyTitle();
     })
     .catch(function (error) {
       console.error("AMOUNT ERROR:", error);

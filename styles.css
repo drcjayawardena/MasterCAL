@@ -108,6 +108,8 @@ body{
   font-weight:700;
   margin-bottom:14px;
   line-height:1.15;
+  text-transform:uppercase;   /* all card headings uppercase, one size */
+  letter-spacing:.3px;
 }
 
 
@@ -290,7 +292,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .chargesTotal{
   display:block; width:100%; box-sizing:border-box; text-align:center;
   background:var(--result-bg); color:var(--result-ink); border:1px solid var(--result-bd);
-  border-radius:12px; font-size:26px; font-weight:700; padding:14px 12px;
+  border-radius:12px; font-size:32px; font-weight:700; padding:14px 12px;   /* same as .bigValue */
   white-space:nowrap; font-variant-numeric:tabular-nums;
 }
 .chargesTable{ width:100%; border-collapse:collapse; }
@@ -503,8 +505,6 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   .summaryTable td{ height:30px; }
 
   #chargesSection{ overflow:auto; }
-  #chargesSection .cardTitle{ font-size:17px; }
-  #chargesSection .chargesTotal{ font-size:24px; }
   #chargesSection .chargesTable td{ font-size:12.5px; padding:8px 6px; }
 
   #rentalScheduleSection{ grid-column:1 / -1; margin-top:0; }
@@ -531,6 +531,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   .field label{ font-size:13px; }
 
   .bigValue{ height:58px; font-size:28px; }
+  .chargesTotal{ font-size:28px; }   /* keep in step with .bigValue */
 
   .scheduleHeader{ flex-direction:column; align-items:stretch; gap:8px; }
   .scheduleHeader select{ width:100%; }
@@ -550,7 +551,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   .header span{ font-size:11px; }
   .facility,.scheduleCard,.summary,.bulk,.chargesCard,.tw-card{ padding:14px; }
   .bigValue{ height:54px; font-size:24px; }
-  .chargesTotal{ font-size:20px; }
+  .chargesTotal{ font-size:24px; }
   #scheduleTable th{ font-size:12px; }
   .gateCard{ padding:24px 20px; }
 }
