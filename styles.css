@@ -303,6 +303,15 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .tw-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
 .tw-card .field{ margin-bottom:10px; }
 
+/* read-only display field (e.g. Maximum Exposure) */
+.tw-readonly{
+  background:var(--row);
+  color:var(--ink);
+  font-weight:700;
+  cursor:default;
+}
+.tw-readonly:focus{ box-shadow:none; border-color:var(--field-bd); }
+
 
 /* ---------- loading overlay ---------- */
 .loading{
@@ -417,8 +426,8 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   /* rental schedule spans the full width, on its own row */
   #rentalScheduleSection{ grid-column:1 / -1; margin-top:0; }
 
-  /* three-wheel: four cards across */
-  .tw-grid{ grid-template-columns:repeat(4, 1fr); align-items:start; }
+  /* three-wheel: three cards across (Totals now inside Initial Charges) */
+  .tw-grid{ grid-template-columns:repeat(3, 1fr); align-items:start; }
 }
 
 
