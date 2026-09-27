@@ -638,9 +638,35 @@ function showOutputs(result) {
   text("rate100",            result.rate100);
 
   if (result.labels) applyLabels(result.labels);
+  if (result.capAmounts) applyCapAmounts(result.capAmounts);
   if (result.charges) renderCharges(result.charges);
   if (result.enabled) applyEnabled(result.enabled);
   applyExpress(result.express);
+}
+
+
+/* Append the capitalized amount to the BIC / INSURANCE / STAMP DUTY
+   labels (like the 3W tab). amounts = [E6 bic, E7 insurance, E8 stamp].
+   Only appended when the amount is a non-zero number. Runs AFTER
+   applyLabels, which resets each label text first (so no accumulation). */
+function applyCapAmounts(amounts) {
+  if (!amounts) return;
+  var map = { lblBic: amounts[0], lblInsurance: amounts[1], lblStampDuty: amounts[2] };
+  Object.keys(map).forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var v = map[id];
+    if (nonZeroAmt(v)) el.textContent = el.textContent + "  -  " + String(v).trim();
+  });
+}
+
+/* True when a display string is a number other than zero (ignores commas). */
+function nonZeroAmt(v) {
+  if (v == null) return false;
+  var s = String(v).trim();
+  if (s === "" || isSheetError(s)) return false;
+  var n = parseFloat(s.replace(/,/g, ""));
+  return !isNaN(n) && n !== 0;
 }
 
 
@@ -1471,11 +1497,14 @@ function render3W(data) {
   set("tw_exposurePct", data.totalCapPct); /* exposure %          */
   set("tw_monthlyRental", o.monthlyRental);
 
-  /* Labelize BIC & INSURANCE with their computed amounts. */
+  /* Labelize BIC & INSURANCE with their computed (capitalized) amounts.
+     BIC uses o.bic (C11); INSURANCE uses o.insurance (C12) — the insurance
+     AMOUNT, not o.insCharge (the initial-charge row, which is 0 when the
+     insurance is CAPITALIZED). */
   const bicLbl = document.getElementById("twlbl_B11");
   if (bicLbl) bicLbl.textContent = "BIC ( % )" + (o.bic ? "  -  " + o.bic : "");
   const insLbl = document.getElementById("twlbl_B12");
-  if (insLbl) insLbl.textContent = "INSURANCE" + (o.insCharge ? "  -  " + o.insCharge : "");
+  if (insLbl) insLbl.textContent = "INSURANCE" + (o.insurance ? "  -  " + o.insurance : "");
   set("tw_chargesTotal", o.chargesTotal);
   set("tw_cribCharge", o.cribCharge);
   set("tw_rmvCharge", o.rmvCharge);
