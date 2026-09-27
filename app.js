@@ -1490,11 +1490,19 @@ function render3W(data) {
   set("tw_flatRate", o.flatRate);
 }
 
+/* Show / hide the 3W calculating spinner over the grid. */
+function tw_setBusy(on) {
+  const grid = document.getElementById("twGrid");
+  if (grid) grid.classList.toggle("tw-busy", !!on);
+}
+
 function set3WValue(cell, value) {
+  tw_setBusy(true);
   api("set3W", [cell, value])
     .then(function (data) { render3W(data); })
     .catch(function (e) {
       console.error("3W set error:", e);
       alert("Could not update the three-wheel value.\n\n" + e.message);
-    });
+    })
+    .then(function () { tw_setBusy(false); });   /* always clear the spinner */
 }
