@@ -383,6 +383,10 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 /* Initial-Charges input block sits below the summary table */
 .tw-card-inputs{ margin-top:14px; }
 
+/* dark line separating the RMV input from Total Capitalized / Flat Rate */
+.tw-cap-divider{ border-top:2px solid var(--ink); margin:14px 0 4px; }
+.tw-cap-table{ margin-top:0; }
+
 /* the "PAYMENT DETAIL" sub-heading inside a 3W card */
 .tw-card .tw-subtitle{ margin-top:18px; }
 

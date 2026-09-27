@@ -1502,8 +1502,6 @@ function build3W(data) {
     twOutRow("Valuation Charges", "tw_valCharge") +
     twOutRow("Service Charges", "tw_svcCharge") +
     twOutRow("VAT 18.00%", "tw_vat") +
-    twOutRow("Total Capitalized", "tw_totCapital") +
-    twOutRow("Flat Rate", "tw_flatRate") +
     '</table>';
   /* Only the RMV CHARGES (B23) input sits below the summary.
      CRIB CHARGES (B22) input is intentionally hidden per the layout. */
@@ -1511,6 +1509,13 @@ function build3W(data) {
   c3inputs.className = "tw-card-inputs";
   ["B23"].forEach(function (cell) { c3inputs.appendChild(twField(cell, data)); });
   c3.appendChild(c3inputs);
+  /* Total Capitalized + Flat Rate go BELOW the RMV input, after a dark line. */
+  c3.insertAdjacentHTML("beforeend",
+    '<div class="tw-cap-divider"></div>' +
+    '<table class="summaryTable tw-cap-table">' +
+    twOutRow("Total Capitalized", "tw_totCapital") +
+    twOutRow("Flat Rate", "tw_flatRate") +
+    '</table>');
   grid.appendChild(c3);
 }
 
