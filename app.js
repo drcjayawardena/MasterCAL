@@ -13,7 +13,7 @@
 ========================================================= */
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbwtNwjIIQLLKZk0OZu6FRTfjPYb1WI0hDFsl3PcbLynvwT-CuMWLRx8tni3Q7hFDVgQ/exec";
+  "https://script.google.com/macros/s/AKfycbx8m_v6iMUy8tTSGzxSfxi79ZyTfJgpy89WjVkqRMO3dvnm734znkdTvjpW92DhO-xN/exec";
 
 
 /* =========================================================
@@ -718,7 +718,8 @@ function applyExpress(express) {
 
 
 /* Charges breakdown from J1:L14 (rows: [J label, K sub, L amount]). */
-var RMV_TYPES = [];
+/* Two RMV option lists: normal (J13 <- B2:B6), other (J14 <- E:E). */
+var RMV_TYPES = { normal: [], other: [] };
 /* grid index -> sheet cell for the editable RMV-type dropdowns */
 const RMV_CELLS = { 12: "J13", 13: "J14" };   /* J13 + J14 */
 const HIDE_ROW_INDEX = 2;   /* grid index 2  = sheet row 3  = J3 (hidden) */
@@ -755,17 +756,29 @@ function renderCharges(grid) {
     const td2 = document.createElement("td");
     td2.textContent = amount;
 
-    if (RMV_CELLS[i] && RMV_TYPES.length) {
+    /* J13 uses the "normal" list (B2:B6); J14 uses the "other" list (E:E). */
+    var rmvList = RMV_CELLS[i]
+      ? (i === 12 ? (RMV_TYPES.normal || []) : (RMV_TYPES.other || []))
+      : null;
+
+    if (rmvList && rmvList.length) {
       /* RMV type = editable dropdown (J13 / J14). */
       const cell = RMV_CELLS[i];
       const sel = document.createElement("select");
       sel.className = "chargesSelect";
-      RMV_TYPES.forEach(function (opt) {
+      rmvList.forEach(function (opt) {
         const o = document.createElement("option");
         o.value = opt; o.textContent = opt;
         sel.appendChild(o);
       });
-      sel.value = String(row[0] || "");
+      /* keep the current sheet value selectable even if it's not in the list */
+      const cur = String(row[0] || "");
+      if (cur !== "" && rmvList.indexOf(cur) === -1) {
+        const o0 = document.createElement("option");
+        o0.value = cur; o0.textContent = cur;
+        sel.insertBefore(o0, sel.firstChild);
+      }
+      sel.value = cur;
       sel.addEventListener("change", function () { setRmvTypeUI(this.value, cell); });
       td1.appendChild(sel);
     } else {
