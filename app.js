@@ -1244,14 +1244,14 @@ var tw_built = false;
 var tw_loaded = false;
 
 const TW_INPUT_LABELS = {
-  B2: "MAKE", B3: "VEHICLE NO", B4: "GRADE", B5: "EXPOSURE & MIN IRR",
+  B2: "MAKE", B3: "VEHICLE NO", B5: "Maximum Exposure",
   B10: "FACILITY AMOUNT", B11: "BIC ( % )", B12: "INSURANCE", B13: "RMV CHARGES",
   B14: "PERIOD", B15: "IRR", B22: "CRIB CHARGES", B23: "RMV CHARGES"
 };
 
-/* These 3W inputs are ALWAYS dropdowns (MAKE, VEHICLE NO, GRADE,
-   INSURANCE, RMV rental, RMV initial). The rest are number inputs. */
-const TW_DROPDOWN_CELLS = ["B2", "B3", "B4", "B12", "B13", "B23"];
+/* Dropdowns (GRADE B4 removed from the UI). B5 = read-only display. */
+const TW_DROPDOWN_CELLS = ["B2", "B3", "B12", "B13", "B23"];
+const TW_READONLY_CELLS = ["B5"];
 
 function setupTabs() {
   const tabs = document.querySelectorAll(".tab");
@@ -1302,7 +1302,14 @@ function twField(cell, data) {
 
   let el;
   const forceSelect = TW_DROPDOWN_CELLS.indexOf(cell) !== -1;
-  if (forceSelect || (info.options && info.options.length)) {
+  const readOnly = TW_READONLY_CELLS.indexOf(cell) !== -1;
+  if (readOnly) {
+    /* Display-only value (e.g. Maximum Exposure) — cannot be edited. */
+    el = document.createElement("input");
+    el.type = "text";
+    el.readOnly = true;
+    el.className = "tw-readonly";
+  } else if (forceSelect || (info.options && info.options.length)) {
     el = document.createElement("select");
     el.addEventListener("change", function () { set3WValue(cell, this.value); });
   } else {
@@ -1332,12 +1339,13 @@ function build3W(data) {
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
-  ["B2", "B3", "B4", "B5"].forEach(function (cell) { c1.appendChild(twField(cell, data)); });
+  ["B2", "B3", "B5"].forEach(function (cell) { c1.appendChild(twField(cell, data)); });
   c1.insertAdjacentHTML("beforeend",
     '<table class="summaryTable" style="margin-top:12px">' +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
-    twOutRow("Total Capitalized", "tw_totCapVal") +
+    twOutRow("Total Capitalized", "tw_totCapAmt") +
+    twOutRow("Exposure", "tw_exposurePct") +
     '</table>');
   grid.appendChild(c1);
 
@@ -1363,21 +1371,17 @@ function build3W(data) {
     twOutRow("Valuation Charges", "tw_valCharge") +
     twOutRow("Service Charges", "tw_svcCharge") +
     twOutRow("VAT 18.00%", "tw_vat") +
-    '</table>');
-  grid.appendChild(c3);
-
-  /* Card 4 — Totals */
-  const c4 = document.createElement("div");
-  c4.className = "tw-card";
-  c4.innerHTML = '<div class="cardTitle">Totals</div>' +
+    '</table>' +
+    /* Totals now live at the bottom of the Initial Charges card */
+    '<div class="cardTitle" style="margin-top:18px">Totals</div>' +
     '<table class="summaryTable">' +
     twOutRow("Total Capitalized", "tw_totCapital") +
     twOutRow("Total Paid", "tw_totPaid") +
     twOutRow("Total Interest", "tw_totInterest") +
     twOutRow("Rate / 100,000", "tw_rate100") +
     twOutRow("Flat Rate", "tw_flatRate") +
-    '</table>';
-  grid.appendChild(c4);
+    '</table>');
+  grid.appendChild(c3);
 }
 
 function render3W(data) {
@@ -1419,8 +1423,15 @@ function render3W(data) {
   };
   set("tw_cfValuation", o.cfValuation);
   set("tw_maxFacility", o.maxFacility);
-  set("tw_totCapVal", (data.totalCapPct ? data.totalCapPct + "  ·  " : "") + (o.totCapVal || ""));
+  set("tw_totCapAmt", o.totCapVal);        /* capitalized amount */
+  set("tw_exposurePct", data.totalCapPct); /* exposure %          */
   set("tw_monthlyRental", o.monthlyRental);
+
+  /* Labelize BIC & INSURANCE with their computed amounts. */
+  const bicLbl = document.getElementById("twlbl_B11");
+  if (bicLbl) bicLbl.textContent = "BIC ( % )" + (o.bic ? "  -  " + o.bic : "");
+  const insLbl = document.getElementById("twlbl_B12");
+  if (insLbl) insLbl.textContent = "INSURANCE" + (o.insCharge ? "  -  " + o.insCharge : "");
   set("tw_chargesTotal", o.chargesTotal);
   set("tw_cribCharge", o.cribCharge);
   set("tw_rmvCharge", o.rmvCharge);
