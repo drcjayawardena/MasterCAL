@@ -1330,6 +1330,14 @@ function twOutRow(label, id) {
   return '<tr><td>' + label + '</td><td id="' + id + '"></td></tr>';
 }
 
+/* A big result value with a label tile beside it (MONTHLY RENTAL | 0.00). */
+function twBigRow(label, id) {
+  return '<div class="tw-bigrow">' +
+    '<div class="tw-biglabel">' + label + '</div>' +
+    '<div class="bigValue red"><span id="' + id + '">0.00</span></div>' +
+    '</div>';
+}
+
 function build3W(data) {
   const grid = document.getElementById("twGrid");
   if (!grid) return;
@@ -1339,29 +1347,35 @@ function build3W(data) {
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
-  ["B2", "B3", "B5"].forEach(function (cell) { c1.appendChild(twField(cell, data)); });
+  ["B2", "B3"].forEach(function (cell) { c1.appendChild(twField(cell, data)); });
   c1.insertAdjacentHTML("beforeend",
     '<table class="summaryTable" style="margin-top:12px">' +
+    twOutRow("Maximum Exposure", "tw_maxExposure") +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
-    twOutRow("Total Capitalized", "tw_totCapAmt") +
-    twOutRow("Exposure", "tw_exposurePct") +
     '</table>');
   grid.appendChild(c1);
 
-  /* Card 2 — Rental -> Monthly Rental */
+  /* Card 2 — Rental Calculation */
   const c2 = document.createElement("div");
   c2.className = "tw-card";
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
-    '<div class="bigValue red"><span id="tw_monthlyRental">0.00</span></div>';
+    twBigRow("MONTHLY RENTAL", "tw_monthlyRental");
   ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
+  c2.insertAdjacentHTML("beforeend",
+    '<table class="summaryTable" style="margin-top:12px">' +
+    twOutRow("Exposure", "tw_exposurePct") +
+    twOutRow("Total Paid", "tw_totPaid") +
+    twOutRow("Total Interest", "tw_totInterest") +
+    twOutRow("Rate / 100,000", "tw_rate100") +
+    '</table>');
   grid.appendChild(c2);
 
-  /* Card 3 — Initial Charges */
+  /* Card 3 — Initial Charges (totals at the bottom) */
   const c3 = document.createElement("div");
   c3.className = "tw-card";
   c3.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
-    '<div class="bigValue red"><span id="tw_chargesTotal">0.00</span></div>';
+    twBigRow("TOTAL CHARGES", "tw_chargesTotal");
   ["B22", "B23"].forEach(function (cell) { c3.appendChild(twField(cell, data)); });
   c3.insertAdjacentHTML("beforeend",
     '<table class="summaryTable" style="margin-top:12px">' +
@@ -1371,14 +1385,7 @@ function build3W(data) {
     twOutRow("Valuation Charges", "tw_valCharge") +
     twOutRow("Service Charges", "tw_svcCharge") +
     twOutRow("VAT 18.00%", "tw_vat") +
-    '</table>' +
-    /* Totals now live at the bottom of the Initial Charges card */
-    '<div class="cardTitle" style="margin-top:18px">Totals</div>' +
-    '<table class="summaryTable">' +
     twOutRow("Total Capitalized", "tw_totCapital") +
-    twOutRow("Total Paid", "tw_totPaid") +
-    twOutRow("Total Interest", "tw_totInterest") +
-    twOutRow("Rate / 100,000", "tw_rate100") +
     twOutRow("Flat Rate", "tw_flatRate") +
     '</table>');
   grid.appendChild(c3);
@@ -1421,9 +1428,9 @@ function render3W(data) {
     const e = document.getElementById(id);
     if (e) e.textContent = (v == null ? "" : v);
   };
+  set("tw_maxExposure", (inputs.B5 && inputs.B5.value) || "");  /* B5 as read-only row */
   set("tw_cfValuation", o.cfValuation);
   set("tw_maxFacility", o.maxFacility);
-  set("tw_totCapAmt", o.totCapVal);        /* capitalized amount */
   set("tw_exposurePct", data.totalCapPct); /* exposure %          */
   set("tw_monthlyRental", o.monthlyRental);
 

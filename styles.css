@@ -301,16 +301,45 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 /* ---------- three-wheel tab ---------- */
 .twLoading{ padding:30px; text-align:center; color:var(--muted); font-weight:600; }
 .tw-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
-.tw-card .field{ margin-bottom:10px; }
 
-/* read-only display field (e.g. Maximum Exposure) */
-.tw-readonly{
-  background:var(--row);
-  color:var(--ink);
-  font-weight:700;
-  cursor:default;
+/* Fields are horizontal: label on the left, control on the right
+   (both the Vehicle-Lease facility card and the 3W cards). */
+.facility .field,
+.tw-card .field{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:10px;
 }
+.facility .field label,
+.tw-card .field label{ margin:0; flex:1 1 auto; }
+.facility .field select,
+.facility .field input,
+.tw-card .field select,
+.tw-card .field input{ flex:0 0 auto; width:48%; max-width:230px; }
+
+/* big result value with a label tile beside it */
+.tw-bigrow{ display:flex; gap:10px; align-items:stretch; margin-bottom:14px; }
+.tw-biglabel{
+  flex:0 0 42%;
+  display:flex; align-items:center;
+  font-weight:800; font-size:14px; letter-spacing:.3px; color:var(--ink);
+  background:#fff; border:1px solid var(--result-bd); border-radius:12px; padding:0 14px;
+}
+.tw-bigrow .bigValue{ flex:1 1 auto; margin:0; }
+
+/* read-only display field (kept for any future use) */
+.tw-readonly{ background:var(--row); color:var(--ink); font-weight:700; cursor:default; }
 .tw-readonly:focus{ box-shadow:none; border-color:var(--field-bd); }
+
+/* on small phones, stack the 3W fields (label above, full-width control) */
+@media (max-width:560px){
+  .facility .field,
+  .tw-card .field{ display:block; }
+  .facility .field label,
+  .tw-card .field label{ margin-bottom:5px; }
+  .facility .field select, .facility .field input,
+  .tw-card .field select, .tw-card .field input{ width:100%; max-width:none; }
+  .tw-biglabel{ flex-basis:40%; font-size:12px; }
+}
 
 
 /* ---------- loading overlay ---------- */
@@ -384,47 +413,37 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 ===================================================================== */
 @media (min-width:1100px){
 
-  /* Vehicle panel is the grid; its .main children flow in via contents */
+  /* Vehicle panel: 3 columns —
+       col 1 = Facility (row 1) + Monthly & Residual (row 2)
+       col 2 = Bullet Schedule (spans both rows)
+       col 3 = Charges (spans both rows)                          */
   #vehiclePanel{
     display:grid;
-    grid-template-columns:1fr 1.4fr 1fr 1fr;   /* facility | schedule(wide) | summary | charges */
+    grid-template-columns:1fr 1.2fr 1fr;
     gap:12px;
-    align-items:stretch;
+    align-items:start;
   }
-  #vehiclePanel:has(.main.schedule-hidden){ grid-template-columns:repeat(3, 1fr); }
-
   .main,
   .main.schedule-hidden{ display:contents; }
 
-  /* cards fill the stretched row height; drop stacked margins */
-  .facility,
-  .scheduleCard,
-  .main>div:last-child,
-  #chargesSection{ margin-bottom:0; align-self:stretch; min-height:0; }
+  .facility{ grid-column:1; grid-row:1; display:flex; flex-direction:column; margin-bottom:0; }
+  .main>div:last-child{ grid-column:1; grid-row:2; display:flex; flex-direction:column; gap:12px; margin:0; }
+  .scheduleCard{ grid-column:2; grid-row:1 / span 2; display:flex; flex-direction:column; margin-bottom:0; }
+  #chargesSection{ grid-column:3; grid-row:1 / span 2; margin:0; display:flex; flex-direction:column; }
+  #rentalScheduleSection{ grid-column:1 / -1; grid-row:3; margin-top:0; }
 
-  .facility{ display:flex; flex-direction:column; }
-
-  .scheduleCard{ display:flex; flex-direction:column; }
   .scheduleTableContainer{ flex:1; min-height:0; }
-
-  /* Monthly + Residual = two equal halves filling the column */
-  .main>div:last-child{ display:flex; flex-direction:column; gap:14px; }
   .main>div:last-child>div:nth-child(2){ display:none; }   /* the spacer div */
-  .summary,
-  .bulk{ display:flex; flex-direction:column; flex:1 1 0; min-height:0; }
-  .summary .cardTitle,
-  .bulk .cardTitle{ margin-bottom:10px; }
-  .bigValue{ margin-bottom:10px; flex-shrink:0; }
+  .summary, .bulk{ display:flex; flex-direction:column; }
   .summaryTable{ border-spacing:0 4px; }
   .summaryTable td{ height:30px; }
 
-  #chargesSection{ overflow:auto; }
-  #chargesSection .cardTitle{ font-size:17px; }
-  #chargesSection .chargesTotal{ font-size:24px; }
-  #chargesSection .chargesTable td{ font-size:12.5px; padding:8px 6px; }
+  /* schedule hidden -> 2 columns (facility/summary | charges) */
+  #vehiclePanel:has(.main.schedule-hidden){ grid-template-columns:1fr 1fr; }
+  #vehiclePanel:has(.main.schedule-hidden) #chargesSection{ grid-column:2; }
 
-  /* rental schedule spans the full width, on its own row */
-  #rentalScheduleSection{ grid-column:1 / -1; margin-top:0; }
+  #chargesSection .cardTitle{ font-size:17px; }
+  #chargesSection .chargesTable td{ font-size:12.5px; padding:8px 6px; }
 
   /* three-wheel: three cards across (Totals now inside Initial Charges) */
   .tw-grid{ grid-template-columns:repeat(3, 1fr); align-items:start; }
