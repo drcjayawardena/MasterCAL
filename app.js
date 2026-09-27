@@ -172,7 +172,7 @@ function loadApp() {
         fillSelect("productType", result.dropdowns.productTypes || []);
         fillSelect("stampDuty",
           (result.stampDuty || result.dropdowns.stampDuty) || []);
-        RMV_TYPES = result.dropdowns.rmvTypes || RMV_TYPES;
+        RMV_TYPES = normalizeRmv(result.dropdowns.rmvTypes);
       }
 
       if (result.outputs) showOutputs(result.outputs);
@@ -720,6 +720,15 @@ function applyExpress(express) {
 /* Charges breakdown from J1:L14 (rows: [J label, K sub, L amount]). */
 /* Two RMV option lists: normal (J13 <- B2:B6), other (J14 <- E:E). */
 var RMV_TYPES = { normal: [], other: [] };
+
+/* Accept either the NEW backend shape { normal:[], other:[] } or the OLD
+   single array (in case the backend hasn't been redeployed yet) — an array
+   is used for BOTH dropdowns so they never silently disappear. */
+function normalizeRmv(rmv) {
+  if (!rmv) return { normal: [], other: [] };
+  if (Array.isArray(rmv)) return { normal: rmv, other: rmv };
+  return { normal: rmv.normal || [], other: rmv.other || [] };
+}
 /* grid index -> sheet cell for the editable RMV-type dropdowns */
 const RMV_CELLS = { 12: "J13", 13: "J14" };   /* J13 + J14 */
 const HIDE_ROW_INDEX = 2;   /* grid index 2  = sheet row 3  = J3 (hidden) */

@@ -104,7 +104,7 @@ body{
 .cardTitle,
 .scheduleTitle{
   color:var(--ink);
-  font-size:18px;
+  font-size:16px;             /* headings a touch smaller */
   font-weight:700;
   margin-bottom:14px;
   line-height:1.15;
