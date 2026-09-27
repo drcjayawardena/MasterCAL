@@ -147,6 +147,7 @@ function init() {
   bindInputs();
   setupBulletPaymentButton();
   setupRentalScheduleToggle();
+  setupTwScheduleToggle();
   setupTabs();
 
   /* Gate: need an email before doing anything. */
@@ -1519,8 +1520,11 @@ function build3W(data) {
   grid.appendChild(c3);
 }
 
+var tw_lastData = null;   /* keep the latest 3W payload for the schedule */
+
 function render3W(data) {
   if (!data) return;
+  tw_lastData = data;
 
   const lb10 = document.getElementById("twlbl_B10");
   if (lb10 && data.labelFacility) lb10.textContent = data.labelFacility;
@@ -1590,6 +1594,118 @@ function render3W(data) {
     const dis = !!data.rmvDisabled;
     rmvEl.disabled = dis;
     rmvEl.classList.toggle("is-disabled", dis);
+  }
+
+  /* keep the rental schedule in sync when it's open */
+  if (isTwScheduleVisible()) renderTwSchedule();
+}
+
+
+/* =========================================================
+   3W RENTAL SCHEDULE  (computed client-side)
+   No schedule table exists on the 3W sheet, so we build a
+   month-by-month amortization from the results:
+     financed principal P = Total Paid − Total Interest
+     monthly rental R     = Monthly Rental
+     term n               = PERIOD (B14)
+   The monthly rate is solved so the annuity amortizes to 0,
+   which makes the totals match the sheet exactly.
+========================================================= */
+
+function twNum(v) {
+  return parseFloat(String(v == null ? "" : v).replace(/,/g, "")) || 0;
+}
+function twFmt(n) {
+  if (!isFinite(n)) n = 0;
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* Solve monthly rate i for R = P·i / (1 − (1+i)^−n) via bisection. */
+function twSolveRate(P, R, n) {
+  if (P <= 0 || R <= 0 || n <= 0) return 0;
+  if (R * n <= P + 0.01) return 0;             /* no interest */
+  const f = function (i) { return P * i / (1 - Math.pow(1 + i, -n)) - R; };
+  let lo = 1e-9, hi = 1.0;
+  for (let k = 0; k < 200; k++) {
+    const mid = (lo + hi) / 2;
+    const fm = f(mid);
+    if (Math.abs(fm) < 1e-7) return mid;
+    if (f(lo) * fm <= 0) hi = mid; else lo = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function setupTwScheduleToggle() {
+  const btn = document.getElementById("twScheduleToggle");
+  if (!btn) return;
+  const nb = btn.cloneNode(true);
+  btn.parentNode.replaceChild(nb, btn);
+  nb.addEventListener("click", function () {
+    if (isTwScheduleVisible()) hideTwSchedule();
+    else showTwSchedule();
+  });
+  hideTwSchedule();
+}
+
+function isTwScheduleVisible() {
+  const s = document.getElementById("twScheduleSection");
+  return s && window.getComputedStyle(s).display !== "none";
+}
+
+function showTwSchedule() {
+  const s = document.getElementById("twScheduleSection");
+  const b = document.getElementById("twScheduleToggle");
+  if (s) s.style.display = "block";
+  if (b) b.textContent = "HIDE RENTAL SCHEDULE";
+  renderTwSchedule();
+}
+
+function hideTwSchedule() {
+  const s = document.getElementById("twScheduleSection");
+  const b = document.getElementById("twScheduleToggle");
+  if (s) s.style.display = "none";
+  if (b) b.textContent = "SHOW RENTAL SCHEDULE";
+}
+
+function renderTwSchedule() {
+  const body = document.getElementById("twScheduleBody");
+  if (!body) return;
+  body.innerHTML = "";
+  if (!tw_lastData) return;
+
+  const o = tw_lastData.out || {};
+  const inp = tw_lastData.inputs || {};
+  const n = Math.round(twNum(inp.B14 && inp.B14.value));
+  const R = twNum(o.monthlyRental);
+  const P = twNum(o.totPaid) - twNum(o.totInterest);   /* financed principal */
+
+  if (n <= 0 || R <= 0 || P <= 0) {
+    body.insertAdjacentHTML("beforeend",
+      '<tr><td style="text-align:center;padding:14px">No schedule to show yet.</td></tr>');
+    return;
+  }
+
+  const i = twSolveRate(P, R, n);
+
+  /* header row */
+  const head = document.createElement("tr");
+  ["No", "Rental", "Interest", "Capital", "Balance"].forEach(function (h) {
+    const td = document.createElement("td"); td.textContent = h; head.appendChild(td);
+  });
+  body.appendChild(head);
+
+  let bal = P;
+  for (let m = 1; m <= n; m++) {
+    let interest = bal * i;
+    let capital = R - interest;
+    if (m === n) { capital = bal; interest = R - capital; if (interest < 0) interest = 0; }
+    bal -= capital;
+    if (bal < 0) bal = 0;
+    const tr = document.createElement("tr");
+    [String(m), twFmt(R), twFmt(interest), twFmt(capital), twFmt(bal)].forEach(function (v) {
+      const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+    });
+    body.appendChild(tr);
   }
 }
 
