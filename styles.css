@@ -290,7 +290,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .chargesHead{ display:flex; flex-direction:column; align-items:stretch; gap:10px; margin-bottom:12px; }
 .chargesHead .cardTitle{ margin:0; }
 .chargesTotal{
-  display:block; width:100%; box-sizing:border-box; text-align:center;
+  display:block; width:100%; box-sizing:border-box; text-align:right;
   background:var(--result-bg); color:var(--result-ink); border:1px solid var(--result-bd);
   border-radius:12px; font-size:32px; font-weight:700; padding:14px 12px;   /* same as .bigValue */
   white-space:nowrap; font-variant-numeric:tabular-nums;
