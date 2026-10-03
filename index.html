@@ -58,6 +58,7 @@
   <div class="tabBar">
     <button type="button" class="tab active" data-tab="vehicle">Vehicle Lease</button>
     <button type="button" class="tab" data-tab="threewheel">Three-Wheel</button>
+    <button type="button" class="tab" data-tab="bike">Bike Lease</button>
   </div>
 
 
@@ -230,6 +231,25 @@
     </div>
   </div>
 
+
+
+  <!-- ============ BIKE PANEL (built by app.js) ============ -->
+  <div id="bikePanel" hidden>
+    <div id="bkLoading" class="twLoading">Loading bike calculator…</div>
+    <div id="bkGrid" class="tw-grid"></div>
+
+    <!-- BIKE RENTAL SCHEDULE (computed in app.js) -->
+    <div class="twScheduleWrap">
+      <button type="button" id="bkScheduleToggle" class="rentalScheduleToggle">
+        SHOW RENTAL SCHEDULE
+      </button>
+      <div id="bkScheduleSection" class="rentalScheduleSection">
+        <div class="rentalScheduleTableContainer">
+          <table id="bkScheduleTable"><tbody id="bkScheduleBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </div>
 <!-- END .page -->
