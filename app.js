@@ -15,7 +15,6 @@
 const API_URL =
   "https://script.google.com/macros/s/AKfycbx8m_v6iMUy8tTSGzxSfxi79ZyTfJgpy89WjVkqRMO3dvnm734znkdTvjpW92DhO-xN/exec";
 
-
 /* =========================================================
    API HELPER
    Uses text/plain body to stay a "simple" CORS request
