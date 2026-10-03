@@ -337,28 +337,21 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 /* ---------- 3W rental schedule ---------- */
 .twScheduleWrap{ margin-top:12px; }
 .twScheduleWrap .rentalScheduleToggle{ width:100%; height:46px; }
-#twScheduleSection,
-#bkScheduleSection { display:none; margin-top:10px; }
-#twScheduleTable,
-#bkScheduleTable { width:100%; min-width:640px; border-collapse:collapse; table-layout:fixed; }
-#twScheduleTable tr:first-child td,
-#bkScheduleTable tr:first-child td {
+#twScheduleSection{ display:none; margin-top:10px; }
+#twScheduleTable{ width:100%; min-width:640px; border-collapse:collapse; table-layout:fixed; }
+#twScheduleTable tr:first-child td{
   height:42px; padding:7px 8px;
   background:var(--brand); color:#fff; border:1px solid #fff;
   font-size:13px; font-weight:700; text-align:center; white-space:nowrap;
 }
-#twScheduleTable tr:not(:first-child) td,
-#bkScheduleTable tr:not(:first-child) td {
+#twScheduleTable tr:not(:first-child) td{
   height:34px; padding:5px 8px;
   border:1px solid #d9d9d9; background:#fff; color:var(--ink);
   font-size:13px; white-space:nowrap;
 }
-#twScheduleTable td:first-child,
-#bkScheduleTable td:first-child { text-align:center; font-weight:600; width:10%; }
-#twScheduleTable tr:not(:first-child) td:not(:first-child),
-#bkScheduleTable tr:not(:first-child) td:not(:first-child) { text-align:right; }
-#twScheduleTable tr:not(:first-child):hover td,
-#bkScheduleTable tr:not(:first-child):hover td { background:#f4fbfb; }
+#twScheduleTable td:first-child{ text-align:center; font-weight:600; width:10%; }
+#twScheduleTable tr:not(:first-child) td:not(:first-child){ text-align:right; }
+#twScheduleTable tr:not(:first-child):hover td{ background:#f4fbfb; }
 
 
 /* ---------- three-wheel tab ---------- */
