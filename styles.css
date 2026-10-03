@@ -585,27 +585,148 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 
 
 /* =====================================================================
-   FINAL DESKTOP ALIGNMENT FIX — CHARGES CALCULATION
-   Keep Charges Calculation on the exact same top line as the other cards
-   and extend it to compensate for the original 12px top offset.
+   MASTER CAL PRO — DESKTOP CARD ALIGNMENT FIX
+   The HTML places .main inside .page and #chargesSection directly in
+   .page. Therefore the desktop grid MUST be applied to .page, not
+   #vehiclePanel.
 ===================================================================== */
 @media (min-width:1100px){
-  #vehiclePanel{
-    align-items:stretch !important;
+
+  /* Four cards on one exact grid row:
+     Facility | Bullet Payment | Monthly/Residual | Charges */
+  .page{
+    width:100%;
+    max-width:1480px;
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:12px;
+    align-items:stretch;
   }
 
-  #chargesSection.chargesCard{
-    margin-top:-12px !important;
-    margin-bottom:0 !important;
-    height:calc(100% + 12px) !important;
-    min-height:0 !important;
-    align-self:stretch !important;
-    box-sizing:border-box !important;
-    position:relative !important;
-    top:0 !important;
+  /* Header spans the complete row */
+  .page > .header{
+    grid-column:1 / -1;
+    width:auto;
+    margin-bottom:0;
   }
 
-  #chargesSection .chargesHead{
+  /* Make .main's children direct grid items */
+  .page > .main,
+  .page > .main.schedule-hidden{
+    display:contents;
+  }
+
+  /* All four main cards start at EXACTLY the same Y position
+     and occupy the same grid-row height. */
+  .page > .main > .facility,
+  .page > .main > .scheduleCard,
+  .page > .main > div:last-child,
+  .page > #chargesSection{
+    width:auto !important;
     margin-top:0 !important;
+    margin-bottom:0 !important;
+    align-self:stretch !important;
+    min-height:0;
+    box-sizing:border-box;
+  }
+
+  /* Facility card */
+  .page > .main > .facility{
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* Bullet payment card */
+  .page > .main > .scheduleCard{
+    display:flex;
+    flex-direction:column;
+  }
+
+  .page > .main > .scheduleCard .scheduleTableContainer{
+    flex:1;
+    min-height:0;
+  }
+
+  /* Monthly Rental + Rental with Residual column */
+  .page > .main > div:last-child{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  .page > .main > div:last-child > div:nth-child(2){
+    display:none;
+  }
+
+  .page > .main > div:last-child .summary,
+  .page > .main > div:last-child .bulk{
+    display:flex;
+    flex-direction:column;
+    flex:1 1 0;
+    min-height:0;
+    margin-bottom:0;
+  }
+
+  .page > .main > div:last-child .summary .cardTitle,
+  .page > .main > div:last-child .bulk .cardTitle{
+    margin-bottom:10px;
+  }
+
+  .page > .main > div:last-child .bigValue{
+    margin-bottom:10px;
+    flex-shrink:0;
+  }
+
+  .page > .main > div:last-child .summaryTable{
+    border-spacing:0 4px;
+  }
+
+  .page > .main > div:last-child .summaryTable td{
+    height:30px;
+  }
+
+  /* Charges card — SAME TOP and SAME BOTTOM as Facility */
+  .page > #chargesSection.chargesCard{
+    display:flex;
+    flex-direction:column;
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+    height:auto !important;
+    min-height:0;
+    align-self:stretch !important;
+    box-sizing:border-box;
+    overflow:auto;
+  }
+
+  .page > #chargesSection .chargesButtons{
+    margin-top:auto;
+  }
+
+  /* Rental schedule occupies a new full-width row */
+  .page > #rentalScheduleSection{
+    grid-column:1 / -1;
+    margin-top:0;
+  }
+
+  /* When Bullet Payment is hidden:
+     Facility | Monthly/Residual | Charges */
+  .page:has(.main.schedule-hidden){
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }
+
+  .page:has(.main.schedule-hidden) > .header{
+    grid-column:1 / -1;
+  }
+}
+
+
+/* Keep the desktop alignment rules from being affected by the
+   generic stacked-view margin declarations. */
+@media (min-width:1100px){
+  .facility,
+  .scheduleCard,
+  #chargesSection,
+  .main > div:last-child{
+    margin-bottom:0 !important;
   }
 }
