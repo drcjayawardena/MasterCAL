@@ -286,14 +286,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 
 
 /* ---------- charges card ---------- */
-.chargesCard{
-  margin-top:0;
-  height:100%;
-  align-self:stretch;
-  display:flex;
-  flex-direction:column;
-  box-sizing:border-box;
-}
+.chargesCard{ margin-top:12px; display:flex; flex-direction:column; }
 .chargesHead{ display:flex; flex-direction:column; align-items:stretch; gap:10px; margin-bottom:12px; }
 .chargesHead .cardTitle{ margin:0; }
 .chargesTotal{
@@ -522,14 +515,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   .facility,
   .scheduleCard,
   .main>div:last-child,
-  #chargesSection{
-    margin-top:0;
-    margin-bottom:0;
-    align-self:stretch;
-    height:100%;
-    min-height:0;
-    box-sizing:border-box;
-  }
+  #chargesSection{ margin-bottom:0; align-self:stretch; min-height:0; }
 
   .facility{ display:flex; flex-direction:column; }
   .scheduleCard{ display:flex; flex-direction:column; }
@@ -595,4 +581,31 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   .chargesTotal{ font-size:24px; }
   #scheduleTable th{ font-size:12px; }
   .gateCard{ padding:24px 20px; }
+}
+
+
+/* =====================================================================
+   FINAL DESKTOP ALIGNMENT FIX — CHARGES CALCULATION
+   Keep Charges Calculation on the exact same top line as the other cards
+   and extend it to compensate for the original 12px top offset.
+===================================================================== */
+@media (min-width:1100px){
+  #vehiclePanel{
+    align-items:stretch !important;
+  }
+
+  #chargesSection.chargesCard{
+    margin-top:-12px !important;
+    margin-bottom:0 !important;
+    height:calc(100% + 12px) !important;
+    min-height:0 !important;
+    align-self:stretch !important;
+    box-sizing:border-box !important;
+    position:relative !important;
+    top:0 !important;
+  }
+
+  #chargesSection .chargesHead{
+    margin-top:0 !important;
+  }
 }
