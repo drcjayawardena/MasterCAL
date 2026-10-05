@@ -15,7 +15,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MasterCAL">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+  <!-- SPEED: open the connections to Google Apps Script early (the /exec URL redirects to googleusercontent.com) -->
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 
   <link rel="stylesheet" href="styles.css">
 
@@ -58,6 +63,7 @@
   <div class="tabBar">
     <button type="button" class="tab active" data-tab="vehicle">Vehicle Lease</button>
     <button type="button" class="tab" data-tab="threewheel">Three-Wheel</button>
+    <button type="button" class="tab" data-tab="bike">Bike Lease</button>
   </div>
 
 
@@ -229,6 +235,25 @@
       </div>
     </div>
   </div>
+
+  <!-- ============ BIKE PANEL (built by app.js) ============ -->
+  <div id="bikePanel" hidden>
+    <div id="bkLoading" class="twLoading">Loading bike calculator…</div>
+    <div id="bkGrid" class="tw-grid"></div>
+
+    <!-- BIKE RENTAL SCHEDULE (computed in app.js) -->
+    <div class="twScheduleWrap">
+      <button type="button" id="bkScheduleToggle" class="rentalScheduleToggle">
+        SHOW RENTAL SCHEDULE
+      </button>
+      <div id="bkScheduleSection" class="rentalScheduleSection">
+        <div class="rentalScheduleTableContainer">
+          <table id="bkScheduleTable"><tbody id="bkScheduleBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
 
 </div>
