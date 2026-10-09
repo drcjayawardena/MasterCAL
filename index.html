@@ -153,13 +153,17 @@
     </div>
 
 
-    <!-- SUMMARY -->
-    <div>
+    <!-- RENTAL CALCULATION (one card: Monthly Rental + Rental with Residual) -->
+    <div class="summaryColumn">
+
+      <div class="cardTitle">Rental Calculation</div>
 
       <!-- MONTHLY RENTAL -->
       <div class="summary">
-        <div class="cardTitle" id="monthlyRentalTitle">Monthly Rental</div>
-        <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
+        <div class="tw-bigrow">
+          <div class="tw-biglabel" id="monthlyRentalTitle">Monthly Rental</div>
+          <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
+        </div>
         <table class="summaryTable">
           <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
           <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
@@ -171,8 +175,11 @@
 
       <!-- RENTAL WITH RESIDUAL -->
       <div class="bulk">
-        <div class="cardTitle">Rental with Residual</div>
-        <div class="bigValue blue"><span id="lastMonthRental">0.00</span></div>
+        <div class="cardTitle tw-subtitle">Rental with Residual</div>
+        <div class="tw-bigrow">
+          <div class="tw-biglabel">Residual Rental</div>
+          <div class="bigValue blue"><span id="lastMonthRental">0.00</span></div>
+        </div>
         <table class="summaryTable">
           <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
           <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
@@ -188,20 +195,21 @@
 
   <!-- CHARGES CALCULATION (J1:L14) -->
   <div id="chargesSection" class="chargesCard">
-    <div class="chargesHead">
-      <span class="cardTitle" id="chargesTitle">Charges Calculation</span>
-      <span class="chargesTotal" id="chargesTotal">0.00</span>
+    <div class="cardTitle" id="chargesTitle">Charges Calculation</div>
+    <div class="tw-bigrow">
+      <div class="tw-biglabel">Total Charges</div>
+      <div class="bigValue red"><span id="chargesTotal">0.00</span></div>
     </div>
     <table class="chargesTable">
       <tbody id="chargesBody"></tbody>
     </table>
+  </div>
 
-    <!-- Rental-schedule toggle stays at the bottom of the charges card -->
-    <div class="chargesButtons">
-      <button type="button" id="rentalScheduleToggle" class="rentalScheduleToggle">
-        SHOW RENTAL SCHEDULE
-      </button>
-    </div>
+  <!-- Rental-schedule toggle: full-width bar under the cards (same as the other tabs) -->
+  <div class="vehicleScheduleToggleRow">
+    <button type="button" id="rentalScheduleToggle" class="rentalScheduleToggle">
+      SHOW RENTAL SCHEDULE
+    </button>
   </div>
 
 
