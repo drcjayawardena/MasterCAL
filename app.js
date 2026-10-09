@@ -687,7 +687,7 @@ function showOutputs(result) {
    IDEMPOTENT: always rebuilt from the clean label text (never stacks "+ …").
    CAP_SHOW_ZERO = true  -> the "+ value" is shown even when the sheet gives 0
                    false -> it is hidden while the amount is 0 */
-var CAP_SHOW_ZERO = true;
+var CAP_SHOW_ZERO = false;
 
 function applyCapAmounts(amounts) {
   if (!amounts) return;
