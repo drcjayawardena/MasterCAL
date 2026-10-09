@@ -707,7 +707,7 @@ function applyCapAmounts(amounts) {
 
     var v = map[id];
     var show = isAmount(v) && (CAP_SHOW_ZERO || nonZeroAmt(v));
-    el.textContent = show ? (base + "  +  " + String(v).trim()) : base;
+    el.textContent = show ? (base + "  -  " + String(v).trim()) : base;
   });
 }
 
