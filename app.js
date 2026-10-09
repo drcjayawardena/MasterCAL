@@ -679,40 +679,50 @@ function showOutputs(result) {
 }
 
 
-/* Append the capitalized amount to the BIC / INSURANCE / STAMP DUTY
-   labels (like the 3W tab). amounts = [E6 bic, E7 insurance, E8 stamp].
-   IDEMPOTENT: rebuilds from each label's clean base text every time, so
-   repeated renders (e.g. calcInputs, which returns no labels) never stack
-   the amount over and over. Only appends when the amount is non-zero. */
+/* Facility Details labels:   <sheet label>  +  <capitalized amount>
+     BIC          ->  A6  +  E6      e.g. "ONLY CAPITALIZED 1% AS BIC  +  35,000"
+     INSURANCE    ->  A7  +  E7      e.g. "INSURANCE CAN NOT CAPITALIZED  +  0"
+     STAMP DUTY   ->  A8  +  E8      e.g. "STAMP DUTY CAN NOT CAPITALIZED  +  0"
+   amounts = [E6, E7, E8] as the sheet displays them.
+   IDEMPOTENT: always rebuilt from the clean label text (never stacks "+ …").
+   CAP_SHOW_ZERO = true  -> the "+ value" is shown even when the sheet gives 0
+                   false -> it is hidden while the amount is 0 */
+var CAP_SHOW_ZERO = true;
+
 function applyCapAmounts(amounts) {
   if (!amounts) return;
-  /* Only BIC (E6) and STAMP DUTY (E8) show their amount on Vehicle Lease.
-     INSURANCE (E7) is intentionally left as a plain label. */
-  var map = { lblBic: amounts[0], lblStampDuty: amounts[2] };
+  var map = { lblBic: amounts[0], lblInsurance: amounts[1], lblStampDuty: amounts[2] };
   Object.keys(map).forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
 
-    /* Clean base label: prefer the one stored by applyLabels; otherwise
-       strip any already-appended "  -  <number>" suffixes (one or many). */
+    /* Clean base label: the one stored by applyLabels; otherwise strip any
+       "  +  <number>" / "  -  <number>" suffixes that were appended before. */
     var base = el.dataset.baseLabel;
     if (base == null) {
-      base = el.textContent.replace(/(\s+-\s+[\d.,]+)+\s*$/, "").trim();
+      base = el.textContent.replace(/(\s+[-+]\s+[\d.,]+)+\s*$/, "");
       el.dataset.baseLabel = base;
     }
+    base = String(base).trim();
 
     var v = map[id];
-    el.textContent = nonZeroAmt(v) ? (base + "  -  " + String(v).trim()) : base;
+    var show = isAmount(v) && (CAP_SHOW_ZERO || nonZeroAmt(v));
+    el.textContent = show ? (base + "  +  " + String(v).trim()) : base;
   });
+}
+
+/* True when a display string is a number (zero included, sheet errors excluded). */
+function isAmount(v) {
+  if (v == null) return false;
+  var s = String(v).trim();
+  if (s === "" || isSheetError(s)) return false;
+  return !isNaN(parseFloat(s.replace(/,/g, "")));
 }
 
 /* True when a display string is a number other than zero (ignores commas). */
 function nonZeroAmt(v) {
-  if (v == null) return false;
-  var s = String(v).trim();
-  if (s === "" || isSheetError(s)) return false;
-  var n = parseFloat(s.replace(/,/g, ""));
-  return !isNaN(n) && n !== 0;
+  if (!isAmount(v)) return false;
+  return parseFloat(String(v).trim().replace(/,/g, "")) !== 0;
 }
 
 
@@ -860,8 +870,8 @@ function applyLabels(labels) {
     const val = labels[i];
     /* Skip empty or sheet-error values -> keep the default label. */
     if (el && val != null && String(val).trim() !== "" && !isSheetError(val)) {
-      el.textContent = val;
-      el.dataset.baseLabel = String(val);   /* clean base for applyCapAmounts */
+      el.textContent = String(val).trim();
+      el.dataset.baseLabel = String(val).trim();   /* clean base for applyCapAmounts */
     }
   });
 }
