@@ -578,8 +578,10 @@ function saveProductType(productType) {
   api("saveProductType", [String(productType)])
     .then(function (result) {
       if (!result) return;
-      if (result.outputs) showOutputs(result.outputs);
+      /* options first, results second: showOutputs() disables + blanks the boxes whose
+         switch is NO, which must happen AFTER the stamp-duty list is rebuilt */
       if (result.stampDuty) fillSelect("stampDuty", result.stampDuty);
+      if (result.outputs) showOutputs(result.outputs);
       drawSchedule(result.schedule || []);
       if (isRentalScheduleVisible()) loadRentalSchedule();
       if (el) el.disabled = false;
@@ -687,7 +689,7 @@ function showOutputs(result) {
    IDEMPOTENT: always rebuilt from the clean label text (never stacks "+ …").
    CAP_SHOW_ZERO = true  -> the "+ value" is shown even when the sheet gives 0
                    false -> it is hidden while the amount is 0 */
-var CAP_SHOW_ZERO = false;
+var CAP_SHOW_ZERO = true;
 
 function applyCapAmounts(amounts) {
   if (!amounts) return;
@@ -707,7 +709,7 @@ function applyCapAmounts(amounts) {
 
     var v = map[id];
     var show = isAmount(v) && (CAP_SHOW_ZERO || nonZeroAmt(v));
-    el.textContent = show ? (base + "  -  " + String(v).trim()) : base;
+    el.textContent = show ? (base + "  +  " + String(v).trim()) : base;
   });
 }
 
