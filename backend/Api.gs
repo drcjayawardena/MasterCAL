@@ -2,11 +2,11 @@
  * MasterCAL Pro
  * Api.gs  (v3 — per-user API + email approval)
  *
- * PWA sends { action, args, email, name, userId }.
+ * PWA sends { action, args, phone, name, userId }.
  *   1. Access is checked against the USERS sheet.
- *      Only APPROVED emails may use the app.
+ *      Only APPROVED WhatsApp numbers may use the app.
  *   2. Each APPROVED user is routed to their OWN copy
- *      of the spreadsheet (keyed by email).
+ *      of the spreadsheet (keyed by "wa:<number>").
  *
  * Only ONE doGet may exist — it's here.
  * Deploy: Execute as = Me, Who has access = Anyone.
@@ -22,19 +22,18 @@ function doPost(e) {
     /* 0) PUBLIC actions — WhatsApp OTP registration runs BEFORE the
           approval gate, because a brand-new user is not APPROVED yet. */
     if (action === "getAuthMode")         return json_({ ok: true, data: { mode: authMode_() } });
-    if (action === "requestEmailCode")    return json_(requestEmailCode_(body.args || []));
-    if (action === "verifyEmailCode")     return json_(verifyEmailCode_(body.args || []));
     if (action === "requestWhatsAppCode") return json_(requestWhatsAppCode_(body.args || []));
     if (action === "verifyWhatsAppCode")  return json_(verifyWhatsAppCode_(body.args || []));
 
     /* 1) approval gate */
-    const access = checkAccessFast_(body.email, body.name);
+    const key = userKey_(body);
+    const access = checkAccessFast_(key, body.name);
     if (access.status !== "APPROVED") {
       return json_({ ok: false, access: access.status, error: "Access " + access.status });
     }
 
-    /* 2) route to this user's own copy (keyed by email) */
-    setUserContext_(normEmail_(body.email));
+    /* 2) route to this user's own copy (keyed by "wa:<number>") */
+    setUserContext_(key);
     return json_({ ok: true, data: dispatch_(action, body.args || []) });
   } catch (err) {
     return json_({ ok: false, error: errMsg_(err) });
@@ -56,11 +55,12 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.TEXT);
   }
   try {
-    const access = checkAccessFast_(e.parameter.email, e.parameter.name);
+    const key = userKey_(e.parameter);
+    const access = checkAccessFast_(key, e.parameter.name);
     if (access.status !== "APPROVED") {
       return json_({ ok: false, access: access.status, error: "Access " + access.status });
     }
-    setUserContext_(normEmail_(e.parameter.email));
+    setUserContext_(key);
     const args = e.parameter.args ? JSON.parse(e.parameter.args) : [];
     return json_({ ok: true, data: dispatch_(action, args) });
   } catch (err) {

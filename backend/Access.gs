@@ -3,34 +3,44 @@
  * Access.gs — user approval / allowlist
  *
  * A "USERS" tab in the MASTER sheet holds:
- *   Email | Name | Status | Requested | Approved
+ *   User (wa:<number>) | Name | Status | Requested | Approved | Phone | Verified
  * Status is one of: PENDING / APPROVED / BLOCKED
  *
- * New users auto-register as PENDING on first request.
+ * New users register by verifying their WhatsApp number with a code.
  * You approve them (menu, or edit the Status cell).
  ******************************************************/
 
 const USERS_SHEET = "USERS";
 
-/* ---- WHO MAY REGISTER AND BE APPROVED ----
-   Only e-mail addresses ending in @cf.lk. Nobody else can register, be approved from the
-   menu, be approved from the e-mail link, or be auto-approved by the WhatsApp registration. */
-const ALLOWED_EMAIL_DOMAIN = "cf.lk";
+/* ---- IDENTITY = VERIFIED WHATSAPP NUMBER ----
+   Nobody registers with an e-mail any more. A user is identified by the WhatsApp number they
+   verified with a one-time code. Column A of USERS holds that key as "wa:<digits>", e.g.
+   "wa:94771234567" (the "wa:" prefix keeps Sheets from turning it into a number).
+   Old e-mail rows stay in the sheet but can no longer sign in. */
 
-/* Addresses OUTSIDE the domain that are allowed anyway (lower-case), e.g. the owner's own
-   address:  ["someone@gmail.com"]  */
-const EMAIL_DOMAIN_EXCEPTIONS = [];
+/* "0771234567" / "+94 77 123 4567" / "771234567"  ->  "94771234567"  ("" when not valid). */
+function normPhone_(p) {
+  let d = String(p == null ? "" : p).replace(/[^\d]/g, "");
+  if (d.indexOf("00") === 0) d = d.slice(2);                   /* 0094... international prefix */
+  if (d.length === 10 && d.charAt(0) === "0") d = "94" + d.slice(1);   /* local 07x... */
+  if (d.length === 9) d = "94" + d;                             /* 7x... without the 0 */
+  return (d.length >= 10 && d.length <= 15) ? d : "";
+}
 
-/* false = people who are ALREADY in the USERS sheet keep their status; the rule applies to new
-           registrations and to every approval.
-   true  = every request from a non-@cf.lk address is refused, even if already APPROVED. */
-const ENFORCE_DOMAIN_ON_EVERY_REQUEST = false;
+/* USERS key for a phone number: "wa:94771234567" ("" when the number is not valid). */
+function phoneKey_(p) {
+  const s = String(p == null ? "" : p).trim();
+  const d = normPhone_(/^wa:/i.test(s) ? s.slice(3) : s);
+  return d ? "wa:" + d : "";
+}
 
-function isAllowedEmail_(email) {
-  const e = normEmail_(email);
-  if (!e) return false;
-  if (EMAIL_DOMAIN_EXCEPTIONS.map(normEmail_).indexOf(e) !== -1) return true;
-  return new RegExp("^[^@\\s]+@" + ALLOWED_EMAIL_DOMAIN.replace(/\./g, "\\.") + "$").test(e);
+/* The identity key of a request ({ phone } from the PWA). */
+function userKey_(src) { return phoneKey_(src && src.phone); }
+
+/* "wa:94771234567" -> "+94771234567" for display. */
+function keyToPhone_(key) {
+  const s = String(key || "");
+  return /^wa:/i.test(s) ? "+" + s.slice(3) : s;
 }
 
 function escapeHtml_(t) {
@@ -57,7 +67,7 @@ function getUsersSheet_() {
   let s = ss.getSheetByName(USERS_SHEET);
   if (!s) {
     s = ss.insertSheet(USERS_SHEET);
-    s.appendRow(["Email", "Name", "Status", "Requested", "Approved", "Phone", "Verified"]);
+    s.appendRow(["User (wa:number)", "Name", "Status", "Requested", "Approved", "Phone", "Verified"]);
     s.setFrozenRows(1);
     s.getRange("A1:G1").setFontWeight("bold");
   }
@@ -69,11 +79,11 @@ function usersData_(s) {
   return s.getRange(1, 1, last, 5).getValues();
 }
 
-/* Returns { status: "APPROVED" | "PENDING" | "BLOCKED" | "NO_EMAIL" } */
+/* Returns { status: "APPROVED" | "PENDING" | "BLOCKED" | "NO_PHONE" }
+   `email` is the USERS key ("wa:<digits>"); the name is kept for the old call sites. */
 function checkAccess_(email, name) {
   email = normEmail_(email);
-  if (!email) return { status: "NO_EMAIL" };
-  if (ENFORCE_DOMAIN_ON_EVERY_REQUEST && !isAllowedEmail_(email)) return { status: "DOMAIN" };
+  if (!email) return { status: "NO_PHONE" };
 
   const s = getUsersSheet_();
   let data = usersData_(s);
@@ -83,31 +93,11 @@ function checkAccess_(email, name) {
     }
   }
 
-  /* A NEW address outside the domain is refused: no row is written and the owner gets no e-mail. */
-  if (!isAllowedEmail_(email)) return { status: "DOMAIN" };
-
-  /* A code screen is ON (e-mail or WhatsApp OTP): a new person may only enter through it. Calling
-     the API directly with an unknown e-mail must NOT create a row or e-mail the owner; the app
-     sends them to the register screen instead. The owner's approval e-mail is sent only AFTER
-     the code has been entered correctly (registerVerifiedUser_ in WhatsApp.gs). */
-  try { if (otpRequired_()) return { status: "NO_EMAIL" }; } catch (e) {}
-
-  /* Not found -> register as PENDING (locked to avoid duplicate rows). */
-  const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-    data = usersData_(s);
-    for (let i = 1; i < data.length; i++) {
-      if (normEmail_(data[i][0]) === email) {
-        return { status: String(data[i][2] || "PENDING").trim().toUpperCase() };
-      }
-    }
-    s.appendRow([email, String(name || ""), "PENDING", new Date(), ""]);
-    notifyOwner_(email, name);   /* email the owner about the new request */
-  } finally {
-    lock.releaseLock();
-  }
-  return { status: "PENDING" };
+  /* Not in USERS: a new person may only enter through the WhatsApp code screen. Calling the
+     API directly with an unknown number must NOT create a row or e-mail the owner; the app
+     sends them to the register screen instead. The row is written (and the owner e-mailed)
+     only AFTER the code has been entered correctly (registerVerifiedUser_ in WhatsApp.gs). */
+  return { status: "NO_PHONE" };
 }
 
 /* SPEED: an APPROVED answer is remembered for 5 minutes (CacheService), so
@@ -119,7 +109,7 @@ const ACCESS_CACHE_SECONDS = 300;
 
 function checkAccessFast_(email, name) {
   const e = normEmail_(email);
-  if (!e) return { status: "NO_EMAIL" };
+  if (!e) return { status: "NO_PHONE" };
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (err) {}
   const key = "acc_" + e;
@@ -134,16 +124,14 @@ function accessCacheClear_(email) {
 }
 
 /* Read-only look at someone's status. Never writes a row and never e-mails the owner.
-   Returns NO_EMAIL / DOMAIN / PENDING / APPROVED / BLOCKED, or NEW (not in the sheet yet). */
+   Returns NO_PHONE / PENDING / APPROVED / BLOCKED, or NEW (not in the sheet yet). */
 function peekAccess_(email) {
   email = normEmail_(email);
-  if (!email) return { status: "NO_EMAIL" };
-  if (ENFORCE_DOMAIN_ON_EVERY_REQUEST && !isAllowedEmail_(email)) return { status: "DOMAIN" };
+  if (!email) return { status: "NO_PHONE" };
   const data = usersData_(getUsersSheet_());
   for (let i = 1; i < data.length; i++) {
     if (normEmail_(data[i][0]) === email) return { status: String(data[i][2] || "PENDING").trim().toUpperCase() };
   }
-  if (!isAllowedEmail_(email)) return { status: "DOMAIN" };
   return { status: "NEW" };
 }
 
@@ -184,33 +172,28 @@ function notifyOwner_(email, name, phone, how) {
     };
 
     /* what was verified: the e-mail (code sent to the @cf.lk mailbox) or the WhatsApp number */
-    const ok = ' &nbsp;<span style="color:#1c5e3a;font-size:12px">(✓ verified)</span>';
-    const emailLine = escapeHtml_(email) + (how === "EMAIL" ? ok.replace("verified", "verified by e-mail code") : "");
-    const waLine = phone
-      ? ('<br><b>WhatsApp:</b> ' + escapeHtml_(phone) +
-         (how === "WHATSAPP" ? ok : ' &nbsp;<span style="color:#8797a0;font-size:12px">(not verified)</span>'))
-      : '';
+    const ok = ' &nbsp;<span style="color:#1c5e3a;font-size:12px">(✓ verified by WhatsApp code)</span>';
+    const waLine = escapeHtml_(phone || keyToPhone_(email)) + (how === "WHATSAPP" ? ok : "");
 
     const html =
       '<div style="font-family:Arial,sans-serif;font-size:14px;color:#20323a;max-width:520px">' +
       '<h2 style="color:#1c5e3a;margin:0 0 12px">MasterCAL Pro — new access request</h2>' +
-      '<p style="line-height:1.6"><b>Email:</b> ' + emailLine +
-      '<br><b>Name:</b> ' + (name ? escapeHtml_(name) : "(not given)") + waLine + '</p>' +
+      '<p style="line-height:1.6"><b>WhatsApp:</b> ' + waLine +
+      '<br><b>Name:</b> ' + (name ? escapeHtml_(name) : "(not given)") + '</p>' +
       (base
         ? ('<p style="margin:22px 0">' + btn(approveUrl, "#1c5e3a", "✓ APPROVE") +
            btn(rejectUrl, "#d8261c", "✕ REJECT") + '</p>' +
            '<p style="color:#8797a0;font-size:12px">Click a button above — it opens a confirmation page.</p>')
         : '<p style="color:#d8261c">Deploy the web app so approve/reject links can be generated.</p>') +
-      '<p style="color:#8797a0;font-size:12px">Or: master sheet → ⚙️ MasterCAL Admin → ✅ Approve a user.</p>' +
+      '<p style="color:#8797a0;font-size:12px">Or: master sheet → ⚙️ MasterCAL Admin → ✅ Approve a user (type the WhatsApp number).</p>' +
       '</div>';
 
     MailApp.sendEmail({
       to: to,
-      subject: "MasterCAL Pro — new access request: " + email,
+      subject: "MasterCAL Pro — new access request: " + (phone || keyToPhone_(email)),
       htmlBody: html,
-      body: "New request: " + email + " (" + (name || "") + ")\n" +
-            (how === "EMAIL" ? "E-mail verified by code.\n" : "") +
-            (phone ? "WhatsApp: " + phone + (how === "WHATSAPP" ? " (verified)" : " (not verified)") + "\n" : "") +
+      body: "New request: " + (phone || keyToPhone_(email)) + " (" + (name || "") + ")\n" +
+            (how === "WHATSAPP" ? "WhatsApp number verified by code.\n" : "") +
             "Approve: " + approveUrl + "\nReject: " + rejectUrl
     });
   } catch (e) {
@@ -223,14 +206,11 @@ function notifyOwner_(email, name, phone, how) {
    Returns an HTML confirmation page. */
 function handleEmailApproval_(action, email, token) {
   email = normEmail_(email);
-  if (!email) return approvalPage_("Missing email.", false);
+  if (!email) return approvalPage_("Missing user.", false);
   if (String(token) !== approvalToken_(email)) {
     return approvalPage_("Invalid or expired link.", false);
   }
   const status = (action === "approveUser") ? "APPROVED" : "BLOCKED";
-  if (status === "APPROVED" && !isAllowedEmail_(email)) {
-    return approvalPage_("Only @" + ALLOWED_EMAIL_DOMAIN + " e-mail addresses can be approved.<br>" + escapeHtml_(email), false);
-  }
   const s = getUsersSheet_();
   const data = usersData_(s);
   for (let i = 1; i < data.length; i++) {
@@ -238,12 +218,12 @@ function handleEmailApproval_(action, email, token) {
       s.getRange(i + 1, 3).setValue(status);
       if (status === "APPROVED") s.getRange(i + 1, 5).setValue(new Date());
       accessCacheClear_(email);       /* after the sheet change, so nothing stale can be re-cached */
-      return approvalPage_(email + " → " + status, status === "APPROVED");
+      return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status, status === "APPROVED");
     }
   }
   s.appendRow([email, "", status, new Date(), status === "APPROVED" ? new Date() : ""]);
   accessCacheClear_(email);
-  return approvalPage_(email + " → " + status, status === "APPROVED");
+  return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status, status === "APPROVED");
 }
 
 function approvalPage_(msg, ok) {
@@ -282,15 +262,11 @@ function menuTestEmail_() {
 function menuApproveUser_() {
   const ui = SpreadsheetApp.getUi();
   const r = ui.prompt("Approve user",
-    "Approve කරන්න ඕන email එක type කරන්න:", ui.ButtonSet.OK_CANCEL);
+    "Approve කරන්න ඕන WhatsApp number එක type කරන්න (e.g. 0771234567):", ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
 
-  const email = normEmail_(r.getResponseText());
-  if (!email) { ui.alert("Email එකක් දාන්න."); return; }
-  if (!isAllowedEmail_(email)) {
-    ui.alert("Not allowed ⛔", "Only @" + ALLOWED_EMAIL_DOMAIN + " e-mail addresses can be approved.\n\n" + email, ui.ButtonSet.OK);
-    return;
-  }
+  const email = phoneKey_(r.getResponseText());
+  if (!email) { ui.alert("හරි WhatsApp number එකක් දාන්න."); return; }
 
   const s = getUsersSheet_();
   const data = usersData_(s);
@@ -298,32 +274,33 @@ function menuApproveUser_() {
     if (normEmail_(data[i][0]) === email) {
       s.getRange(i + 1, 3).setValue("APPROVED");
       s.getRange(i + 1, 5).setValue(new Date());
-      ui.alert("Approved ✅", email + " approved.", ui.ButtonSet.OK);
+      accessCacheClear_(email);
+      ui.alert("Approved ✅", keyToPhone_(email) + " approved.", ui.ButtonSet.OK);
       return;
     }
   }
-  s.appendRow([email, "", "APPROVED", new Date(), new Date()]);
-  ui.alert("Approved ✅", email + " added & approved.", ui.ButtonSet.OK);
+  s.appendRow([email, "", "APPROVED", new Date(), new Date(), keyToPhone_(email), ""]);
+  ui.alert("Approved ✅", keyToPhone_(email) + " added & approved.", ui.ButtonSet.OK);
 }
 
 function menuBlockUser_() {
   const ui = SpreadsheetApp.getUi();
   const r = ui.prompt("Block user",
-    "Block කරන්න ඕන email එක type කරන්න:", ui.ButtonSet.OK_CANCEL);
+    "Block කරන්න ඕන WhatsApp number එක type කරන්න:", ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
-  const email = normEmail_(r.getResponseText());
-  if (!email) return;
+  const email = phoneKey_(r.getResponseText());
+  if (!email) { ui.alert("හරි WhatsApp number එකක් දාන්න."); return; }
   const s = getUsersSheet_();
   const data = usersData_(s);
   for (let i = 1; i < data.length; i++) {
     if (normEmail_(data[i][0]) === email) {
       s.getRange(i + 1, 3).setValue("BLOCKED");
       accessCacheClear_(email);
-      ui.alert("Blocked", email + " blocked.", ui.ButtonSet.OK);
+      ui.alert("Blocked", keyToPhone_(email) + " blocked.", ui.ButtonSet.OK);
       return;
     }
   }
-  ui.alert("Not found", email + " list එකේ නෑ.", ui.ButtonSet.OK);
+  ui.alert("Not found", keyToPhone_(email) + " list එකේ නෑ.", ui.ButtonSet.OK);
 }
 
 /* Build an APPROVED_USERS sheet listing everyone approved. */
@@ -332,10 +309,10 @@ function menuApprovedList_() {
   const s = getUsersSheet_();
   const data = usersData_(s);
 
-  const out = [["Email", "Name", "Approved On"]];
+  const out = [["WhatsApp", "Name", "Approved On"]];
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][2]).trim().toUpperCase() === "APPROVED") {
-      out.push([ data[i][0], data[i][1], data[i][4] ]);
+      out.push([ keyToPhone_(data[i][0]), data[i][1], data[i][4] ]);
     }
   }
 
@@ -367,20 +344,20 @@ function menuPendingCount_() {
     "නැත්නම් menu එකෙන් Approve කරන්න.", ui.ButtonSet.OK);
 }
 
-/* Menu: who is in USERS but outside the allowed domain (nothing is changed). */
+/* Menu: old e-mail rows in USERS (from before WhatsApp sign-in). They can no longer sign in;
+   nothing is changed here. (Kept under the old function name so the existing menu still works.) */
 function menuNonCfUsers_() {
   const ui = SpreadsheetApp.getUi();
   const data = usersData_(getUsersSheet_());
   const out = [];
   for (let i = 1; i < data.length; i++) {
-    const e = normEmail_(data[i][0]);
-    if (e && !isAllowedEmail_(e)) out.push(e + "  —  " + String(data[i][2] || "PENDING").trim().toUpperCase());
+    const k = normEmail_(data[i][0]);
+    if (k && k.indexOf("wa:") !== 0) out.push(k + "  —  " + String(data[i][2] || "PENDING").trim().toUpperCase());
   }
-  ui.alert("Users outside @" + ALLOWED_EMAIL_DOMAIN,
+  ui.alert("Old e-mail users",
     out.length
-      ? out.length + " user(s):\n\n" + out.slice(0, 25).join("\n") + (out.length > 25 ? "\n…" : "") +
-        "\n\nAPPROVED ones keep their access unless ENFORCE_DOMAIN_ON_EVERY_REQUEST is true (Access.gs). " +
-        "PENDING ones can no longer be approved. Block anyone you do not want."
-      : "Everybody in the USERS sheet is on @" + ALLOWED_EMAIL_DOMAIN + ".",
+      ? out.length + " old e-mail row(s):\n\n" + out.slice(0, 25).join("\n") + (out.length > 25 ? "\n…" : "") +
+        "\n\nThese people must register again with their WhatsApp number."
+      : "Every user in the USERS sheet signs in with WhatsApp.",
     ui.ButtonSet.OK);
 }
