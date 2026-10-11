@@ -18,20 +18,11 @@ const USERS_SHEET = "USERS";
    "wa:94771234567" (the "wa:" prefix keeps Sheets from turning it into a number).
    Old e-mail rows stay in the sheet but can no longer sign in. */
 
-/* "0771234567" / "+94 77 123 4567" / "771234567"  ->  "94771234567"  ("" when not valid). */
-function normPhone_(p) {
-  let d = String(p == null ? "" : p).replace(/[^\d]/g, "");
-  if (d.indexOf("00") === 0) d = d.slice(2);                   /* 0094... international prefix */
-  if (d.length === 10 && d.charAt(0) === "0") d = "94" + d.slice(1);   /* local 07x... */
-  if (d.length === 9) d = "94" + d;                             /* 7x... without the 0 */
-  return (d.length >= 10 && d.length <= 15) ? d : "";
-}
-
 /* USERS key for a phone number: "wa:94771234567" ("" when the number is not valid). */
 function phoneKey_(p) {
   const s = String(p == null ? "" : p).trim();
-  const d = normPhone_(/^wa:/i.test(s) ? s.slice(3) : s);
-  return d ? "wa:" + d : "";
+  const d = normPhone_(/^wa:/i.test(s) ? s.slice(3) : s);   /* normPhone_ lives in WhatsApp.gs */
+  return (d.length >= 10 && d.length <= 15) ? "wa:" + d : "";
 }
 
 /* The identity key of a request ({ phone } from the PWA). */

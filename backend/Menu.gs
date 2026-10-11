@@ -18,9 +18,7 @@ function onOpen() {
     .addItem("🔄 Refresh all user copies", "menuRefreshCopies_")
     .addItem("ℹ️ Count user copies", "menuCountCopies_")
     .addSeparator()
-    .addItem("📧 OTP channel (Email / WhatsApp / None)", "menuOtpChannel_")
-    .addItem("📨 Test OTP e-mail", "menuTestOtpEmail_")
-    .addItem("🔎 Users outside @cf.lk", "menuNonCfUsers_")
+    .addItem("🔎 Old e-mail users", "menuNonCfUsers_")
     .addItem("🔍 Check BIKE sheet", "menuCheckBikeSheet_")
     .addItem("⏱ Measure calculation time", "menuTimeCalc_")
     .addToUi();

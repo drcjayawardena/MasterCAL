@@ -3,8 +3,11 @@
  * WhatsApp.gs — WhatsApp OTP new-user registration
  *               (Meta WhatsApp Cloud API)
  *
+ * The ONLY way to register: the verified WhatsApp number is the user's identity
+ * (USERS key "wa:<digits>", see phoneKey_ in Access.gs). There is no e-mail.
+ *
  * Flow
- *   1) User enters WhatsApp Number + Name + Email in the app.
+ *   1) User enters WhatsApp Number + Name in the app.
  *   2) requestWhatsAppCode  -> a 6-digit code is generated,
  *      stored (hashed, with expiry) and SENT to the number
  *      via the Meta Cloud API authentication template.
@@ -34,12 +37,17 @@ var OTP_LEN       = 6;               /* digits                           */
 
 function waProps_() { return PropertiesService.getScriptProperties(); }
 
-/* True only when both required WhatsApp credentials are present.
-   The app uses this to decide between WhatsApp OTP and email register. */
+/* True only when both required WhatsApp credentials are present. */
 function waIsConfigured_() {
   var p = waProps_();
   return !!(p.getProperty("WA_TOKEN") && p.getProperty("WA_PHONE_ID"));
 }
+
+/* The app always shows the WhatsApp register screen (kept for older app versions). */
+function authMode_() { return "whatsapp"; }
+
+/* A new person must always pass the WhatsApp code screen. */
+function otpRequired_() { return true; }
 
 function waCountry_() { return String(waProps_().getProperty("WA_COUNTRY") || "94"); }
 
@@ -80,28 +88,24 @@ function genCode_() {
 
 /* =========================================================
    PUBLIC ACTION 1 — request a code
-   args = [ phone, name, email ]
+   args = [ phone, name ]
 ========================================================= */
 function requestWhatsAppCode_(args) {
   args = args || [];
-  if (otpChannel_() !== "WHATSAPP") return { ok: false, error: "WhatsApp registration is switched off." };
-  var phone = normPhone_(args[0]);
-  var name  = String(args[1] || "").trim();
-  var email = normEmail_(args[2]);
+  var key   = phoneKey_(args[0]);
+  var phone = key ? key.slice(3) : "";
+  var name  = String(args[1] || "").trim().slice(0, 80);
 
-  if (phone.length < 10) return { ok: false, error: "Enter a valid WhatsApp number." };
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
-    return { ok: false, error: "Enter a valid email." };
+  if (!key)  return { ok: false, error: "Enter a valid WhatsApp number." };
+  if (!name) return { ok: false, error: "Enter your name." };
 
   var props = waProps_();
 
-  /* If this email is already BLOCKED, stop here. */
+  /* If this number is already BLOCKED, stop here.
+     read-only: asking for a code must not create a row or e-mail the owner (that happens
+     only after the code is entered correctly) */
   try {
-    /* read-only: asking for a code must not create a row or e-mail the owner (that happens
-       only after the code is entered correctly) */
-    var acc = peekAccess_(email);
-    if (acc.status === "BLOCKED") return { ok: false, error: "This account is blocked." };
-    if (acc.status === "DOMAIN")  return { ok: false, error: "Only @" + ALLOWED_EMAIL_DOMAIN + " email addresses can register." };
+    if (peekAccess_(key).status === "BLOCKED") return { ok: false, error: "This account is blocked." };
   } catch (e) {}
 
   /* Rate-limit resends. */
@@ -122,8 +126,7 @@ function requestWhatsAppCode_(args) {
     exp:   Date.now() + OTP_TTL_MS,
     tries: 0,
     last:  Date.now(),
-    name:  name,
-    email: email
+    name:  name
   };
   props.setProperty(otpKey_(phone), JSON.stringify(rec));
 
@@ -143,8 +146,9 @@ function requestWhatsAppCode_(args) {
 ========================================================= */
 function verifyWhatsAppCode_(args) {
   args = args || [];
-  if (otpChannel_() !== "WHATSAPP") return { ok: false, error: "WhatsApp registration is switched off." };
-  var phone = normPhone_(args[0]);
+  var key   = phoneKey_(args[0]);
+  var phone = key ? key.slice(3) : "";
+  if (!key) return { ok: false, error: "Enter a valid WhatsApp number." };
   var code  = String(args[1] || "").replace(/[^\d]/g, "");
 
   var props = waProps_();
@@ -172,11 +176,11 @@ function verifyWhatsAppCode_(args) {
 
   /* Success — code correct. Consume it and register the user. */
   props.deleteProperty(otpKey_(phone));
-  var status = registerVerifiedUser_(rec.email, rec.name, phone, "WHATSAPP");
+  var status = registerVerifiedUser_(key, rec.name, phone, "WHATSAPP");
 
   return {
     ok: true,
-    data: { verified: true, status: status, email: rec.email, name: rec.name, phone: phone }
+    data: { verified: true, status: status, name: rec.name, phone: phone }
   };
 }
 
@@ -188,19 +192,15 @@ function verifyWhatsAppCode_(args) {
    APPROVAL -> PENDING (still needs admin approve).
    BLOCKED users stay BLOCKED.
 ========================================================= */
-/* how = "EMAIL" (code was e-mailed) | "WHATSAPP" (code went to WhatsApp). Only used for the
-   wording of the admin's approval e-mail. */
+/* key = USERS key "wa:<digits>"; phone = the same digits (column F).
+   how = "WHATSAPP" — only used for the wording of the admin's approval e-mail. */
 function registerVerifiedUser_(email, name, phone, how) {
   email = normEmail_(email);
   var s = getUsersSheet_();
   ensureUsersColumns_(s);
 
-  /* Only the allowed e-mail domain can be AUTO-approved. A new outside address gets no row at all;
-     an outside address that is already in the sheet is never promoted to APPROVED here. */
-  var allowed = isAllowedEmail_(email);
-  if (!allowed && !findUserRow_(s, email)) return "DOMAIN";
-
-  var approve = (verifyMode_() === "INSTANT") && allowed;    /* default: APPROVAL */
+  var approve = (verifyMode_() === "INSTANT");    /* default: APPROVAL */
+  var shown = keyToPhone_(email);                 /* "+94771234567" for the owner's e-mail */
   var now = new Date();
 
   var lock = LockService.getScriptLock();
@@ -219,7 +219,7 @@ function registerVerifiedUser_(email, name, phone, how) {
         if (phone) s.getRange(i + 1, 6).setValue(phone);   /* Phone (never overwritten with blank) */
         s.getRange(i + 1, 7).setValue(now);      /* Verified */
         var out = (cur === "APPROVED") ? "APPROVED" : (approve ? "APPROVED" : "PENDING");
-        if (out === "PENDING" && allowed) { try { notifyOwner_(email, name, phone, how); } catch (e) {} }
+        if (out === "PENDING") { try { notifyOwner_(email, name, shown, how); } catch (e) {} }
         return out;
       }
     }
@@ -229,11 +229,11 @@ function registerVerifiedUser_(email, name, phone, how) {
     lock.releaseLock();
   }
 
-  if (!approve) { try { notifyOwner_(email, name, phone, how); } catch (e) {} }   /* APPROVAL mode: e-mail the owner now */
+  if (!approve) { try { notifyOwner_(email, name, shown, how); } catch (e) {} }   /* APPROVAL mode: e-mail the owner now */
   return approve ? "APPROVED" : "PENDING";
 }
 
-/* Row number (1-based) of an e-mail in USERS, or 0. */
+/* Row number (1-based) of a USERS key in USERS, or 0. */
 function findUserRow_(s, email) {
   var data = usersData_(s);
   for (var i = 1; i < data.length; i++) if (normEmail_(data[i][0]) === email) return i + 1;
