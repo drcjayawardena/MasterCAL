@@ -210,22 +210,24 @@ function hideGate() { const g = gateEl(); if (g) g.style.display = "none"; }
    Picks the WhatsApp OTP flow only if the backend has WhatsApp
    configured; otherwise falls back to the classic email request.
    Cached after the first check so it is instant afterwards.        */
-var _authMode = null;   /* "whatsapp" | "email" | null (unknown) */
+var _authMode = null;   /* "emailotp" | "whatsapp" | "email" | null (unknown) */
 
 function showRegister() {
   const g = gateEl(); if (!g) return;
   g.style.display = "flex";
 
+  if (_authMode === "emailotp") { showRegisterEmailOtp(); return; }
   if (_authMode === "whatsapp") { showRegisterWhatsApp(); return; }
   if (_authMode === "email")    { showRegisterEmail(); return; }
 
   /* Ask the backend which registration method to show. */
   gateBody().innerHTML = '<h2>Register</h2><p>Loading…</p>';
   api("getAuthMode")
-    .then(function (d) { _authMode = (d && d.mode === "whatsapp") ? "whatsapp" : "email"; })
+    .then(function (d) { _authMode = (d && (d.mode === "whatsapp" || d.mode === "emailotp")) ? d.mode : "email"; })
     .catch(function () { _authMode = "email"; })   /* safe default */
     .then(function () {
-      if (_authMode === "whatsapp") showRegisterWhatsApp();
+      if (_authMode === "emailotp") showRegisterEmailOtp();
+      else if (_authMode === "whatsapp") showRegisterWhatsApp();
       else showRegisterEmail();
     });
 }
@@ -260,6 +262,53 @@ function submitRegisterEmail() {
   setIdentity(email.toLowerCase(), name);
   err.textContent = "";
   loadApp();   /* backend registers as PENDING and returns the status */
+}
+
+/* -------- E-MAIL OTP registration (default): the code is e-mailed to the user's @cf.lk address -------- */
+function showRegisterEmailOtp() {
+  const g = gateEl(); if (!g) return;
+  g.style.display = "flex";
+  gateBody().innerHTML =
+    '<h2>Register</h2>' +
+    '<p>ඔයාගේ <b>@cf.lk</b> email එකට verification code එකක් එනවා. ' +
+    'Code එක verify කරාට පස්සේ admin approval එකක් ලැබුණාම app එක පාවිච්චි කරන්න පුළුවන්.</p>' +
+    '<input id="gateName" type="text" placeholder="Your name" value="' + escapeHtml(getName()) + '">' +
+    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your @cf.lk email" value="' + escapeHtml(getEmail()) + '">' +
+    '<input id="gatePhone" type="tel" inputmode="tel" placeholder="WhatsApp number (optional)" value="' + escapeHtml(getPhone()) + '">' +
+    '<button id="gateSend" class="gateBtn">Send Code</button>' +
+    '<div id="gateErr" class="gateErr"></div>';
+  document.getElementById("gateSend").addEventListener("click", requestEmailCodeUi);
+  document.getElementById("gatePhone").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") requestEmailCodeUi();
+  });
+}
+
+function requestEmailCodeUi() {
+  const name  = (document.getElementById("gateName").value || "").trim();
+  const email = (document.getElementById("gateEmail").value || "").trim();
+  const phone = (document.getElementById("gatePhone").value || "").trim();
+  const err   = document.getElementById("gateErr");
+  const btn   = document.getElementById("gateSend");
+
+  if (!name)  { err.textContent = "ඔයාගේ නම දාන්න."; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
+  if (!isCfEmail(email)) { err.textContent = "@cf.lk email එකක් පමණක් භාවිතා කළ හැක."; return; }
+  if (phone && phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "හරි WhatsApp number එකක් දාන්න, නැත්නම් හිස්ව තියන්න."; return; }
+
+  err.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+
+  api("requestEmailCode", [name, email, phone])
+    .then(function () {
+      setIdentity(email.toLowerCase(), name, phone);
+      showVerify();
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "Send Code";
+      err.textContent = e.message || "Code එක යවන්න බැරි වුණා.";
+    });
 }
 
 /* -------- WhatsApp OTP registration: enter details + request a code -------- */
@@ -319,8 +368,11 @@ function showVerify() {
   g.style.display = "flex";
   gateBody().innerHTML =
     '<h2>Enter Code</h2>' +
-    '<p>WhatsApp එකට ආපු 6-ඉලක්කම් code එක දාන්න.</p>' +
-    '<div class="gateMuted">' + escapeHtml(getPhone()) + '</div>' +
+    (_authMode === "emailotp"
+      ? '<p>ඔයාගේ <b>@cf.lk</b> email එකට යැවූ 6-ඉලක්කම් code එක දාන්න. Inbox එකත් Spam folder එකත් බලන්න.</p>' +
+        '<div class="gateMuted">' + escapeHtml(getEmail()) + '</div>'
+      : '<p>WhatsApp එකට ආපු 6-ඉලක්කම් code එක දාන්න.</p>' +
+        '<div class="gateMuted">' + escapeHtml(getPhone()) + '</div>') +
     '<input id="gateCode" type="text" inputmode="numeric" maxlength="6" ' +
       'autocomplete="one-time-code" placeholder="______" class="gateCode">' +
     '<button id="gateVerify" class="gateBtn">Verify</button>' +
@@ -349,7 +401,7 @@ function verifyCode() {
   btn.disabled = true;
   btn.textContent = "Verifying…";
 
-  api("verifyWhatsAppCode", [getPhone(), code])
+  (_authMode === "emailotp" ? api("verifyEmailCode", [getEmail(), code]) : api("verifyWhatsAppCode", [getPhone(), code]))
     .then(function (data) {
       const status = (data && data.status) || "APPROVED";
       if (status === "APPROVED") {
@@ -370,7 +422,7 @@ function resendCode() {
   const link = document.getElementById("gateResend");
   link.style.pointerEvents = "none";
   link.textContent = "Sending…";
-  api("requestWhatsAppCode", [getPhone(), getName(), getEmail()])
+  (_authMode === "emailotp" ? api("requestEmailCode", [getName(), getEmail(), getPhone()]) : api("requestWhatsAppCode", [getPhone(), getName(), getEmail()]))
     .then(function () {
       err.textContent = "";
       link.textContent = "Code sent ✓";
