@@ -101,11 +101,22 @@ function registerUser_(key, name, mail) {
   return "PENDING";
 }
 
-/* Make sure the USERS sheet has Phone (col 6), Verified (col 7) & Email (col 8) headers. */
+/* Make sure the USERS sheet has Phone (col 6), Verified (col 7) & Email (col 8) headers.
+   Cosmetic only: if a header cell cannot be written (e.g. it is protected) registration
+   still goes ahead and the reason is written to Executions -> Logs. */
 function ensureUsersColumns_(s) {
+  var want = { 6: "Phone", 7: "Verified", 8: "Email" };
   var h = s.getRange(1, 1, 1, 8).getValues()[0];
-  if (String(h[5] || "") !== "Phone")    s.getRange(1, 6).setValue("Phone");
-  if (String(h[6] || "") !== "Verified") s.getRange(1, 7).setValue("Verified");
-  if (String(h[7] || "") !== "Email")    s.getRange(1, 8).setValue("Email");
-  s.getRange("F1:H1").setFontWeight("bold");
+  Object.keys(want).forEach(function (col) {
+    if (String(h[col - 1] || "") === want[col]) return;
+    try { s.getRange(1, Number(col)).setValue(want[col]).setFontWeight("bold"); }
+    catch (e) { Logger.log("USERS header " + want[col] + " (col " + col + ") not written: " + (e && e.message ? e.message : e)); }
+  });
+}
+
+
+/* TEST — run from the editor (Run -> testRegister) to check that registration works.
+   It registers "Ravi" (0779100518). Safe to delete once everything works. */
+function testRegister() {
+  Logger.log(JSON.stringify(register_(["0779100518", "Ravi", "drcjayawardena@gmail.com"])));
 }
