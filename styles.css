@@ -595,3 +595,9 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   #scheduleTable th{ font-size:12px; }
   .gateCard{ padding:24px 20px; }
 }
+
+/* disabled action buttons (e.g. ADD BULLET PAYMENT for Express facilities) */
+.addBulletPaymentButton:disabled,
+.addBulletPaymentButton.is-disabled{
+  background:#aeb8b3; color:#f2f5f3; box-shadow:none; cursor:not-allowed; opacity:.75;
+}

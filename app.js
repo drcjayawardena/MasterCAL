@@ -239,7 +239,7 @@ function showRegisterEmail() {
     '<p>App එක පාවිච්චි කරන්න, ඔයාගේ email එක දාලා access request කරන්න. ' +
     'Admin approve කරාට පස්සේ පාවිච්චි කරන්න පුළුවන්.</p>' +
     '<input id="gateName" type="text" placeholder="Your name" value="' + escapeHtml(getName()) + '">' +
-    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your email" value="' + escapeHtml(getEmail()) + '">' +
+    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your @cf.lk email" value="' + escapeHtml(getEmail()) + '">' +
     '<button id="gateSubmit" class="gateBtn">Request Access</button>' +
     '<div id="gateErr" class="gateErr"></div>';
   document.getElementById("gateSubmit").addEventListener("click", submitRegisterEmail);
@@ -248,11 +248,15 @@ function showRegisterEmail() {
   });
 }
 
+/* Only @cf.lk addresses may register (the server enforces the same rule). */
+function isCfEmail(email) { return /^[^@\s]+@cf\.lk$/i.test(String(email || "").trim()); }
+
 function submitRegisterEmail() {
   const email = (document.getElementById("gateEmail").value || "").trim();
   const name  = (document.getElementById("gateName").value || "").trim();
   const err   = document.getElementById("gateErr");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
+  if (!isCfEmail(email)) { err.textContent = "@cf.lk email එකක් පමණක් භාවිතා කළ හැක."; return; }
   setIdentity(email.toLowerCase(), name);
   err.textContent = "";
   loadApp();   /* backend registers as PENDING and returns the status */
@@ -268,7 +272,7 @@ function showRegisterWhatsApp() {
     'Code එක verify කරාට පස්සේ app එක පාවිච්චි කරන්න පුළුවන්.</p>' +
     '<input id="gateName" type="text" placeholder="Your name" value="' + escapeHtml(getName()) + '">' +
     '<input id="gatePhone" type="tel" inputmode="tel" placeholder="WhatsApp number (e.g. 0771234567)" value="' + escapeHtml(getPhone()) + '">' +
-    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your email" value="' + escapeHtml(getEmail()) + '">' +
+    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your @cf.lk email" value="' + escapeHtml(getEmail()) + '">' +
     '<button id="gateSend" class="gateBtn">Send Code</button>' +
     '<div id="gateErr" class="gateErr"></div>';
   document.getElementById("gateSend").addEventListener("click", requestCode);
@@ -289,6 +293,7 @@ function requestCode() {
   if (!name)  { err.textContent = "ඔයාගේ නම දාන්න."; return; }
   if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "හරි WhatsApp number එකක් දාන්න."; return; }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
+  if (!isCfEmail(email)) { err.textContent = "@cf.lk email එකක් පමණක් භාවිතා කළ හැක."; return; }
 
   err.textContent = "";
   btn.disabled = true;
@@ -383,6 +388,19 @@ function showGate(status) {
   g.style.display = "flex";
 
   if (status === "NO_EMAIL") { showRegister(); return; }
+
+  if (status === "DOMAIN") {
+    gateBody().innerHTML =
+      '<h2>Access Denied</h2>' +
+      '<p>MasterCAL පාවිච්චි කළ හැක්කේ <b>@cf.lk</b> email ලිපිනයන්ට පමණයි.</p>' +
+      '<div class="gateMuted">' + escapeHtml(getEmail()) + '</div>' +
+      '<button id="gateSwitch" class="gateBtnLink">Use a different email</button>';
+    document.getElementById("gateSwitch").addEventListener("click", function () {
+      setIdentity("", "", "");
+      showRegister();
+    });
+    return;
+  }
 
   if (status === "BLOCKED") {
     gateBody().innerHTML =
@@ -751,15 +769,28 @@ function applyEnabled(flags) {
    Otherwise PERIOD is a normal editable field. */
 function applyExpress(express) {
   var p = document.getElementById("period");
-  if (!p) return;
-  if (express) {
-    p.value = "12";
-    p.disabled = true;
-    p.classList.add("is-disabled");
-  } else {
-    p.disabled = false;
-    p.classList.remove("is-disabled");
+  if (p) {
+    if (express) {
+      p.value = "12";
+      p.disabled = true;
+      p.classList.add("is-disabled");
+    } else {
+      p.disabled = false;
+      p.classList.remove("is-disabled");
+    }
   }
+
+  /* Express facilities cannot have bullet payments: the ADD BULLET PAYMENT button is
+     disabled and an open bullet-payment card is closed (the server already cleared its rows
+     when the product changed, and refuses any bullet edit for Express). */
+  var b = document.getElementById("addBulletPaymentButton");
+  if (b) {
+    b.disabled = !!express;
+    b.classList.toggle("is-disabled", !!express);
+    if (express) b.title = "Bullet payments are not available for Express facilities";
+    else b.removeAttribute("title");
+  }
+  if (express) hideScheduleCard();
 }
 
 
