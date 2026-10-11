@@ -1508,22 +1508,25 @@ function setupTabs() {
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
       const which = this.dataset.tab;
+      const wasActive = this.classList.contains("active");
       document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("active"); });
       this.classList.add("active");
       Object.keys(PANELS).forEach(function (key) {
         const p = document.getElementById(PANELS[key]);
         if (p) p.hidden = (key !== which);
       });
-      if (which === "threewheel" && !tw_loaded) load3W();
-      if (which === "bike" && !bk_loaded) loadBike();
+      /* Opening the 3W / BIKE tab starts a fresh calculation: the Rental
+         Calculation inputs are cleared (re-clicking the open tab does nothing). */
+      if (which === "threewheel" && !wasActive) load3W(true);
+      if (which === "bike" && !wasActive) loadBike(true);
     });
   });
 }
 
-function load3W() {
+function load3W(reset) {
   const l = document.getElementById("twLoading");
   if (l) { l.style.display = "block"; l.textContent = "Loading three-wheel calculator…"; }
-  api("get3W")
+  api(reset ? "reset3W" : "get3W")
     .then(function (data) {
       if (l) l.style.display = "none";
       tw_loaded = true;
@@ -1599,13 +1602,6 @@ function build3W(data) {
     twOutRow("Maximum Exposure", "tw_maxExposure") +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
-    '</table>' +
-    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
-    '<table class="summaryTable">' +
-    twOutRow("Exposure", "tw_exposurePct") +
-    twOutRow("Total Paid", "tw_totPaid") +
-    twOutRow("Total Interest", "tw_totInterest") +
-    twOutRow("Rate / 100,000", "tw_rate100") +
     '</table>');
   grid.appendChild(c1);
 
@@ -1615,6 +1611,15 @@ function build3W(data) {
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
     twBigRow("MONTHLY RENTAL", "tw_monthlyRental");
   ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
+  /* PAYMENT DETAIL sits at the bottom of the Rental Calculation card. */
+  c2.insertAdjacentHTML("beforeend",
+    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
+    '<table class="summaryTable tw-pay">' +
+    twOutRow("Exposure", "tw_exposurePct") +
+    twOutRow("Total Paid", "tw_totPaid") +
+    twOutRow("Total Interest", "tw_totInterest") +
+    twOutRow("Rate / 100,000", "tw_rate100") +
+    '</table>');
   grid.appendChild(c2);
 
   /* Card 3 — Initial Charges: TOTAL tile -> summary rows -> inputs at bottom */
@@ -1636,13 +1641,6 @@ function build3W(data) {
   c3inputs.className = "tw-card-inputs";
   ["B23"].forEach(function (cell) { c3inputs.appendChild(twField(cell, data)); });
   c3.appendChild(c3inputs);
-  /* Total Capitalized + Flat Rate go BELOW the RMV input, after a dark line. */
-  c3.insertAdjacentHTML("beforeend",
-    '<div class="tw-cap-divider"></div>' +
-    '<table class="summaryTable tw-cap-table">' +
-    twOutRow("Total Capitalized", "tw_totCapital") +
-    twOutRow("Flat Rate", "tw_flatRate") +
-    '</table>');
   grid.appendChild(c3);
 }
 
@@ -1707,11 +1705,9 @@ function render3W(data) {
   set("tw_valCharge", o.valCharge);
   set("tw_svcCharge", o.svcCharge);
   set("tw_vat", o.vat);
-  set("tw_totCapital", o.totCapital);
   set("tw_totPaid", o.totPaid);
   set("tw_totInterest", o.totInterest);
   set("tw_rate100", o.rate100);
-  set("tw_flatRate", o.flatRate);
 
   /* When the sheet's F13 == "YES", disable the RMV CHARGES input in the
      charges card (B23). */
@@ -1720,6 +1716,7 @@ function render3W(data) {
     const dis = !!data.rmvDisabled;
     rmvEl.disabled = dis;
     rmvEl.classList.toggle("is-disabled", dis);
+    if (dis) rmvEl.value = "";               /* F13 = YES -> no RMV charge */
   }
 
   /* keep the rental schedule in sync when it's open */
@@ -1867,16 +1864,16 @@ var bk_loaded = false;
 var bk_lastData = null;   /* latest payload, used by the schedule */
 
 const BK_LABELS = {
-  B2: "MAKE", B3: "MODEL", B4: "YEAR", B5: "EXPOSURE ( % )",
+  B2: "MAKE", B3: "MODEL", B4: "YEAR", B5: "Maximum Exposure",
   B7: "FACILITY AMOUNT", B8: "BIC ( % )", B9: "INSURANCE",
   B10: "PERIOD", B11: "IRR ( % )", B20: "RMV CHARGES"
 };
 const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B20"];
 
-function loadBike() {
+function loadBike(reset) {
   const l = document.getElementById("bkLoading");
   if (l) { l.style.display = "block"; l.textContent = "Loading bike calculator…"; }
-  api("getBike")
+  api(reset ? "resetBike" : "getBike")
     .then(function (data) {
       if (l) l.style.display = "none";
       bk_loaded = true;
@@ -1889,6 +1886,8 @@ function loadBike() {
     });
 }
 
+const BK_READONLY_CELLS = ["B5"];
+
 function bkField(cell) {
   const wrap = document.createElement("div");
   wrap.className = "field";
@@ -1899,7 +1898,10 @@ function bkField(cell) {
   wrap.appendChild(lab);
 
   let el;
-  if (BK_SELECT_CELLS.indexOf(cell) !== -1) {
+  if (BK_READONLY_CELLS.indexOf(cell) !== -1) {
+    el = document.createElement("input");           /* display only, like 3W */
+    el.type = "text"; el.readOnly = true; el.className = "tw-readonly";
+  } else if (BK_SELECT_CELLS.indexOf(cell) !== -1) {
     el = document.createElement("select");
     el.addEventListener("change", function () { setBikeValue(cell, this.value); });
   } else {
@@ -1936,18 +1938,12 @@ function buildBike() {
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
-  ["B2", "B3", "B4", "B5"].forEach(function (cell) { c1.appendChild(bkField(cell)); });
+  ["B2", "B3", "B4"].forEach(function (cell) { c1.appendChild(bkField(cell)); });
   c1.insertAdjacentHTML("beforeend",
     '<table class="summaryTable">' +
+    bkOutRow("Maximum Exposure", "bk_maxExposure") +
     bkOutRow("CF Valuation", "bk_cfValuation") +
     bkOutRow("Max Facility Value", "bk_maxFacility") +
-    '</table>' +
-    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
-    '<table class="summaryTable">' +
-    bkOutRow("Exposure", "bk_exposurePct") +
-    bkOutRow("Total Paid", "bk_totPaid") +
-    bkOutRow("Total Interest", "bk_totInterest") +
-    bkOutRow("Rate / 100,000", "bk_rate100") +
     '</table>');
   grid.appendChild(c1);
 
@@ -1957,6 +1953,15 @@ function buildBike() {
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
     bkBigRow("MONTHLY RENTAL", "bk_monthlyRental");
   ["B7", "B8", "B9", "B10", "B11"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
+  /* PAYMENT DETAIL sits at the bottom of the Rental Calculation card. */
+  c2.insertAdjacentHTML("beforeend",
+    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
+    '<table class="summaryTable tw-pay">' +
+    bkOutRow("Exposure", "bk_exposurePct") +
+    bkOutRow("Total Paid", "bk_totPaid") +
+    bkOutRow("Total Interest", "bk_totInterest") +
+    bkOutRow("Rate / 100,000", "bk_rate100") +
+    '</table>');
   grid.appendChild(c2);
 
   /* Card 3 — Initial Charges (CRIB input B19 is not shown, like the 3W layout) */
@@ -1975,11 +1980,6 @@ function buildBike() {
   c3inputs.className = "tw-card-inputs";
   c3inputs.appendChild(bkField("B20"));
   c3.appendChild(c3inputs);
-  c3.insertAdjacentHTML("beforeend",
-    '<div class="tw-cap-divider"></div>' +
-    '<table class="summaryTable tw-cap-table">' +
-    bkOutRow("Total Capitalized", "bk_totCapital") +
-    '</table>');
   grid.appendChild(c3);
 }
 
@@ -2040,6 +2040,7 @@ function renderBike(data) {
     const e = document.getElementById(id);
     if (e) e.textContent = (v == null ? "" : v);
   };
+  set("bk_maxExposure", (inputs.B5 && inputs.B5.value) || "");
   set("bk_cfValuation", o.cfValuation);
   set("bk_maxFacility", o.maxFacility);
   set("bk_exposurePct", data.exposurePct);
@@ -2053,7 +2054,6 @@ function renderBike(data) {
   set("bk_valCharge", o.valCharge);
   set("bk_svcCharge", o.svcCharge);
   set("bk_vat", o.vat);
-  set("bk_totCapital", o.totCapital);
 
   if (isBkScheduleVisible()) renderBkSchedule();
 }

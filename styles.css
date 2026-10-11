@@ -601,3 +601,9 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .addBulletPaymentButton.is-disabled{
   background:#aeb8b3; color:#f2f5f3; box-shadow:none; cursor:not-allowed; opacity:.75;
 }
+
+/* PAYMENT DETAIL block at the bottom of the Rental Calculation card: compact so the
+   card stays the same size as every other card. */
+.tw-card .tw-subtitle{ margin-top:8px; }
+.tw-card .summaryTable.tw-pay{ border-spacing:0 3px; margin-top:4px; }
+.tw-card .summaryTable.tw-pay td{ height:22px; padding:3px 12px; font-size:12.5px; }
