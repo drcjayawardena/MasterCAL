@@ -3,25 +3,25 @@
  * Access.gs — user approval / allowlist
  *
  * A "USERS" tab in the MASTER sheet holds:
- *   User (wa:<number>) | Name | Status | Requested | Approved | Phone | Verified
+ *   User (wa:<number>) | Name | Status | Requested | Approved | Phone | Verified | Email
  * Status is one of: PENDING / APPROVED / BLOCKED
  *
- * New users register by verifying their WhatsApp number with a code.
+ * New users register with their name + WhatsApp number (Register.gs).
  * You approve them (menu, or edit the Status cell).
  ******************************************************/
 
 const USERS_SHEET = "USERS";
 
-/* ---- IDENTITY = VERIFIED WHATSAPP NUMBER ----
+/* ---- IDENTITY = WHATSAPP NUMBER ----
    Nobody registers with an e-mail any more. A user is identified by the WhatsApp number they
-   verified with a one-time code. Column A of USERS holds that key as "wa:<digits>", e.g.
+   typed when registering (not verified — the owner's approval is the check). Column A of USERS holds that key as "wa:<digits>", e.g.
    "wa:94771234567" (the "wa:" prefix keeps Sheets from turning it into a number).
    Old e-mail rows stay in the sheet but can no longer sign in. */
 
 /* USERS key for a phone number: "wa:94771234567" ("" when the number is not valid). */
 function phoneKey_(p) {
   const s = String(p == null ? "" : p).trim();
-  const d = normPhone_(/^wa:/i.test(s) ? s.slice(3) : s);   /* normPhone_ lives in WhatsApp.gs */
+  const d = normPhone_(/^wa:/i.test(s) ? s.slice(3) : s);   /* normPhone_ lives in Register.gs */
   return (d.length >= 10 && d.length <= 15) ? "wa:" + d : "";
 }
 
@@ -58,9 +58,9 @@ function getUsersSheet_() {
   let s = ss.getSheetByName(USERS_SHEET);
   if (!s) {
     s = ss.insertSheet(USERS_SHEET);
-    s.appendRow(["User (wa:number)", "Name", "Status", "Requested", "Approved", "Phone", "Verified"]);
+    s.appendRow(["User (wa:number)", "Name", "Status", "Requested", "Approved", "Phone", "Verified", "Email"]);
     s.setFrozenRows(1);
-    s.getRange("A1:G1").setFontWeight("bold");
+    s.getRange("A1:H1").setFontWeight("bold");
   }
   return s;
 }
@@ -84,10 +84,8 @@ function checkAccess_(email, name) {
     }
   }
 
-  /* Not in USERS: a new person may only enter through the WhatsApp code screen. Calling the
-     API directly with an unknown number must NOT create a row or e-mail the owner; the app
-     sends them to the register screen instead. The row is written (and the owner e-mailed)
-     only AFTER the code has been entered correctly (registerVerifiedUser_ in WhatsApp.gs). */
+  /* Not in USERS: send the app to the register screen. Only the "register" action
+     (Register.gs) writes a row and e-mails the owner. */
   return { status: "NO_PHONE" };
 }
 
@@ -145,7 +143,7 @@ function approvalToken_(email) {
 
 /* Email the owner when a new user requests access — with one-click
    APPROVE / REJECT buttons (secured by a per-email token). */
-function notifyOwner_(email, name, phone, how) {
+function notifyOwner_(email, name, phone, how, contactEmail) {
   try {
     const to = adminEmail_();
     if (!to) return;
@@ -163,14 +161,15 @@ function notifyOwner_(email, name, phone, how) {
     };
 
     /* what was verified: the e-mail (code sent to the @cf.lk mailbox) or the WhatsApp number */
-    const ok = ' &nbsp;<span style="color:#1c5e3a;font-size:12px">(✓ verified by WhatsApp code)</span>';
-    const waLine = escapeHtml_(phone || keyToPhone_(email)) + (how === "WHATSAPP" ? ok : "");
+    const waLine = escapeHtml_(phone || keyToPhone_(email)) +
+      ' &nbsp;<span style="color:#8797a0;font-size:12px">(not verified — check before approving)</span>';
 
     const html =
       '<div style="font-family:Arial,sans-serif;font-size:14px;color:#20323a;max-width:520px">' +
       '<h2 style="color:#1c5e3a;margin:0 0 12px">MasterCAL Pro — new access request</h2>' +
       '<p style="line-height:1.6"><b>WhatsApp:</b> ' + waLine +
-      '<br><b>Name:</b> ' + (name ? escapeHtml_(name) : "(not given)") + '</p>' +
+      '<br><b>Name:</b> ' + (name ? escapeHtml_(name) : "(not given)") +
+      '<br><b>Email:</b> ' + (contactEmail ? escapeHtml_(contactEmail) : "(not given)") + '</p>' +
       (base
         ? ('<p style="margin:22px 0">' + btn(approveUrl, "#1c5e3a", "✓ APPROVE") +
            btn(rejectUrl, "#d8261c", "✕ REJECT") + '</p>' +
@@ -184,7 +183,8 @@ function notifyOwner_(email, name, phone, how) {
       subject: "MasterCAL Pro — new access request: " + (phone || keyToPhone_(email)),
       htmlBody: html,
       body: "New request: " + (phone || keyToPhone_(email)) + " (" + (name || "") + ")\n" +
-            (how === "WHATSAPP" ? "WhatsApp number verified by code.\n" : "") +
+            (contactEmail ? "Email: " + contactEmail + "\n" : "") +
+            "The number is not verified — check it before approving.\n" +
             "Approve: " + approveUrl + "\nReject: " + rejectUrl
     });
   } catch (e) {
@@ -270,7 +270,7 @@ function menuApproveUser_() {
       return;
     }
   }
-  s.appendRow([email, "", "APPROVED", new Date(), new Date(), keyToPhone_(email), ""]);
+  s.appendRow([email, "", "APPROVED", new Date(), new Date(), email.slice(3), ""]);
   ui.alert("Approved ✅", keyToPhone_(email) + " added & approved.", ui.ButtonSet.OK);
 }
 

@@ -19,11 +19,9 @@ function doPost(e) {
     const action = body.action;
     if (!action) return json_({ ok: false, error: "Missing 'action'." });
 
-    /* 0) PUBLIC actions — WhatsApp OTP registration runs BEFORE the
-          approval gate, because a brand-new user is not APPROVED yet. */
-    if (action === "getAuthMode")         return json_({ ok: true, data: { mode: authMode_() } });
-    if (action === "requestWhatsAppCode") return json_(requestWhatsAppCode_(body.args || []));
-    if (action === "verifyWhatsAppCode")  return json_(verifyWhatsAppCode_(body.args || []));
+    /* 0) PUBLIC action — registration runs BEFORE the approval gate,
+          because a brand-new user is not APPROVED yet. */
+    if (action === "register")            return json_(register_(body.args || []));
 
     /* 1) approval gate */
     const key = userKey_(body);

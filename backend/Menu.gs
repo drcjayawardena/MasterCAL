@@ -10,10 +10,7 @@ function onOpen() {
     .addItem("👥 Pending users", "menuPendingCount_")
     .addItem("📋 Approved users list", "menuApprovedList_")
     .addItem("✉️ Test notification email", "menuTestEmail_")
-    .addSeparator()
-    .addItem("📱 Set WhatsApp credentials", "menuSetWhatsApp_")
-    .addItem("🔀 Verify mode (Instant / Approval)", "menuVerifyMode_")
-    .addItem("📲 Test WhatsApp code", "menuTestWhatsApp_")
+
     .addSeparator()
     .addItem("🔄 Refresh all user copies", "menuRefreshCopies_")
     .addItem("ℹ️ Count user copies", "menuCountCopies_")

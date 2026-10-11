@@ -39,12 +39,14 @@ function getUserId() {
   return id;
 }
 
-/* The verified WhatsApp number is the user's identity (no e-mail). */
+/* The WhatsApp number is the user's identity; the e-mail is a contact detail. */
 function getName()  { return lsGet("mastercal_name")  || ""; }
 function getPhone() { return lsGet("mastercal_phone") || ""; }
-function setIdentity(name, phone) {
+function getEmail() { return lsGet("mastercal_email") || ""; }
+function setIdentity(name, phone, email) {
   lsSet("mastercal_name", name || "");
   lsSet("mastercal_phone", phone || "");
+  if (email !== undefined) lsSet("mastercal_email", email || "");
 }
 
 
@@ -155,8 +157,8 @@ function init() {
   setupBkScheduleToggle();
   setupTabs();
 
-  /* Gate: need a verified WhatsApp number before doing anything. */
-  if (!getPhone() || lsGet("mastercal_verified") !== "1") { showRegister(); return; }
+  /* Gate: need a registered WhatsApp number before doing anything. */
+  if (!getPhone() || lsGet("mastercal_registered") !== "1") { showRegister(); return; }
 
   loadApp();
 }
@@ -205,130 +207,64 @@ function gateBody() { return document.getElementById("gateBody"); }
 
 function hideGate() { const g = gateEl(); if (g) g.style.display = "none"; }
 
-/* -------- Registration: WhatsApp OTP only --------
-   The user's WhatsApp number is their identity. A 6-digit code is sent
-   to that number; once it is verified the admin approves the account. */
+/* -------- Registration: name + WhatsApp number + e-mail (no code) --------
+   The WhatsApp number is the user's identity; the e-mail is a contact
+   detail for the admin. The request waits for the admin's approval. */
 function showRegister() {
   const g = gateEl(); if (!g) return;
   g.style.display = "flex";
   gateBody().innerHTML =
-    '<h2>Register</h2>' +
-    '<p>ඔයාගේ WhatsApp number එකට verification code එකක් එනවා. ' +
-    'Code එක verify කරාට පස්සේ admin approval එකක් ලැබුණාම app එක පාවිච්චි කරන්න පුළුවන්.</p>' +
+    '<h2>Request Access</h2>' +
+    '<p>App එක පාවිච්චි කරන්න ඔයාගේ විස්තර දාලා access request කරන්න. ' +
+    'Admin approve කරාට පස්සේ පාවිච්චි කරන්න පුළුවන්.</p>' +
     '<input id="gateName" type="text" placeholder="Your name" value="' + escapeHtml(getName()) + '">' +
     '<input id="gatePhone" type="tel" inputmode="tel" placeholder="WhatsApp number (e.g. 0771234567)" value="' + escapeHtml(getPhone()) + '">' +
-    '<button id="gateSend" class="gateBtn">Send Code</button>' +
+    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your email address" value="' + escapeHtml(getEmail()) + '">' +
+    '<button id="gateSend" class="gateBtn">Request Access</button>' +
     '<div id="gateErr" class="gateErr"></div>';
-  document.getElementById("gateSend").addEventListener("click", requestCode);
+  document.getElementById("gateSend").addEventListener("click", submitRegister);
 
-  /* Enter key on the last field triggers send. */
-  document.getElementById("gatePhone").addEventListener("keydown", function (ev) {
-    if (ev.key === "Enter") requestCode();
+  /* Enter key on the last field submits. */
+  document.getElementById("gateEmail").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") submitRegister();
   });
 }
 
-function requestCode() {
+function submitRegister() {
   const name  = (document.getElementById("gateName").value || "").trim();
   const phone = (document.getElementById("gatePhone").value || "").trim();
+  const email = (document.getElementById("gateEmail").value || "").trim();
   const err   = document.getElementById("gateErr");
   const btn   = document.getElementById("gateSend");
 
   if (!name)  { err.textContent = "ඔයාගේ නම දාන්න."; return; }
   if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "හරි WhatsApp number එකක් දාන්න."; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
 
   err.textContent = "";
   btn.disabled = true;
   btn.textContent = "Sending…";
 
-  api("requestWhatsAppCode", [phone, name])
+  api("register", [phone, name, email])
     .then(function (data) {
-      /* Remember what they typed, then move to the code screen. */
-      setIdentity(name, (data && data.phone) || phone);
-      showVerify();
+      setIdentity(name, (data && data.phone) || phone, email.toLowerCase());
+      lsSet("mastercal_registered", "1");
+      const status = (data && data.status) || "PENDING";
+      if (status === "APPROVED") loadApp();
+      else showGate(status);
     })
     .catch(function (e) {
       btn.disabled = false;
-      btn.textContent = "Send Code";
-      err.textContent = e.message || "Code එක යවන්න බැරි වුණා.";
-    });
-}
-
-
-/* -------- STEP 2: enter the 6-digit code + verify -------- */
-function showVerify() {
-  const g = gateEl(); if (!g) return;
-  g.style.display = "flex";
-  gateBody().innerHTML =
-    '<h2>Enter Code</h2>' +
-    '<p>WhatsApp එකට ආපු 6-ඉලක්කම් code එක දාන්න.</p>' +
-    '<div class="gateMuted">' + escapeHtml(getPhone()) + '</div>' +
-    '<input id="gateCode" type="text" inputmode="numeric" maxlength="6" ' +
-      'autocomplete="one-time-code" placeholder="______" class="gateCode">' +
-    '<button id="gateVerify" class="gateBtn">Verify</button>' +
-    '<button id="gateResend" class="gateBtnLink">Resend code</button>' +
-    '<button id="gateEditNum" class="gateBtnLink">Change number</button>' +
-    '<div id="gateErr" class="gateErr"></div>';
-
-  const codeEl = document.getElementById("gateCode");
-  codeEl.focus();
-  codeEl.addEventListener("keydown", function (ev) {
-    if (ev.key === "Enter") verifyCode();
-  });
-  document.getElementById("gateVerify").addEventListener("click", verifyCode);
-  document.getElementById("gateResend").addEventListener("click", resendCode);
-  document.getElementById("gateEditNum").addEventListener("click", showRegister);
-}
-
-function verifyCode() {
-  const code = (document.getElementById("gateCode").value || "").trim();
-  const err  = document.getElementById("gateErr");
-  const btn  = document.getElementById("gateVerify");
-
-  if (code.replace(/[^\d]/g, "").length < 6) { err.textContent = "6-ඉලක්කම් code එක දාන්න."; return; }
-
-  err.textContent = "";
-  btn.disabled = true;
-  btn.textContent = "Verifying…";
-
-  api("verifyWhatsAppCode", [getPhone(), code])
-    .then(function (data) {
-      lsSet("mastercal_verified", "1");
-      const status = (data && data.status) || "APPROVED";
-      if (status === "APPROVED") {
-        loadApp();            /* verified + approved -> straight in */
-      } else {
-        showGate(status);     /* waiting for admin approval */
-      }
-    })
-    .catch(function (e) {
-      btn.disabled = false;
-      btn.textContent = "Verify";
-      err.textContent = e.message || "Code එක verify කරන්න බැරි වුණා.";
-    });
-}
-
-function resendCode() {
-  const err = document.getElementById("gateErr");
-  const link = document.getElementById("gateResend");
-  link.style.pointerEvents = "none";
-  link.textContent = "Sending…";
-  api("requestWhatsAppCode", [getPhone(), getName()])
-    .then(function () {
-      err.textContent = "";
-      link.textContent = "Code sent ✓";
-      setTimeout(function () { link.textContent = "Resend code"; link.style.pointerEvents = ""; }, 3000);
-    })
-    .catch(function (e) {
-      link.textContent = "Resend code";
-      link.style.pointerEvents = "";
-      err.textContent = e.message || "Resend බැරි වුණා.";
+      btn.textContent = "Request Access";
+      if (e.access === "BLOCKED") { setIdentity(name, phone, email.toLowerCase()); showGate("BLOCKED"); return; }
+      err.textContent = e.message || "Request එක යවන්න බැරි වුණා.";
     });
 }
 
 /* Forget the stored number and go back to the register screen. */
 function switchNumber() {
-  lsSet("mastercal_verified", "");
-  setIdentity(getName(), "");
+  lsSet("mastercal_registered", "");
+  setIdentity(getName(), "", getEmail());
   showRegister();
 }
 
