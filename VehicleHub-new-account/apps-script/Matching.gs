@@ -9,7 +9,7 @@
  */
 
 const MATCH_CONFIG = {
-  VERSION: '3.5',        // must match APP.VERSION in Code.gs
+  VERSION: '3.6',        // must match APP.VERSION in Code.gs
   MIN_SCORE: 50,           // New matches below this score are not saved
   BUDGET_TOLERANCE: 0.10,  // Allow prices up to 10% over budget (room to negotiate)
   YEAR_TOLERANCE: 1,       // Half points if within 1 year outside the range
@@ -207,28 +207,37 @@ function updateMatch_(p, user) {
   const lists = getLists_();
   if ((lists.MATCH_STATUS || []).indexOf(p.status) === -1) throw new Error('Invalid status: ' + p.status);
 
-  const m = readAll_('MATCHES').find(function (x) { return String(x.match_id) === String(p.matchId); });
-  if (!m) throw new Error('Match not found');
-  if (!canSeeMatch_(m, mapBy_(readAll_('BUYERS'), 'buyer_id'), mapBy_(readAll_('VEHICLES'), 'vehicle_id'), user)) {
-    throw new Error('This match does not involve your customers');
-  }
+  // Same lock as the matching engine, so a re-match running at the same time cannot
+  // overwrite this status change, and row numbers cannot shift under a delete.
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const m = readAll_('MATCHES').find(function (x) { return String(x.match_id) === String(p.matchId); });
+    if (!m) throw new Error('Match not found');
+    if (!canSeeMatch_(m, mapBy_(readAll_('BUYERS'), 'buyer_id'), mapBy_(readAll_('VEHICLES'), 'vehicle_id'), user)) {
+      throw new Error('This match does not involve your customers');
+    }
 
-  m.status = p.status;
-  m.notes = str_(p.notes);
-  m.updated_at = new Date();
-  m.updated_by = user.username;
-  writeRow_(sheet_('MATCHES'), 'MATCHES', m._row, m);
+    m.status = p.status;
+    m.notes = str_(p.notes);
+    m.updated_at = new Date();
+    m.updated_by = user.username;
+    writeRow_(sheet_('MATCHES'), 'MATCHES', m._row, m);
 
-  // On a Deal: buyer = Bought, vehicle = Sold
-  let closed = false;
-  if (isDeal_(p.status)) {
-    const b = findById_('BUYERS', 'buyer_id', m.buyer_id);
-    const v = findById_('VEHICLES', 'vehicle_id', m.vehicle_id);
-    if (b) { b.status = MATCH_CONFIG.BUYER_DONE; b.updated_at = new Date(); writeRow_(sheet_('BUYERS'), 'BUYERS', b._row, b); }
-    if (v) { v.status = MATCH_CONFIG.VEHICLE_DONE; v.updated_at = new Date(); writeRow_(sheet_('VEHICLES'), 'VEHICLES', v._row, v); }
-    closed = true;
+    // On a Deal: buyer = Bought, vehicle = Sold
+    let closed = false;
+    if (isDeal_(p.status)) {
+      const b = findById_('BUYERS', 'buyer_id', m.buyer_id);
+      const v = findById_('VEHICLES', 'vehicle_id', m.vehicle_id);
+      if (b) { b.status = MATCH_CONFIG.BUYER_DONE; b.updated_at = new Date(); writeRow_(sheet_('BUYERS'), 'BUYERS', b._row, b); }
+      if (v) { v.status = MATCH_CONFIG.VEHICLE_DONE; v.updated_at = new Date(); writeRow_(sheet_('VEHICLES'), 'VEHICLES', v._row, v); }
+      closed = true;
+    }
+    SpreadsheetApp.flush();
+    return { ok: true, closed: closed };
+  } finally {
+    lock.releaseLock();
   }
-  return { ok: true, closed: closed };
 }
 
 function enrichMatch_(m, bMap, vMap, user, officers) {

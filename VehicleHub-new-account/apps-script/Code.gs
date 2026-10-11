@@ -10,13 +10,14 @@
  *    Index.html   ← the complete UI
  *
  *  First time: select the `setup` function in the editor and click ▶ Run.
- *  Default login → username: admin   password: admin123  (change it right away!)
+ *  The first admin (FIRST_ADMIN below) is created with a random temporary password,
+ *  shown in the Execution log. Log in and change it right away (Settings → Change password).
  * ============================================================
  */
 
 const APP = {
   NAME: 'VehicleHub',
-  VERSION: '3.5',   // must match MATCH_CONFIG.VERSION in Matching.gs and APP_VERSION in Index.html
+  VERSION: '3.6',   // must match MATCH_CONFIG.VERSION in Matching.gs and APP_VERSION in Index.html
   TZ: 'Asia/Colombo',
   SESSION_SECONDS: 6 * 60 * 60, // 6 hours (CacheService maximum)
   // Privacy: in matches, customers of OTHER officers are hidden — only the officer's
@@ -41,7 +42,16 @@ const APP = {
   LEAD_CONFIRM_EMAIL: true,                    // email the customer a confirmation (if they give an email)
   // Public showroom (vehicles.html): approved vehicles ticked "Show on website" + a Wanted board of buyer needs
   // (no names / phone numbers). PUBLIC_PHONE = number shown for Call / WhatsApp ('' = first admin's number).
-  PUBLIC_PHONE: ''
+  PUBLIC_PHONE: '0714100518',
+  FACEBOOK_URL: 'https://www.facebook.com/profile.php?id=61593573333056'
+};
+
+// First admin account, created by setup() when the USERS sheet is empty
+const FIRST_ADMIN = {
+  username: 'ravi',          // login is not case-sensitive: "Ravi" works too
+  full_name: 'Ravi',
+  phone: '0779100518',
+  email: 'drcjayawardena@gmail.com'
 };
 
 // Fields that other officers may see (no customer name / phone / notes)
@@ -184,16 +194,23 @@ function setup() {
     appendRows_('VEHICLE_MASTER', rows);
   }
 
-  // Default admin user
+  // First admin user — random temporary password, shown once in the Execution log
+  let firstLogin = '';
   if (sheet_('USERS').getLastRow() < 2) {
+    const tempPw = Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+    const now = new Date();
     appendObj_('USERS', {
-      username: 'admin',
-      password_hash: hash_('admin', 'admin123'),
-      full_name: 'Administrator',
+      username: FIRST_ADMIN.username,
+      password_hash: hash_(FIRST_ADMIN.username, tempPw),
+      full_name: FIRST_ADMIN.full_name,
       role: 'admin',
       active: true,
-      created_at: new Date()
+      created_at: now,
+      phone: normPhone_(FIRST_ADMIN.phone),
+      approved_at: now,
+      email: cleanEmail_(FIRST_ADMIN.email)
     });
+    firstLogin = ' Login: ' + FIRST_ADMIN.username + ' / ' + tempPw + ' (change the password right away)';
   }
 
   // Remove the empty default "Sheet1"
@@ -206,7 +223,7 @@ function setup() {
   ensureListValues_('VEHICLE_STATUS', ['Pending', 'Rejected']);
   makePhotoFoldersPrivate_();
   applyValidations_();
-  const msg = '✅ Setup complete. Login: admin / admin123 (change the password right away)';
+  const msg = '✅ Setup complete.' + (firstLogin || ' (Users already exist — no new admin created.)');
   Logger.log(msg);
   return msg;
 }
@@ -1002,15 +1019,15 @@ function deletePhoto_(p, user) {
   while (parents.hasNext()) { if (parents.next().getId() === x.folder.getId()) ok = true; }
   if (!ok) throw new Error('Photo not found');
   f.setTrashed(true);
-  if (String(x.v.cover_id) === String(p.fileId)) {   // the cover photo was deleted → drop its thumbnail
-    try { DriveApp.getFileById(String(x.v.thumb_id)).setTrashed(true); } catch (e) {}
-    x.v.thumb_id = ''; x.v.cover_id = '';
-  }
+  const coverGone = String(x.v.cover_id) === String(p.fileId);   // the cover photo was deleted → drop its thumbnail
+  if (coverGone) { try { DriveApp.getFileById(String(x.v.thumb_id)).setTrashed(true); } catch (e) {} }
   let count = 0;
   const it = x.folder.getFiles();
   while (it.hasNext()) { const g = it.next(); if (!g.isTrashed || !g.isTrashed()) count++; }
-  x.v.photo_count = count;
-  writeRow_(sheet_('VEHICLES'), 'VEHICLES', x.v._row, x.v);
+  updateById_('VEHICLES', 'vehicle_id', x.v.vehicle_id, function (r) {
+    r.photo_count = count;
+    if (coverGone) { r.thumb_id = ''; r.cover_id = ''; }
+  });
   return { photo_count: count };
 }
 
@@ -1071,7 +1088,7 @@ function makeThumbFromDrive_(v) {
       if (!t) return null;
       const saved = thumbsFolder_().createFile(t.setName(v.vehicle_id + '_thumb.png'));
       v.thumb_id = saved.getId(); v.cover_id = f.getId();
-      writeRow_(sheet_('VEHICLES'), 'VEHICLES', v._row, v);
+      updateById_('VEHICLES', 'vehicle_id', v.vehicle_id, function (r) { r.thumb_id = v.thumb_id; r.cover_id = v.cover_id; });
       return t;
     }
   } catch (e) {}
@@ -1082,14 +1099,14 @@ function makeThumbFromDrive_(v) {
 /** Admin approves (→ Available, matching starts) or rejects (→ Rejected) a pending vehicle. */
 function approveVehicle_(p, user) {
   if (!isAdmin_(user)) throw new Error('Only admins can approve vehicles');
-  const v = findById_('VEHICLES', 'vehicle_id', p.vehicleId);
+  const v = updateById_('VEHICLES', 'vehicle_id', p.vehicleId, function (r) {
+    r.status = p.approve ? 'Available' : 'Rejected';
+    r.approved_by = user.username;
+    r.approved_at = new Date();
+    if (!p.approve && str_(p.note)) r.notes = (str_(r.notes) ? str_(r.notes) + '\n' : '') + '[Rejected: ' + str_(p.note) + ']';
+    r.updated_at = new Date();
+  });
   if (!v) throw new Error('Vehicle not found');
-  v.status = p.approve ? 'Available' : 'Rejected';
-  v.approved_by = user.username;
-  v.approved_at = new Date();
-  if (!p.approve && str_(p.note)) v.notes = (str_(v.notes) ? str_(v.notes) + '\n' : '') + '[Rejected: ' + str_(p.note) + ']';
-  v.updated_at = new Date();
-  writeRow_(sheet_('VEHICLES'), 'VEHICLES', v._row, v);
   let matches = 0;
   if (p.approve) {
     matchForVehicle_(v.vehicle_id);
@@ -1210,6 +1227,26 @@ function writeRow_(sh, name, row, obj) {
   })]);
 }
 
+/**
+ * Re-reads the record by ID under the script lock, applies mutate(row) to that fresh copy and
+ * writes it back. Safe while other requests delete rows (row numbers shift) or edit other columns.
+ * Do not call while already holding the script lock.
+ */
+function updateById_(name, idCol, id, mutate) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const r = findById_(name, idCol, id);
+    if (!r) return null;
+    mutate(r);
+    writeRow_(sheet_(name), name, r._row, r);
+    SpreadsheetApp.flush();
+    return r;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function appendObj_(name, obj) {
   const sh = sheet_(name);
   const row = sh.getLastRow() + 1;
@@ -1240,7 +1277,8 @@ function nextId_(name, idCol, prefix) {
     if (!isNaN(n) && n > max) max = n;
   });
   props.setProperty(key, String(max + 1));
-  return prefix + ('0000' + (max + 1)).slice(-4);
+  const n = String(max + 1);
+  return prefix + ('0000' + n).slice(-Math.max(4, n.length));   // V0001 … V9999, then V10000
 }
 
 /**
@@ -1733,8 +1771,10 @@ function updateLead_(p, user) {
     if (p.status === LEAD_STATUS.REJECTED) l.reject_reason = str_(p.reason);
   }
   l.updated_at = new Date(); l.handled_by = user.username;
-  writeRow_(sheet_('LEADS'), 'LEADS', l._row, l);
-  return { ok: true, lead: leadView_(l, officersMap_()) };
+  const saved = updateById_('LEADS', 'lead_id', l.lead_id, function (r) {
+    ['assigned_to', 'status', 'reject_reason', 'updated_at', 'handled_by'].forEach(function (k) { r[k] = l[k]; });
+  });
+  return { ok: true, lead: leadView_(saved || l, officersMap_()) };
 }
 
 /** The customer's photos (seller requests) as data URLs, for the officer only. */
@@ -1770,13 +1810,16 @@ function convertLead_(leadId, recordId, user) {
       if (v && !v.photos_url) {
         folder.moveTo(photosRoot_());
         folder.setName(recordId + ' - ' + [v.make, v.model, v.year].filter(String).join(' '));
-        v.photos_url = folder.getUrl();
-        v.photo_count = Number(l.photo_count) || 0;
-        writeRow_(sheet_('VEHICLES'), 'VEHICLES', v._row, v);
+        updateById_('VEHICLES', 'vehicle_id', recordId, function (r) {
+          r.photos_url = folder.getUrl();
+          r.photo_count = Number(l.photo_count) || 0;
+        });
       }
     } catch (e) { Logger.log('convertLead_ photos: ' + e.message); }
   }
-  writeRow_(sheet_('LEADS'), 'LEADS', l._row, l);
+  updateById_('LEADS', 'lead_id', l.lead_id, function (r) {
+    ['status', 'converted_id', 'updated_at', 'handled_by'].forEach(function (k) { r[k] = l[k]; });
+  });
 }
 
 
@@ -1800,7 +1843,7 @@ function publicContact_() {
     const a = readAll_('USERS').find(function (u) { return String(u.role) === 'admin' && isTrue_(u.active) && normPhone_(u.phone); });
     phone = a ? normPhone_(a.phone) : '';
   }
-  return { phone: phone, facebook: 'https:/' + '/www.facebook.com/profile.php?id=61593573333056' };
+  return { phone: phone, facebook: APP.FACEBOOK_URL };
 }
 
 /** PUBLIC: everything the showroom needs in one call (cached for 2 minutes). */
