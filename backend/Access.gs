@@ -204,9 +204,11 @@ function handleEmailApproval_(action, email, token) {
   const data = usersData_(s);
   for (let i = 1; i < data.length; i++) {
     if (normEmail_(data[i][0]) === email) {
+      const was = String(data[i][2] || "").trim().toUpperCase();
       s.getRange(i + 1, 3).setValue(status);
       if (status === "APPROVED") s.getRange(i + 1, 5).setValue(new Date());
       accessCacheClear_(email);       /* after the sheet change, so nothing stale can be re-cached */
+      if (status === "APPROVED" && was !== "APPROVED") sendManualToRow_(s.getRange(i + 1, 1, 1, 8).getValues()[0]);   /* Manual.gs */
       return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status, status === "APPROVED");
     }
   }
@@ -261,10 +263,13 @@ function menuApproveUser_() {
   const data = usersData_(s);
   for (let i = 1; i < data.length; i++) {
     if (normEmail_(data[i][0]) === email) {
+      const was = String(data[i][2] || "").trim().toUpperCase();
       s.getRange(i + 1, 3).setValue("APPROVED");
       s.getRange(i + 1, 5).setValue(new Date());
       accessCacheClear_(email);
-      ui.alert("Approved ✅", keyToPhone_(email) + " approved.", ui.ButtonSet.OK);
+      const sent = was !== "APPROVED" && sendManualToRow_(s.getRange(i + 1, 1, 1, 8).getValues()[0]);   /* Manual.gs */
+      ui.alert("Approved ✅", keyToPhone_(email) + " approved." +
+        (sent ? "\nVehicleHUB user manual e-mailed." : ""), ui.ButtonSet.OK);
       return;
     }
   }
