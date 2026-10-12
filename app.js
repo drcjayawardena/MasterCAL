@@ -2101,7 +2101,7 @@ function openHub(tab) {
 
 var vc_ready = false;
 
-/* Makes and models most often bought and sold in Sri Lanka (Make -> Model -> Year).
+/* Makes and models most often bought and sold in Sri Lanka (Make -> Model -> Year; see VC_YEARS).
    "Other" opens a text box for anything not listed. */
 const VC_MODELS = {
   "Toyota": ["Aqua", "Allion", "Axio", "Belta", "Camry", "C-HR", "Corolla", "Fortuner", "Hiace", "Hilux", "KDH",
@@ -2125,8 +2125,73 @@ const VC_MODELS = {
   "Hero": ["Dash", "Destini", "Hunk", "Maestro", "Pleasure", "Splendor"],
   "Yamaha": ["FZ", "Fascino", "Ray ZR", "R15"]
 };
+/* Years each model was made: [first, last] (0 = still made). Approximate; a
+   model not listed here (or "Other") shows every year from VC_FIRST_YEAR. */
+const VC_YEARS = {
+  "Toyota": { "Aqua": [2011, 0], "Allion": [2001, 2021], "Axio": [2006, 0], "Belta": [2005, 0], "Camry": [1990, 0],
+    "C-HR": [2016, 0], "Corolla": [1990, 0], "Fortuner": [2005, 0], "Hiace": [1990, 0], "Hilux": [1990, 0], "KDH": [2004, 0],
+    "Land Cruiser": [1990, 0], "Land Cruiser Prado": [1990, 0], "Passo": [2004, 0], "Premio": [2001, 2021], "Prius": [1997, 0],
+    "Raize": [2019, 0], "Roomy": [2016, 0], "Rush": [2006, 0], "Vitz": [1999, 2019], "Yaris": [2005, 0] },
+  "Suzuki": { "A-Star": [2008, 2015], "Alto": [1990, 0], "Celerio": [2008, 0], "Dzire": [2008, 0], "Ertiga": [2012, 0],
+    "Every": [1990, 0], "Estilo": [2006, 2014], "Hustler": [2014, 0], "Jimny": [1990, 0], "Spacia": [2013, 0],
+    "Swift": [2000, 0], "Vitara": [1990, 0], "Wagon R": [1993, 0], "Wagon R FX": [2003, 2017], "Wagon R Stingray": [2007, 0] },
+  "Honda": { "Civic": [1990, 0], "CR-V": [1995, 0], "Fit": [2001, 0], "Fit Shuttle": [2011, 2015], "Freed": [2008, 0],
+    "Grace": [2014, 2020], "Insight": [1999, 2022], "Vezel": [2013, 0], "WR-V": [2017, 0],
+    "CB Shine": [2006, 0], "CD 125": [1990, 0], "Dio": [1990, 0], "Hornet": [2015, 0], "X-Blade": [2018, 0] },
+  "Nissan": { "Caravan": [1990, 0], "Dayz": [2013, 0], "Leaf": [2010, 0], "March": [1990, 0], "Navara": [1997, 0],
+    "Note": [2004, 0], "Sunny": [1990, 0], "Tiida": [2004, 2016], "X-Trail": [2000, 0] },
+  "Mitsubishi": { "Lancer": [1990, 2017], "Montero": [1990, 2021], "Outlander": [2001, 0], "Pajero": [1990, 2021],
+    "L200": [1990, 0], "Eclipse Cross": [2017, 0], "Mirage": [1990, 0], "eK Wagon": [2001, 0] },
+  "Mazda": { "Axela": [2003, 2019], "BT-50": [2006, 0], "CX-3": [2015, 0], "CX-5": [2012, 0], "Demio": [1996, 2019],
+    "Familia": [1990, 2004] },
+  "Micro": { "Panda": [2008, 2014], "Trend": [2010, 2015], "MX7": [2011, 2015], "Actyon": [2006, 2015],
+    "Kyron": [2005, 2014], "Rexton": [2001, 2015] },
+  "Hyundai": { "Accent": [1994, 0], "Creta": [2014, 0], "Elantra": [1990, 0], "Grand i10": [2013, 0], "i20": [2008, 0],
+    "Santa Fe": [2000, 0], "Tucson": [2004, 0], "Venue": [2019, 0] },
+  "Kia": { "Picanto": [2004, 0], "Rio": [1999, 0], "Sorento": [2002, 0], "Sportage": [1993, 0], "Sonet": [2020, 0],
+    "Stonic": [2017, 0] },
+  "Daihatsu": { "Boon": [2004, 0], "Hijet": [1990, 0], "Mira": [1990, 0], "Move": [1995, 0], "Rocky": [2019, 0],
+    "Tanto": [2003, 0], "Terios": [1997, 0] },
+  "Perodua": { "Axia": [2014, 0], "Bezza": [2016, 0], "Kelisa": [2001, 2007], "Myvi": [2005, 0], "Viva": [2007, 2014] },
+  "Tata": { "Ace": [2005, 0], "Indica": [1998, 2018], "Nano": [2008, 2019], "Super Ace": [2008, 0], "Xenon": [2007, 0] },
+  "Mahindra": { "Bolero": [2000, 0], "KUV100": [2016, 0], "Maxximo": [2010, 0], "Scorpio": [2002, 0], "XUV500": [2011, 2021] },
+  "Bajaj": { "RE Three Wheeler": [1990, 0], "Discover": [2004, 0], "Platina": [2006, 0], "Pulsar": [2001, 0], "CT 100": [2004, 0] },
+  "TVS": { "King Three Wheeler": [2008, 0], "Apache": [2005, 0], "Metro": [2009, 0], "Ntorq": [2018, 0], "Scooty Pep": [2005, 0] },
+  "Hero": { "Dash": [2014, 0], "Destini": [2018, 0], "Hunk": [2007, 0], "Maestro": [2012, 0], "Pleasure": [2006, 0],
+    "Splendor": [1994, 0] },
+  "Yamaha": { "FZ": [2008, 0], "Fascino": [2015, 0], "Ray ZR": [2016, 0], "R15": [2008, 0] }
+};
+/* Common grades as sellers write them in ad titles. Models not listed have no
+   Grade choice (the Grade dropdown stays on "any grade"). */
+const VC_GRADES = {
+  "Toyota": { "Aqua": ["S", "G", "L", "X-Urban", "Crossover", "Z"], "Axio": ["X", "G", "Luxel", "Hybrid"],
+    "Allion": ["A15", "A18", "G"], "Premio": ["F", "G", "X", "EX"], "Prius": ["S", "G", "L", "A", "Touring"],
+    "Vitz": ["F", "U", "RS", "Jewela", "Safety"], "Yaris": ["X", "G", "Z", "Hybrid"], "C-HR": ["S", "G", "GT"],
+    "Corolla": ["Hybrid", "G", "X"], "Passo": ["X", "Moda"], "Raize": ["X", "G", "Z"], "Roomy": ["X", "G", "Custom"],
+    "Land Cruiser Prado": ["TX", "TZ"], "KDH": ["GL", "DX", "Super GL"] },
+  "Suzuki": { "Wagon R": ["FX", "FZ", "Hybrid"], "Alto": ["L", "S", "X", "800", "K10"], "Swift": ["RS", "XG", "XL", "Hybrid"],
+    "Spacia": ["Hybrid X", "Custom"], "Hustler": ["G", "X", "Turbo"], "Every": ["PA", "PC", "Join"] },
+  "Honda": { "Vezel": ["Hybrid", "Hybrid Z", "RS", "X", "Z", "e:HEV"], "Fit": ["13G", "15X", "Hybrid", "RS", "L", "Home"],
+    "Grace": ["Hybrid DX", "Hybrid LX", "Hybrid EX"], "Civic": ["EX", "LX", "Type R"], "Insight": ["G", "L", "EX"],
+    "Freed": ["G", "Hybrid", "Spike"], "Fit Shuttle": ["Hybrid", "Hybrid C"] },
+  "Nissan": { "Leaf": ["S", "X", "G", "e+"], "Note": ["e-Power", "X", "Medalist"], "Dayz": ["X", "S", "Highway Star"],
+    "X-Trail": ["20X", "Hybrid", "Mode Premier"], "March": ["S", "X", "Bolero"] },
+  "Mitsubishi": { "Outlander": ["PHEV", "G", "24G"], "Montero": ["Sport", "GLS"], "eK Wagon": ["E", "M", "G"] },
+  "Mazda": { "Axela": ["15S", "Hybrid", "20S"], "Demio": ["13C", "XD", "13S"] },
+  "Daihatsu": { "Mira": ["e:S", "X", "G"], "Move": ["X", "Custom"], "Tanto": ["X", "Custom"] },
+  "Perodua": { "Axia": ["E", "G", "SE", "AV"], "Bezza": ["G", "X", "AV"], "Myvi": ["G", "X", "H", "AV"] }
+};
 const VC_OTHER = "__other";
 const VC_FIRST_YEAR = 1990;
+
+/* Year list for the chosen make + model: newest first. */
+function vcYearsFor(make, model) {
+  const now = new Date().getFullYear();
+  const r = (VC_YEARS[make] || {})[model] || [VC_FIRST_YEAR, 0];
+  const out = [];
+  for (let y = r[1] || now; y >= Math.max(r[0], VC_FIRST_YEAR); y--) out.push(vcPair(String(y)));
+  return out;
+}
 
 function vcFill(sel, items, first) {
   sel.innerHTML = "";
@@ -2156,9 +2221,28 @@ function setupVehicleCheck() {
   vcFill(makeSel, Object.keys(VC_MODELS).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Make තෝරන්න"]);
   vcFill(modelSel, [], ["", "මුලින් Make තෝරන්න"]);
   modelSel.disabled = true;
-  const years = [];
-  for (let y = new Date().getFullYear(); y >= VC_FIRST_YEAR; y--) years.push(vcPair(String(y)));
-  vcFill(yearSel, years, ["", "ඕනෑම අවුරුද්දක්"]);
+  /* Grade depends on the model; disabled when we list no grades for it */
+  const gradeSel = document.getElementById("vcGrade");
+  const fillGrades = function () {
+    const g = (VC_GRADES[makeSel.value] || {})[modelSel.value] || [];
+    vcFill(gradeSel, g.map(vcPair), ["", g.length ? "ඕනෑම grade එකක්" : "Grade නෑ"]);
+    gradeSel.disabled = !g.length;
+  };
+  fillGrades();
+
+  /* Year depends on the model: only the years that model was made */
+  const fillYears = function () {
+    if (!modelSel.value) {
+      vcFill(yearSel, [], ["", "මුලින් Model තෝරන්න"]);
+      yearSel.disabled = true;
+      return;
+    }
+    const keep = yearSel.value;
+    vcFill(yearSel, vcYearsFor(makeSel.value, modelSel.value), ["", "ඕනෑම අවුරුද්දක්"]);
+    yearSel.disabled = false;
+    if (keep && yearSel.querySelector('option[value="' + keep + '"]')) yearSel.value = keep;
+  };
+  fillYears();
 
   makeSel.addEventListener("change", function () {
     const m = makeSel.value;
@@ -2172,9 +2256,11 @@ function setupVehicleCheck() {
       if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
     }
     vcOtherToggle(modelSel, modelOther);
+    fillGrades();
+    fillYears();
     if (m === VC_OTHER) makeOther.focus();
   });
-  modelSel.addEventListener("change", function () { vcOtherToggle(modelSel, modelOther); });
+  modelSel.addEventListener("change", function () { vcOtherToggle(modelSel, modelOther); fillGrades(); fillYears(); });
   document.getElementById("vcForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     runVehicleCheck();
@@ -2191,6 +2277,7 @@ function runVehicleCheck() {
   const make  = pick("vcMake");
   const model = pick("vcModel");
   const year  = document.getElementById("vcYear").value.trim();
+  const grade = document.getElementById("vcGrade").value.trim();
   const out = document.getElementById("vcOut");
   const btn = document.getElementById("vcGo");
   if (!make || !model) { out.innerHTML = '<p class="vcErr">Make සහ model දාන්න.</p>'; return; }
@@ -2199,7 +2286,7 @@ function runVehicleCheck() {
   btn.textContent = "Checking…";
   out.innerHTML = '<p class="vcHint">ikman.lk සහ riyasewana.com බලනවා…</p>';
 
-  api("checkVehicle", [make, model, year])
+  api("checkVehicle", [make, model, year, grade])
     .then(function (r) {
       out.innerHTML = vcSiteHtml(r.ikman, "ikman.lk") + vcSiteHtml(r.riyasewana, "riyasewana.com");
     })

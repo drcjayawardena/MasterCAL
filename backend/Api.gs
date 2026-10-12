@@ -89,7 +89,7 @@ function dispatch_(action, args) {
     case "getBike":             return getBike();
     case "setBike":             return setBike(args[0], args[1]);
     case "resetBike":           return resetBike();
-    case "checkVehicle":        return checkVehicle_(args[0], args[1], args[2]);
+    case "checkVehicle":        return checkVehicle_(args[0], args[1], args[2], args[3]);
     default: throw new Error("Unknown action: " + action);
   }
 }
