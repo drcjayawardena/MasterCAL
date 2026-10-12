@@ -64,6 +64,8 @@
     <button type="button" class="tab active" data-tab="vehicle">Vehicle Lease</button>
     <button type="button" class="tab" data-tab="threewheel">Three-Wheel</button>
     <button type="button" class="tab" data-tab="bike">Bike Lease</button>
+    <button type="button" class="tab tab-hub" data-tab="request">Request</button>
+    <button type="button" class="tab tab-hub" data-tab="matches">Matches</button>
   </div>
 
 
@@ -263,6 +265,20 @@
   </div>
 
 
+
+  <!-- ============ VEHICLEHUB: REQUEST FORM (request.html, loaded on first open) ============ -->
+  <div id="requestPanel" class="hubPanel" hidden>
+    <iframe id="requestFrame" class="hubFrame" title="VehicleHub — Request" loading="lazy"></iframe>
+  </div>
+
+  <!-- ============ VEHICLEHUB: MATCHES (VehicleHub app, opened on its Matches view) ============ -->
+  <div id="matchesPanel" class="hubPanel" hidden>
+    <div class="hubBar">
+      <span>VehicleHub — Matches</span>
+      <a id="matchesOpen" target="_blank" rel="noopener">Open VehicleHub ↗</a>
+    </div>
+    <iframe id="matchesFrame" class="hubFrame" title="VehicleHub — Matches" loading="lazy"></iframe>
+  </div>
 
 </div>
 <!-- END .page -->
