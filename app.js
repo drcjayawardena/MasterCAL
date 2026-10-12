@@ -1320,7 +1320,8 @@ const TW_READONLY_CELLS = ["B5"];
 
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
-  const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel" };
+  const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
+                   request: "requestPanel", matches: "matchesPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -1336,6 +1337,8 @@ function setupTabs() {
          Calculation inputs are cleared (re-clicking the open tab does nothing). */
       if (which === "threewheel" && !wasActive) load3W(true);
       if (which === "bike" && !wasActive) loadBike(true);
+      if (which === "request") openHubRequest();
+      if (which === "matches") openHubMatches();
     });
   });
 }
@@ -1997,4 +2000,48 @@ function setBikeValue(cell, value) {
       loadBike();                       /* put the fields back to what the sheet really holds */
     })
     .then(function () { bk_setBusy(false); });
+}
+
+
+/* =========================================================
+   VEHICLEHUB TABS  (Request + Matches)
+   Both pages come from the VehicleHub site, which is served from the
+   same origin as MasterCAL (drcjayawardena.github.io), so they are
+   shown inside the app in an iframe. They load on first open only.
+     Request -> VehicleHub request.html (public buy/sell form)
+     Matches -> the VehicleHub app; it asks for its own login once per
+                browser tab, then this code switches it to Matches.
+========================================================= */
+
+const VEHICLEHUB_URL = "https://drcjayawardena.github.io/VehicleHUB/";
+
+function openHubRequest() {
+  const f = document.getElementById("requestFrame");
+  if (f && !f.getAttribute("src")) f.src = VEHICLEHUB_URL + "request.html";
+}
+
+var hubMatchesTimer = null;
+
+function openHubMatches() {
+  const f = document.getElementById("matchesFrame");
+  const a = document.getElementById("matchesOpen");
+  if (a) a.href = VEHICLEHUB_URL;
+  if (!f) return;
+  if (!f.getAttribute("src")) f.src = VEHICLEHUB_URL;
+  if (!hubMatchesTimer) hubMatchesTimer = setInterval(hubShowMatches, 500);
+}
+
+/* Each time the VehicleHub app draws its menu (after loading, or after its
+   login), open its Matches view once. Clicking its other tabs still works. */
+function hubShowMatches() {
+  const f = document.getElementById("matchesFrame");
+  let w, nav;
+  try {
+    w = f && f.contentWindow;
+    nav = w && w.document.getElementById("nav");
+  } catch (e) { return; }                     /* not same-origin (should not happen) */
+  if (!nav || nav.dataset.mcMatches === "1") return;
+  if (typeof w.go !== "function") return;
+  nav.dataset.mcMatches = "1";
+  try { w.go("matches"); } catch (e) { console.error("VehicleHub matches:", e); }
 }
