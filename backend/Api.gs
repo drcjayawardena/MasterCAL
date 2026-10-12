@@ -81,6 +81,7 @@ function dispatch_(action, args) {
     case "deleteScheduleRow":   return deleteScheduleRow(args[0]);
     case "saveSchedule":        return saveSchedule(args[0]);
     case "setRmvType":          return setRmvType(args[0], args[1]);
+    case "setAdditionalCharge": return setAdditionalCharge(args[0]);
     case "clearSchedule":       return clearScheduleInputs();
     case "get3W":               return get3W();
     case "set3W":               return set3W(args[0], args[1]);

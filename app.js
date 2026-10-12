@@ -65,7 +65,8 @@ function updateCalcUI() {
 
 /* actions that change the Vehicle Lease sheet besides calcInputs */
 const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, addScheduleRow:1,
-  updateScheduleFrom:1, updateScheduleAmount:1, deleteScheduleRow:1, saveSchedule:1, clearSchedule:1, setRmvType:1 };
+  updateScheduleFrom:1, updateScheduleAmount:1, deleteScheduleRow:1, saveSchedule:1, clearSchedule:1, setRmvType:1,
+  setAdditionalCharge:1 };
 
 async function api(action, args) {
 
@@ -743,7 +744,8 @@ function renderCharges(grid) {
     const tr = document.createElement("tr");
     const td1 = document.createElement("td");
     const td2 = document.createElement("td");
-    td2.textContent = amount;
+    if (ADDL_RE.test(norm)) td2.appendChild(addlChargeInput(amount));   /* typed by the user */
+    else td2.textContent = amount;
 
     /* J13 uses the "normal" list (B2:B6); J14 uses the "other" list (E:E). */
     var rmvList = RMV_CELLS[i]
@@ -779,6 +781,40 @@ function renderCharges(grid) {
     tr.appendChild(td2);
     body.appendChild(tr);
   }
+}
+
+/* ADDITIONAL SERVICE CHARGES: the user types the amount. One input is reused
+   across re-renders so typing / focus is never lost. Empty until a value is typed. */
+const ADDL_RE = /ADDITIONAL SERVICE CHARGE/;
+var addlInput = null;
+
+function addlChargeInput(amount) {
+  if (!addlInput) {
+    addlInput = document.createElement("input");
+    addlInput.type = "text";
+    addlInput.inputMode = "decimal";
+    addlInput.className = "chargesInput";
+    addlInput.placeholder = "Amount";
+    addlInput.setAttribute("aria-label", "Additional service charges");
+    addlInput.addEventListener("change", function () { setAdditionalChargeUI(this.value); });
+    addlInput.addEventListener("keydown", function (ev) { if (ev.key === "Enter") this.blur(); });
+  }
+  if (document.activeElement !== addlInput) {
+    const n = Number(String(amount).replace(/,/g, ""));
+    addlInput.value = (amount === "" || !n) ? "" : amount;
+  }
+  return addlInput;
+}
+
+function setAdditionalChargeUI(value) {
+  const v = String(value).replace(/,/g, "").trim();
+  if (v !== "" && !(Number(v) >= 0)) { alert("හරි amount එකක් දාන්න."); return; }
+  api("setAdditionalCharge", [v])
+    .then(function (r) { if (r && r.outputs) showOutputs(r.outputs); })
+    .catch(function (e) {
+      console.error("ADDITIONAL CHARGE ERROR:", e);
+      alert("Additional service charges could not be saved.\n\n" + e.message);
+    });
 }
 
 function setRmvTypeUI(value, cell) {
@@ -2088,9 +2124,80 @@ function hubShowView(t) {
 
 var vc_ready = false;
 
+/* Makes and models most often bought and sold in Sri Lanka (Make -> Model -> Year).
+   "Other" opens a text box for anything not listed. */
+const VC_MODELS = {
+  "Toyota": ["Aqua", "Allion", "Axio", "Belta", "Camry", "C-HR", "Corolla", "Fortuner", "Hiace", "Hilux", "KDH",
+             "Land Cruiser", "Land Cruiser Prado", "Passo", "Premio", "Prius", "Raize", "Roomy", "Rush", "Vitz", "Yaris"],
+  "Suzuki": ["A-Star", "Alto", "Celerio", "Dzire", "Ertiga", "Every", "Estilo", "Hustler", "Jimny", "Spacia",
+             "Swift", "Vitara", "Wagon R", "Wagon R FX", "Wagon R Stingray"],
+  "Honda": ["Civic", "CR-V", "Fit", "Fit Shuttle", "Freed", "Grace", "Insight", "Vezel", "WR-V",
+            "CB Shine", "CD 125", "Dio", "Hornet", "X-Blade"],
+  "Nissan": ["Caravan", "Dayz", "Leaf", "March", "Navara", "Note", "Sunny", "Tiida", "X-Trail"],
+  "Mitsubishi": ["Lancer", "Montero", "Outlander", "Pajero", "L200", "Eclipse Cross", "Mirage", "eK Wagon"],
+  "Mazda": ["Axela", "BT-50", "CX-3", "CX-5", "Demio", "Familia"],
+  "Micro": ["Panda", "Trend", "MX7", "Actyon", "Kyron", "Rexton"],
+  "Hyundai": ["Accent", "Creta", "Elantra", "Grand i10", "i20", "Santa Fe", "Tucson", "Venue"],
+  "Kia": ["Picanto", "Rio", "Sorento", "Sportage", "Sonet", "Stonic"],
+  "Daihatsu": ["Boon", "Hijet", "Mira", "Move", "Rocky", "Tanto", "Terios"],
+  "Perodua": ["Axia", "Bezza", "Kelisa", "Myvi", "Viva"],
+  "Tata": ["Ace", "Indica", "Nano", "Super Ace", "Xenon"],
+  "Mahindra": ["Bolero", "KUV100", "Maxximo", "Scorpio", "XUV500"],
+  "Bajaj": ["RE Three Wheeler", "Discover", "Platina", "Pulsar", "CT 100"],
+  "TVS": ["King Three Wheeler", "Apache", "Metro", "Ntorq", "Scooty Pep"],
+  "Hero": ["Dash", "Destini", "Hunk", "Maestro", "Pleasure", "Splendor"],
+  "Yamaha": ["FZ", "Fascino", "Ray ZR", "R15"]
+};
+const VC_OTHER = "__other";
+const VC_FIRST_YEAR = 1990;
+
+function vcFill(sel, items, first) {
+  sel.innerHTML = "";
+  [first].concat(items).forEach(function (it) {
+    const o = document.createElement("option");
+    o.value = it[0]; o.textContent = it[1];
+    sel.appendChild(o);
+  });
+}
+
+function vcPair(v) { return [v, v]; }
+
+/* show / hide the "Other" text box next to a dropdown */
+function vcOtherToggle(sel, box) {
+  box.hidden = sel.value !== VC_OTHER;
+  box.required = !box.hidden;
+  if (!box.hidden) box.focus();
+}
+
 function setupVehicleCheck() {
   if (vc_ready) return;
   vc_ready = true;
+  const makeSel = document.getElementById("vcMake"), modelSel = document.getElementById("vcModel");
+  const yearSel = document.getElementById("vcYear");
+  const makeOther = document.getElementById("vcMakeOther"), modelOther = document.getElementById("vcModelOther");
+
+  vcFill(makeSel, Object.keys(VC_MODELS).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Make තෝරන්න"]);
+  vcFill(modelSel, [], ["", "මුලින් Make තෝරන්න"]);
+  modelSel.disabled = true;
+  const years = [];
+  for (let y = new Date().getFullYear(); y >= VC_FIRST_YEAR; y--) years.push(vcPair(String(y)));
+  vcFill(yearSel, years, ["", "ඕනෑම අවුරුද්දක්"]);
+
+  makeSel.addEventListener("change", function () {
+    const m = makeSel.value;
+    vcOtherToggle(makeSel, makeOther);
+    if (!m) {
+      vcFill(modelSel, [], ["", "මුලින් Make තෝරන්න"]);
+      modelSel.disabled = true;
+    } else {
+      vcFill(modelSel, (VC_MODELS[m] || []).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Model තෝරන්න"]);
+      modelSel.disabled = false;
+      if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
+    }
+    vcOtherToggle(modelSel, modelOther);
+    if (m === VC_OTHER) makeOther.focus();
+  });
+  modelSel.addEventListener("change", function () { vcOtherToggle(modelSel, modelOther); });
   document.getElementById("vcForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     runVehicleCheck();
@@ -2100,8 +2207,12 @@ function setupVehicleCheck() {
 function vcRs(n) { return n ? "Rs " + Number(n).toLocaleString("en-US") : "-"; }
 
 function runVehicleCheck() {
-  const make  = document.getElementById("vcMake").value.trim();
-  const model = document.getElementById("vcModel").value.trim();
+  const pick = function (id) {
+    const v = document.getElementById(id).value;
+    return (v === VC_OTHER ? document.getElementById(id + "Other").value : v).trim();
+  };
+  const make  = pick("vcMake");
+  const model = pick("vcModel");
   const year  = document.getElementById("vcYear").value.trim();
   const out = document.getElementById("vcOut");
   const btn = document.getElementById("vcGo");

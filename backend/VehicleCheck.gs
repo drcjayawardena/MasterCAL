@@ -26,7 +26,7 @@ function checkVehicle_(make, model, year) {
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc_" + (make + "|" + model + "|" + year).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc2_" + (make + "|" + model + "|" + year).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
@@ -103,11 +103,32 @@ function vcIkman_(make, model, year) {
   const ads = [];
   ((data && data.ads) || []).forEach(function (a) {
     if (ads.length >= VC_MAX_ADS || !vcFits_(a.title, model, year)) return;   /* drops featured ads of other years */
+    const when = vcWhen_(a);
     ads.push({ title: String(a.title || ""), price: String(a.price || ""), priceValue: vcPrice_(a.price),
-               details: String(a.details || ""), location: String(a.location || ""), when: /_/.test(String(a.timeStamp)) ? "" : String(a.timeStamp || ""),
+               details: String(a.details || ""), location: String(a.location || ""), when: when,
+               age: vcAgeMinutes_(when),
                url: "https://ikman.lk/en/ad/" + encodeURIComponent(String(a.slug || "")) });
   });
+  /* newest first: featured / top ads come first on ikman even when they are old */
+  ads.sort(function (x, y) { return x.age - y.age; });
   return { site: "ikman.lk", searchUrl: used, ads: ads, summary: vcSummary_(ads) };
+}
+
+/* How long ago an ikman ad was posted or bumped up: "7 hours", "just now", "2 days".
+   timeStamp is "bump_up" for a bumped ad; then lastBumpUpDate holds the age. */
+function vcWhen_(a) {
+  const t = String(a.timeStamp || "");
+  return /_/.test(t) ? String(a.lastBumpUpDate || "") : t;
+}
+
+/* "7 hours" -> 420 minutes (unknown -> very old, so it sorts last) */
+function vcAgeMinutes_(when) {
+  const t = String(when || "").toLowerCase();
+  if (/just now|now/.test(t)) return 0;
+  const m = t.match(/(\d+)\s*(min|hour|day|week|month|year)/);
+  if (!m) return 1e9;
+  const per = { min: 1, hour: 60, day: 1440, week: 10080, month: 43200, year: 525600 };
+  return Number(m[1]) * per[m[2]];
 }
 
 /* ---------- riyasewana.com ---------- */

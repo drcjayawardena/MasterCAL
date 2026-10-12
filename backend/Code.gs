@@ -256,10 +256,43 @@ function getRentalSchedule() {
   return { success: true, rows: rng("RENTAL_SCHEDULE").getDisplayValues() };
 }
 
-/* Clear every user input in ONE call (RangeList). */
+/* Clear every user input in ONE call (RangeList).
+   The ADDITIONAL SERVICE CHARGES amount is typed by the user too, so it starts empty. */
 function clearInputs_() {
-  sh().getRangeList([CFG.IN_PRODUCT_TYPE, CFG.IN_MAIN, CFG.IN_SCHEDULE_TYPE,
-                     CFG.SCHED_FROM, CFG.SCHED_AMOUNT]).clearContent();
+  const list = [CFG.IN_PRODUCT_TYPE, CFG.IN_MAIN, CFG.IN_SCHEDULE_TYPE, CFG.SCHED_FROM, CFG.SCHED_AMOUNT];
+  const addl = addlChargeCell_();
+  if (addl) list.push(addl);
+  sh().getRangeList(list).clearContent();
+}
+
+/* ADDITIONAL SERVICE CHARGES: the amount (column L) of the charges-block row (J1:J14)
+   whose label is "ADDITIONAL SERVICE CHARGES". The user types it in the app.
+   The row is looked up by its label (cached 6 h), so moving the row in the
+   template needs no code change. "" when the template has no such row. */
+function addlChargeCell_() {
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  const hit = cache ? cache.get("addl_cell") : null;
+  if (hit !== null && hit !== undefined) return hit === "-" ? "" : hit;
+  const j = sh().getRange("J1:J14").getDisplayValues();
+  var cell = "";
+  for (var i = 0; i < j.length; i++) {
+    if (/ADDITIONAL\s+SERVICE\s+CHARGE/i.test(String(j[i][0]))) { cell = "L" + (i + 1); break; }
+  }
+  if (cache) { try { cache.put("addl_cell", cell || "-", 21600); } catch (e) {} }
+  return cell;
+}
+
+/* The user typed an ADDITIONAL SERVICE CHARGES amount ("" clears it). */
+function setAdditionalCharge(value) {
+  const cell = addlChargeCell_();
+  if (!cell) throw new Error("ADDITIONAL SERVICE CHARGES row not found in the sheet.");
+  const v = String(value == null ? "" : value).replace(/,/g, "").trim();
+  if (v !== "" && !(Number(v) >= 0)) throw new Error("හරි amount එකක් දාන්න.");
+  const s = sh();
+  if (v === "") s.getRange(cell).clearContent(); else s.getRange(cell).setValue(Number(v));
+  SpreadsheetApp.flush();
+  return { success: true, outputs: outputsFrom_(readBlock_()) };
 }
 
 
