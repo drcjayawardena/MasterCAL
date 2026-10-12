@@ -2078,39 +2078,16 @@ function setBikeValue(cell, value) {
    Opens the VehicleHub app, which is served from the same origin as
    MasterCAL (drcjayawardena.github.io), inside an iframe, loaded on first
    open. VehicleHub logs in with the MasterCAL session (localStorage
-   "mastercal_token"), then this code switches it to its "Add a new call"
-   view (its own menu still reaches Matches and the rest).
+   "mastercal_token") and starts on its Dashboard.
 ========================================================= */
 
 const VEHICLEHUB_URL = "https://drcjayawardena.github.io/VehicleHUB/";
-const HUB_TABS = {
-  newcall: { frame: "newcallFrame", link: "newcallOpen", view: "newcall" }
-};
-var hubTimers = {};
+const HUB_TABS = { newcall: { frame: "newcallFrame" } };
 
 function openHub(tab) {
   const t = HUB_TABS[tab]; if (!t) return;
   const f = document.getElementById(t.frame);
-  const a = document.getElementById(t.link);
-  if (a) a.href = VEHICLEHUB_URL;
-  if (!f) return;
-  if (!f.getAttribute("src")) f.src = VEHICLEHUB_URL;
-  if (!hubTimers[tab]) hubTimers[tab] = setInterval(function () { hubShowView(t); }, 500);
-}
-
-/* Each time the VehicleHub app draws its menu (after loading, or after its
-   login), open the tab's view once. Clicking its other tabs still works. */
-function hubShowView(t) {
-  const f = document.getElementById(t.frame);
-  let w, nav;
-  try {
-    w = f && f.contentWindow;
-    nav = w && w.document.getElementById("nav");
-  } catch (e) { return; }                     /* not same-origin (should not happen) */
-  if (!nav || nav.dataset.mcView === "1") return;
-  if (typeof w.go !== "function") return;
-  nav.dataset.mcView = "1";
-  try { w.go(t.view); } catch (e) { console.error("VehicleHub " + t.view + ":", e); }
+  if (f && !f.getAttribute("src")) f.src = VEHICLEHUB_URL;
 }
 
 

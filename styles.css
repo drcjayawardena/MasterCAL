@@ -616,12 +616,8 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .hubPanel{ background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden;
   box-shadow:0 6px 18px rgba(20,40,60,.05); }
 .hubPanel[hidden]{ display:none !important; }
-.hubFrame{ display:block; width:100%; height:calc(100vh - 190px); min-height:520px; border:0; background:#f3f5f9; }
-.hubBar{ display:flex; justify-content:space-between; align-items:center; gap:10px;
-  padding:8px 14px; border-bottom:1px solid var(--line); font-size:13px; font-weight:700; color:var(--muted); }
-.hubBar a{ color:#1d3f8f; text-decoration:none; white-space:nowrap; }
-.hubBar a:hover{ text-decoration:underline; }
-@media (max-width:560px){ .hubFrame{ height:calc(100vh - 170px); } }
+.hubFrame{ display:block; width:100%; height:calc(100vh - 155px); min-height:520px; border:0; background:#f3f5f9; }
+@media (max-width:560px){ .hubFrame{ height:calc(100vh - 135px); } }
 
 
 /* ---------- Vehicle Checking tab ---------- */
