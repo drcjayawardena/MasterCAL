@@ -64,6 +64,7 @@
     <button type="button" class="tab active" data-tab="vehicle">Vehicle Lease</button>
     <button type="button" class="tab" data-tab="threewheel">Three-Wheel</button>
     <button type="button" class="tab" data-tab="bike">Bike Lease</button>
+    <button type="button" class="tab" data-tab="vcheck">Vehicle Checking</button>
     <button type="button" class="tab tab-hub" data-tab="newcall">Vehicle Hub</button>
   </div>
 
@@ -264,6 +265,17 @@
   </div>
 
 
+
+  <!-- ============ VEHICLE CHECKING (ikman.lk / riyasewana.com ad prices, filled by app.js) ============ -->
+  <div id="vcheckPanel" class="vcPanel" hidden>
+    <form id="vcForm" class="vcForm" autocomplete="off">
+      <label><span>Make</span><input id="vcMake" type="text" placeholder="e.g. Toyota" required></label>
+      <label><span>Model</span><input id="vcModel" type="text" placeholder="e.g. Aqua" required></label>
+      <label><span>Year</span><input id="vcYear" type="number" inputmode="numeric" min="1950" max="2100" placeholder="e.g. 2015"></label>
+      <button type="submit" id="vcGo" class="vcGo">Check</button>
+    </form>
+    <div id="vcOut" class="vcOut"><p class="vcHint">Make, model සහ අවුරුද්ද දාලා <b>Check</b> ඔබන්න. ikman.lk සහ riyasewana.com වල දැන් තියෙන ads වල මිල සාරාංශය මෙතන පේනවා.</p></div>
+  </div>
 
   <!-- ============ VEHICLE HUB (VehicleHub app, opened on its "Add a new call" view) ============ -->
   <div id="newcallPanel" class="hubPanel" hidden>
