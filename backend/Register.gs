@@ -113,10 +113,3 @@ function ensureUsersColumns_(s) {
     catch (e) { Logger.log("USERS header " + want[col] + " (col " + col + ") not written: " + (e && e.message ? e.message : e)); }
   });
 }
-
-
-/* TEST — run from the editor (Run -> testRegister) to check that registration works.
-   It registers "Ravi" (0779100518). Safe to delete once everything works. */
-function testRegister() {
-  Logger.log(JSON.stringify(register_(["0779100518", "Ravi", "drcjayawardena@gmail.com"])));
-}
