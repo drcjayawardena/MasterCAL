@@ -138,3 +138,6 @@ function vcRiyasewana_(make, model, year) {
   });
   return { site: "riyasewana.com", searchUrl: url, ads: ads, summary: vcSummary_(ads) };
 }
+
+/* Run once from the Apps Script editor to authorize UrlFetchApp and see a sample answer. */
+function testVehicleCheck() { Logger.log(JSON.stringify(checkVehicle_("Toyota", "Aqua", "2015")).slice(0, 1500)); }
