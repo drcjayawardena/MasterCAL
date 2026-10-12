@@ -29,7 +29,7 @@
 
 <body>
 
-<!-- ACCESS GATE (register / pending / blocked) -->
+<!-- ACCESS GATE (login / register / pending / blocked) -->
 <div id="gate" class="gate">
   <div class="gateCard">
     <div class="gateLogo">MasterCAL</div>
@@ -64,7 +64,7 @@
     <button type="button" class="tab active" data-tab="vehicle">Vehicle Lease</button>
     <button type="button" class="tab" data-tab="threewheel">Three-Wheel</button>
     <button type="button" class="tab" data-tab="bike">Bike Lease</button>
-    <button type="button" class="tab tab-hub" data-tab="request">Request</button>
+    <button type="button" class="tab tab-hub" data-tab="newcall">New Call</button>
     <button type="button" class="tab tab-hub" data-tab="matches">Matches</button>
   </div>
 
@@ -266,9 +266,13 @@
 
 
 
-  <!-- ============ VEHICLEHUB: REQUEST FORM (request.html, loaded on first open) ============ -->
-  <div id="requestPanel" class="hubPanel" hidden>
-    <iframe id="requestFrame" class="hubFrame" title="VehicleHub — Request" loading="lazy"></iframe>
+  <!-- ============ VEHICLEHUB: NEW CALL (VehicleHub app, opened on its "Add a new call" view) ============ -->
+  <div id="newcallPanel" class="hubPanel" hidden>
+    <div class="hubBar">
+      <span>VehicleHub — New Call</span>
+      <a id="newcallOpen" target="_blank" rel="noopener">Open VehicleHub ↗</a>
+    </div>
+    <iframe id="newcallFrame" class="hubFrame" title="VehicleHub — New Call" loading="lazy"></iframe>
   </div>
 
   <!-- ============ VEHICLEHUB: MATCHES (VehicleHub app, opened on its Matches view) ============ -->

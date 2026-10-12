@@ -27,27 +27,14 @@ var _mem = {};
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return (k in _mem) ? _mem[k] : null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { _mem[k] = v; } }
 
-/* Per-user identity — each user gets their own isolated Sheet copy. */
-function getUserId() {
-  let id = lsGet("mastercal_uid");
-  if (!id) {
-    id = (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : "u" + Date.now() + Math.random().toString(36).slice(2);
-    lsSet("mastercal_uid", id);
-  }
-  return id;
-}
-
-/* The WhatsApp number is the user's identity; the e-mail is a contact detail. */
-function getName()  { return lsGet("mastercal_name")  || ""; }
-function getPhone() { return lsGet("mastercal_phone") || ""; }
-function getEmail() { return lsGet("mastercal_email") || ""; }
-function setIdentity(name, phone, email) {
-  lsSet("mastercal_name", name || "");
-  lsSet("mastercal_phone", phone || "");
-  if (email !== undefined) lsSet("mastercal_email", email || "");
-}
+/* Login session. One username + password for MasterCAL and VehicleHUB:
+   the server returns a signed token (backend/Login.gs) that is sent with
+   every request. It lives in localStorage "mastercal_token", which the
+   VehicleHUB pages on this same origin read to log the user in too. */
+const TOKEN_KEY = "mastercal_token";
+function getToken() { return lsGet(TOKEN_KEY) || ""; }
+function setToken(t) { if (t) lsSet(TOKEN_KEY, t); else { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} delete _mem[TOKEN_KEY]; } }
+function getUsername() { return lsGet("mastercal_username") || ""; }
 
 
 /* =========================================================
@@ -91,8 +78,7 @@ async function api(action, args) {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
-        action: action, args: args || [],
-        userId: getUserId(), phone: getPhone(), name: getName()
+        action: action, args: args || [], token: getToken()
       }),
       redirect: "follow"
     });
@@ -105,7 +91,7 @@ async function api(action, args) {
 
     if (!json || json.ok !== true) {
       const e = new Error((json && json.error) || "API error");
-      if (json && json.access) e.access = json.access;   /* PENDING / BLOCKED / NO_PHONE */
+      if (json && json.access) e.access = json.access;   /* LOGIN / PENDING / BLOCKED */
       throw e;
     }
 
@@ -157,8 +143,8 @@ function init() {
   setupBkScheduleToggle();
   setupTabs();
 
-  /* Gate: need a registered WhatsApp number before doing anything. */
-  if (!getPhone() || lsGet("mastercal_registered") !== "1") { showRegister(); return; }
+  /* Gate: log in before doing anything. */
+  if (!getToken()) { showLogin(); return; }
 
   loadApp();
 }
@@ -199,7 +185,7 @@ function loadApp() {
 
 
 /* =========================================================
-   ACCESS GATE  (register / pending / blocked)
+   ACCESS GATE  (login / register / pending / blocked)
 ========================================================= */
 
 function gateEl() { return document.getElementById("gate"); }
@@ -207,91 +193,139 @@ function gateBody() { return document.getElementById("gateBody"); }
 
 function hideGate() { const g = gateEl(); if (g) g.style.display = "none"; }
 
-/* -------- Registration: name + WhatsApp number + e-mail (no code) --------
-   The WhatsApp number is the user's identity; the e-mail is a contact
-   detail for the admin. The request waits for the admin's approval. */
-function showRegister() {
+function gateShow(html) {
   const g = gateEl(); if (!g) return;
   g.style.display = "flex";
-  gateBody().innerHTML =
-    '<h2>Request Access</h2>' +
-    '<p>App එක පාවිච්චි කරන්න ඔයාගේ විස්තර දාලා access request කරන්න. ' +
-    'Admin approve කරාට පස්සේ පාවිච්චි කරන්න පුළුවන්.</p>' +
-    '<input id="gateName" type="text" placeholder="Your name" value="' + escapeHtml(getName()) + '">' +
-    '<input id="gatePhone" type="tel" inputmode="tel" placeholder="WhatsApp number (e.g. 0771234567)" value="' + escapeHtml(getPhone()) + '">' +
-    '<input id="gateEmail" type="email" inputmode="email" placeholder="Your email address" value="' + escapeHtml(getEmail()) + '">' +
-    '<button id="gateSend" class="gateBtn">Request Access</button>' +
-    '<div id="gateErr" class="gateErr"></div>';
-  document.getElementById("gateSend").addEventListener("click", submitRegister);
+  gateBody().innerHTML = html;
+}
 
-  /* Enter key on the last field submits. */
-  document.getElementById("gateEmail").addEventListener("keydown", function (ev) {
-    if (ev.key === "Enter") submitRegister();
+/* Enter in any field of the gate presses its main button. */
+function gateEnter(fn) {
+  gateBody().querySelectorAll("input").forEach(function (el) {
+    el.addEventListener("keydown", function (ev) { if (ev.key === "Enter") fn(); });
   });
+}
+
+/* -------- Login: username + password (the same login opens VehicleHUB) -------- */
+function showLogin(msg) {
+  gateShow(
+    '<h2>Login</h2>' +
+    '<p>MasterCAL username සහ password එක දාන්න. මේ login එකෙන්ම VehicleHUB එකත් open වෙනවා.</p>' +
+    '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username" value="' + escapeHtml(getUsername()) + '">' +
+    '<input id="gatePass" type="password" autocomplete="current-password" placeholder="Password">' +
+    '<button id="gateSend" class="gateBtn">Login</button>' +
+    '<div id="gateErr" class="gateErr">' + escapeHtml(msg || "") + '</div>' +
+    '<button id="gateReg" class="gateBtnLink">Login එකක් නැද්ද? Register වෙන්න</button>');
+  document.getElementById("gateSend").addEventListener("click", submitLogin);
+  document.getElementById("gateReg").addEventListener("click", showRegister);
+  gateEnter(submitLogin);
+  document.getElementById(getUsername() ? "gatePass" : "gateUser").focus();
+}
+
+function submitLogin() {
+  const user = (document.getElementById("gateUser").value || "").trim().toLowerCase();
+  const pass = document.getElementById("gatePass").value || "";
+  const err  = document.getElementById("gateErr");
+  const btn  = document.getElementById("gateSend");
+  if (!user || !pass) { err.textContent = "Username සහ password දාන්න."; return; }
+
+  err.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Logging in…";
+  lsSet("mastercal_username", user);
+
+  api("login", [user, pass])
+    .then(function (data) {
+      if (data && data.token) { setToken(data.token); loadApp(); return; }
+      showGate((data && data.status) || "PENDING");
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "Login";
+      if (e.access === "BLOCKED") { showGate("BLOCKED"); return; }
+      err.textContent = e.message || "Login වෙන්න බැරි වුණා.";
+    });
+}
+
+/* -------- Registration: name + WhatsApp + e-mail + username + password --------
+   The request waits for the admin's approval. Users from before passwords
+   register here once with their same WhatsApp number. */
+function showRegister() {
+  gateShow(
+    '<h2>Register</h2>' +
+    '<p>ඔයාගේ විස්තර සහ අලුත් username, password එකක් දාන්න. ' +
+    'Admin approve කරාට පස්සේ MasterCAL සහ VehicleHUB දෙකටම මේ login එකෙන් එන්න පුළුවන්.</p>' +
+    '<input id="gateName" type="text" autocomplete="name" placeholder="Your name">' +
+    '<input id="gatePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="WhatsApp number (e.g. 0771234567)">' +
+    '<input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">' +
+    '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username (a-z, 0-9)">' +
+    '<input id="gatePass" type="password" autocomplete="new-password" placeholder="Password (අවම අකුරු 6)">' +
+    '<input id="gatePass2" type="password" autocomplete="new-password" placeholder="Password again">' +
+    '<button id="gateSend" class="gateBtn">Register</button>' +
+    '<div id="gateErr" class="gateErr"></div>' +
+    '<button id="gateBack" class="gateBtnLink">Back to login</button>');
+  document.getElementById("gateSend").addEventListener("click", submitRegister);
+  document.getElementById("gateBack").addEventListener("click", function () { showLogin(); });
+  gateEnter(submitRegister);
 }
 
 function submitRegister() {
   const name  = (document.getElementById("gateName").value || "").trim();
   const phone = (document.getElementById("gatePhone").value || "").trim();
   const email = (document.getElementById("gateEmail").value || "").trim();
+  const user  = (document.getElementById("gateUser").value || "").trim().toLowerCase();
+  const pass  = document.getElementById("gatePass").value || "";
+  const pass2 = document.getElementById("gatePass2").value || "";
   const err   = document.getElementById("gateErr");
   const btn   = document.getElementById("gateSend");
 
   if (!name)  { err.textContent = "ඔයාගේ නම දාන්න."; return; }
   if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "හරි WhatsApp number එකක් දාන්න."; return; }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
+  if (!/^[a-z0-9._-]{3,30}$/.test(user)) { err.textContent = "Username: අකුරු 3–30 (a-z, 0-9, . _ -)."; return; }
+  if (pass.length < 6) { err.textContent = "Password එකට අවම අකුරු 6ක් ඕනේ."; return; }
+  if (pass !== pass2) { err.textContent = "Passwords දෙක සමාන නෑ."; return; }
 
   err.textContent = "";
   btn.disabled = true;
   btn.textContent = "Sending…";
 
-  api("register", [phone, name, email])
-    .then(function (data) {
-      setIdentity(name, (data && data.phone) || phone, email.toLowerCase());
-      lsSet("mastercal_registered", "1");
-      const status = (data && data.status) || "PENDING";
-      if (status === "APPROVED") loadApp();
-      else showGate(status);
+  api("register", [phone, name, email, user, pass])
+    .then(function () {
+      lsSet("mastercal_username", user);
+      showGate("PENDING");
     })
     .catch(function (e) {
       btn.disabled = false;
-      btn.textContent = "Request Access";
-      if (e.access === "BLOCKED") { setIdentity(name, phone, email.toLowerCase()); showGate("BLOCKED"); return; }
+      btn.textContent = "Register";
+      if (e.access === "BLOCKED") { showGate("BLOCKED"); return; }
       err.textContent = e.message || "Request එක යවන්න බැරි වුණා.";
     });
 }
 
-/* Forget the stored number and go back to the register screen. */
-function switchNumber() {
-  lsSet("mastercal_registered", "");
-  setIdentity(getName(), "", getEmail());
-  showRegister();
-}
-
 function showGate(status) {
-  const g = gateEl(); if (!g) return;
-  g.style.display = "flex";
-
-  if (status === "NO_EMAIL" || status === "NO_PHONE") { showRegister(); return; }
+  if (status === "LOGIN") { setToken(""); showLogin("නැවත login වෙන්න."); return; }
 
   if (status === "BLOCKED") {
-    gateBody().innerHTML =
+    setToken("");
+    gateShow(
       '<h2>Access Denied</h2>' +
       '<p>ඔයාගේ access එක block කරලා. Admin එක්ක කතා කරන්න.</p>' +
-      '<div class="gateMuted">' + escapeHtml(getPhone()) + '</div>';
+      '<div class="gateMuted">' + escapeHtml(getUsername()) + '</div>' +
+      '<button id="gateBack" class="gateBtnLink">Back to login</button>');
+    document.getElementById("gateBack").addEventListener("click", function () { showLogin(); });
     return;
   }
 
   /* PENDING (default) */
-  gateBody().innerHTML =
+  setToken("");
+  gateShow(
     '<h2>Approval Pending ⏳</h2>' +
     '<p>ඔයාගේ request එක admin approval එකට යවලා.<br>' +
-    'Approve වුණාට පස්සේ පහළ button එක click කරන්න.</p>' +
-    '<div class="gateMuted">' + escapeHtml(getPhone()) + '</div>' +
-    '<button id="gateRetry" class="gateBtn">Check again</button>' +
-    '<button id="gateSwitch" class="gateBtnLink">Use a different number</button>';
-  document.getElementById("gateRetry").addEventListener("click", loadApp);
-  document.getElementById("gateSwitch").addEventListener("click", switchNumber);
+    'Approve වුණාට පස්සේ login වෙන්න.</p>' +
+    '<div class="gateMuted">' + escapeHtml(getUsername()) + '</div>' +
+    '<button id="gateRetry" class="gateBtn">Login</button>');
+  document.getElementById("gateRetry").addEventListener("click", function () { showLogin(); });
 }
 
 
@@ -1321,7 +1355,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   request: "requestPanel", matches: "matchesPanel" };
+                   newcall: "newcallPanel", matches: "matchesPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -1337,8 +1371,7 @@ function setupTabs() {
          Calculation inputs are cleared (re-clicking the open tab does nothing). */
       if (which === "threewheel" && !wasActive) load3W(true);
       if (which === "bike" && !wasActive) loadBike(true);
-      if (which === "request") openHubRequest();
-      if (which === "matches") openHubMatches();
+      if (HUB_TABS[which]) openHub(which);
     });
   });
 }
@@ -2004,44 +2037,43 @@ function setBikeValue(cell, value) {
 
 
 /* =========================================================
-   VEHICLEHUB TABS  (Request + Matches)
-   Both pages come from the VehicleHub site, which is served from the
-   same origin as MasterCAL (drcjayawardena.github.io), so they are
-   shown inside the app in an iframe. They load on first open only.
-     Request -> VehicleHub request.html (public buy/sell form)
-     Matches -> the VehicleHub app; it asks for its own login once per
-                browser tab, then this code switches it to Matches.
+   VEHICLEHUB TABS  (New Call + Matches)
+   Both open the VehicleHub app, which is served from the same origin as
+   MasterCAL (drcjayawardena.github.io), inside an iframe, loaded on first
+   open. VehicleHub logs in with the MasterCAL session (localStorage
+   "mastercal_token"), then this code switches it to the right view:
+     New Call -> VehicleHub "Add a new call"
+     Matches  -> VehicleHub Matches
 ========================================================= */
 
 const VEHICLEHUB_URL = "https://drcjayawardena.github.io/VehicleHUB/";
+const HUB_TABS = {
+  newcall: { frame: "newcallFrame", link: "newcallOpen", view: "newcall" },
+  matches: { frame: "matchesFrame", link: "matchesOpen", view: "matches" }
+};
+var hubTimers = {};
 
-function openHubRequest() {
-  const f = document.getElementById("requestFrame");
-  if (f && !f.getAttribute("src")) f.src = VEHICLEHUB_URL + "request.html";
-}
-
-var hubMatchesTimer = null;
-
-function openHubMatches() {
-  const f = document.getElementById("matchesFrame");
-  const a = document.getElementById("matchesOpen");
+function openHub(tab) {
+  const t = HUB_TABS[tab]; if (!t) return;
+  const f = document.getElementById(t.frame);
+  const a = document.getElementById(t.link);
   if (a) a.href = VEHICLEHUB_URL;
   if (!f) return;
   if (!f.getAttribute("src")) f.src = VEHICLEHUB_URL;
-  if (!hubMatchesTimer) hubMatchesTimer = setInterval(hubShowMatches, 500);
+  if (!hubTimers[tab]) hubTimers[tab] = setInterval(function () { hubShowView(t); }, 500);
 }
 
 /* Each time the VehicleHub app draws its menu (after loading, or after its
-   login), open its Matches view once. Clicking its other tabs still works. */
-function hubShowMatches() {
-  const f = document.getElementById("matchesFrame");
+   login), open the tab's view once. Clicking its other tabs still works. */
+function hubShowView(t) {
+  const f = document.getElementById(t.frame);
   let w, nav;
   try {
     w = f && f.contentWindow;
     nav = w && w.document.getElementById("nav");
   } catch (e) { return; }                     /* not same-origin (should not happen) */
-  if (!nav || nav.dataset.mcMatches === "1") return;
+  if (!nav || nav.dataset.mcView === "1") return;
   if (typeof w.go !== "function") return;
-  nav.dataset.mcMatches = "1";
-  try { w.go("matches"); } catch (e) { console.error("VehicleHub matches:", e); }
+  nav.dataset.mcView = "1";
+  try { w.go(t.view); } catch (e) { console.error("VehicleHub " + t.view + ":", e); }
 }

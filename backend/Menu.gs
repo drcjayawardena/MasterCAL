@@ -7,6 +7,7 @@ function onOpen() {
     .createMenu("⚙️ MasterCAL Admin")
     .addItem("✅ Approve a user", "menuApproveUser_")
     .addItem("⛔ Block a user", "menuBlockUser_")
+    .addItem("🔑 Reset a user's login", "menuResetLogin_")
     .addItem("👥 Pending users", "menuPendingCount_")
     .addItem("📋 Approved users list", "menuApprovedList_")
     .addItem("✉️ Test notification email", "menuTestEmail_")

@@ -3,7 +3,8 @@
  * Access.gs — user approval / allowlist
  *
  * A "USERS" tab in the MASTER sheet holds:
- *   User (wa:<number>) | Name | Status | Requested | Approved | Phone | Verified | Email
+ *   User (wa:<number>) | Name | Status | Requested | Approved | Phone | Verified | Email | Username | Password
+ * (Password holds a salted hash only — see Login.gs.)
  * Status is one of: PENDING / APPROVED / BLOCKED
  *
  * New users register with their name + WhatsApp number (Register.gs).
@@ -24,9 +25,6 @@ function phoneKey_(p) {
   const d = normPhone_(/^wa:/i.test(s) ? s.slice(3) : s);   /* normPhone_ lives in Register.gs */
   return (d.length >= 10 && d.length <= 15) ? "wa:" + d : "";
 }
-
-/* The identity key of a request ({ phone } from the PWA). */
-function userKey_(src) { return phoneKey_(src && src.phone); }
 
 /* "wa:94771234567" -> "+94771234567" for display. */
 function keyToPhone_(key) {
@@ -58,9 +56,9 @@ function getUsersSheet_() {
   let s = ss.getSheetByName(USERS_SHEET);
   if (!s) {
     s = ss.insertSheet(USERS_SHEET);
-    s.appendRow(["User (wa:number)", "Name", "Status", "Requested", "Approved", "Phone", "Verified", "Email"]);
+    s.appendRow(["User (wa:number)", "Name", "Status", "Requested", "Approved", "Phone", "Verified", "Email", "Username", "Password"]);
     s.setFrozenRows(1);
-    s.getRange("A1:H1").setFontWeight("bold");
+    s.getRange("A1:J1").setFontWeight("bold");
   }
   return s;
 }

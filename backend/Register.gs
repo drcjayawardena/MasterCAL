@@ -1,18 +1,17 @@
 /******************************************************
  * MasterCAL Pro
- * Register.gs — sign-up with name + WhatsApp number (no OTP)
+ * Register.gs — sign-up with name + WhatsApp number + username + password
  *
  * Flow
- *   1) The user enters Name + WhatsApp number + e-mail in the app.
- *      The e-mail (any address) is a contact detail kept in USERS column H;
- *      the WhatsApp number is the identity.
- *   2) register  -> the user is written to USERS as PENDING
- *      (key "wa:<digits>", see phoneKey_ in Access.gs) and the
- *      owner gets the approval e-mail (APPROVE / REJECT buttons).
- *   3) The owner approves -> the user can use the app.
+ *   1) The user enters Name, WhatsApp number, e-mail, username and password.
+ *      The username + password (Login.gs) is the one login for MasterCAL and
+ *      VehicleHUB; the WhatsApp number keys the USERS row and the user's copy.
+ *   2) register  -> the user is written to USERS as PENDING and the owner
+ *      gets the approval e-mail (APPROVE / REJECT buttons).
+ *   3) The owner approves -> the user can log in.
  *
- * No code is sent: the number and e-mail are NOT verified. The owner's approval
- * is the only check, so look at the name + number before approving.
+ * The number and e-mail are NOT verified. The owner's approval is the check,
+ * so look at the name + number before approving.
  *
  * This action is PUBLIC — it runs BEFORE the approval gate in Api.gs
  * (a brand-new user is not APPROVED yet).
@@ -34,34 +33,45 @@ function normPhone_(raw) {
 
 
 /* =========================================================
-   PUBLIC ACTION — request access     args = [ phone, name, email ]
-   Returns { ok, data: { status, phone, name } }
-   status: PENDING (waiting for the owner) | APPROVED | BLOCKED
+   PUBLIC ACTION — request access
+   args = [ phone, name, email, username, password ]
+   Returns { ok, data: { status, phone, name, username } }
+   status: PENDING (waiting for the owner)
 ========================================================= */
 function register_(args) {
   args = args || [];
-  var key  = phoneKey_(args[0]);
-  var name = String(args[1] || "").trim().slice(0, 80);
-  var mail = normEmail_(args[2]).slice(0, 120);
+  var key   = phoneKey_(args[0]);
+  var name  = String(args[1] || "").trim().slice(0, 80);
+  var mail  = normEmail_(args[2]).slice(0, 120);
+  var uname = normUsername_(args[3]);
+  var pass  = String(args[4] || "");
 
   if (!key)  return { ok: false, error: "Enter a valid WhatsApp number." };
   if (!name) return { ok: false, error: "Enter your name." };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return { ok: false, error: "Enter a valid e-mail address." };
+  if (!validUsername_(uname)) return { ok: false, error: "Username: අකුරු 3–30 (a-z, 0-9, . _ -)." };
+  if (pass.length < 6 || pass.length > 100) return { ok: false, error: "Password එකට අවම අකුරු 6ක් ඕනේ." };
 
-  var status = registerUser_(key, name, mail);
+  var status = registerUser_(key, name, mail, uname, hashPassword_(pass));
   if (status === "BLOCKED") return { ok: false, access: "BLOCKED", error: "This account is blocked." };
-  return { ok: true, data: { status: status, phone: key.slice(3), name: name } };
+  if (status === "USERNAME_TAKEN") return { ok: false, error: "ඒ username එක වෙන කෙනෙක් ගත්තා. වෙන එකක් දාන්න." };
+  if (status === "HAS_LOGIN") return { ok: false, error: "මේ number එකට දැනටමත් login එකක් තියෙනවා. Login වෙන්න, නැත්නම් admin ගෙන් reset කරගන්න." };
+  return { ok: true, data: { status: status, phone: key.slice(3), name: name, username: uname } };
 }
 
 
-/* Write the user to USERS (or update the name / e-mail of a still-PENDING row).
-   New row  -> PENDING + owner e-mail.
-   Existing -> status unchanged (APPROVED stays APPROVED, BLOCKED stays BLOCKED);
-               the owner is e-mailed again only if the row is still PENDING and
-               the last e-mail is older than REGISTER_RENOTIFY_MS (no inbox flooding). */
+/* Write the user's request to USERS.
+   New number          -> new PENDING row + owner e-mail.
+   Number without login (users from before passwords, or after an admin reset)
+                       -> username + password saved and the row goes to PENDING,
+                          so the owner approves again: knowing someone's number
+                          is not enough to take over their account.
+   Number with a login -> HAS_LOGIN (nothing changes).
+   A still-PENDING row e-mails the owner again only if the last e-mail is older
+   than REGISTER_RENOTIFY_MS (no inbox flooding). */
 const REGISTER_RENOTIFY_MS = 6 * 60 * 60 * 1000;   /* 6 hours */
 
-function registerUser_(key, name, mail) {
+function registerUser_(key, name, mail, uname, passHash) {
   key = normEmail_(key);
   var s = getUsersSheet_();
   ensureUsersColumns_(s);
@@ -72,41 +82,44 @@ function registerUser_(key, name, mail) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
-    var data = usersData_(s);
+    var data = usersRows_(s);
+    var taken = findUsername_(data, uname);
+    if (taken > 0 && normEmail_(data[taken][0]) !== key) return "USERNAME_TAKEN";
+
     for (var i = 1; i < data.length; i++) {
       if (normEmail_(data[i][0]) !== key) continue;
       var cur = String(data[i][2] || "PENDING").trim().toUpperCase();
       if (cur === "BLOCKED") return "BLOCKED";
-      if (cur === "PENDING") {
-        /* only a request that is still waiting may change its details: nobody can overwrite
-           an APPROVED user's name / e-mail just by typing that user's number */
-        if (name) s.getRange(i + 1, 2).setValue(name);
-        if (mail) s.getRange(i + 1, 8).setValue(mail);
-        var last = data[i][3] instanceof Date ? data[i][3].getTime() : 0;   /* Requested */
-        if (Date.now() - last > REGISTER_RENOTIFY_MS) {
-          s.getRange(i + 1, 4).setValue(now);
-          notify = true;
-        }
+      if (String(data[i][PASS_COL - 1] || "")) return "HAS_LOGIN";
+      s.getRange(i + 1, 2).setValue(name);
+      s.getRange(i + 1, 8).setValue(mail);
+      s.getRange(i + 1, USER_COL, 1, 2).setValues([[uname, passHash]]);
+      var last = data[i][3] instanceof Date ? data[i][3].getTime() : 0;   /* Requested */
+      if (cur !== "PENDING" || Date.now() - last > REGISTER_RENOTIFY_MS) {
+        s.getRange(i + 1, 3, 1, 2).setValues([["PENDING", now]]);
+        notify = true;
       }
-      if (notify) { try { notifyOwner_(key, name, keyToPhone_(key), "REQUEST", mail); } catch (e) {} }
-      return cur;
+      accessCacheClear_(key);
+      break;
     }
-    /* New row. */
-    s.appendRow([key, name || "", "PENDING", now, "", phone, "", mail || ""]);
+    if (i >= data.length) {
+      s.appendRow([key, name || "", "PENDING", now, "", phone, "", mail || "", uname, passHash]);
+      notify = true;
+    }
   } finally {
     lock.releaseLock();
   }
 
-  try { notifyOwner_(key, name, keyToPhone_(key), "REQUEST", mail); } catch (e) {}
+  if (notify) { try { notifyOwner_(key, name + " (username: " + uname + ")", keyToPhone_(key), "REQUEST", mail); } catch (e) {} }
   return "PENDING";
 }
 
-/* Make sure the USERS sheet has Phone (col 6), Verified (col 7) & Email (col 8) headers.
+/* Make sure the USERS sheet has Phone (6), Verified (7), Email (8), Username (9) & Password (10) headers.
    Cosmetic only: if a header cell cannot be written (e.g. it is protected) registration
    still goes ahead and the reason is written to Executions -> Logs. */
 function ensureUsersColumns_(s) {
-  var want = { 6: "Phone", 7: "Verified", 8: "Email" };
-  var h = s.getRange(1, 1, 1, 8).getValues()[0];
+  var want = { 6: "Phone", 7: "Verified", 8: "Email", 9: "Username", 10: "Password" };
+  var h = s.getRange(1, 1, 1, 10).getValues()[0];
   Object.keys(want).forEach(function (col) {
     if (String(h[col - 1] || "") === want[col]) return;
     try { s.getRange(1, Number(col)).setValue(want[col]).setFontWeight("bold"); }

@@ -2,9 +2,9 @@
  * MasterCAL Pro
  * Api.gs  (v3 — per-user API + email approval)
  *
- * PWA sends { action, args, phone, name, userId }.
- *   1. Access is checked against the USERS sheet.
- *      Only APPROVED WhatsApp numbers may use the app.
+ * PWA sends { action, args, token }.
+ *   1. The token comes from logging in with username + password
+ *      (Login.gs); only APPROVED users get one and may use the app.
  *   2. Each APPROVED user is routed to their OWN copy
  *      of the spreadsheet (keyed by "wa:<number>").
  *
@@ -22,16 +22,17 @@ function doPost(e) {
     /* 0) PUBLIC action — registration runs BEFORE the approval gate,
           because a brand-new user is not APPROVED yet. */
     if (action === "register")            return json_(register_(body.args || []));
+    if (action === "login")               return json_(login_(body.args || []));
+    if (action === "whoami")              return json_(whoami_(body.args || []));   /* VehicleHUB's server */
 
-    /* 1) approval gate */
-    const key = userKey_(body);
-    const access = checkAccessFast_(key, body.name);
+    /* 1) login + approval gate */
+    const access = tokenAccess_(body.token);
     if (access.status !== "APPROVED") {
       return json_({ ok: false, access: access.status, error: "Access " + access.status });
     }
 
     /* 2) route to this user's own copy (keyed by "wa:<number>") */
-    setUserContext_(key);
+    setUserContext_(access.who.key);
     return json_({ ok: true, data: dispatch_(action, body.args || []) });
   } catch (err) {
     return json_({ ok: false, error: errMsg_(err) });
@@ -53,12 +54,11 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.TEXT);
   }
   try {
-    const key = userKey_(e.parameter);
-    const access = checkAccessFast_(key, e.parameter.name);
+    const access = tokenAccess_(e.parameter.token);
     if (access.status !== "APPROVED") {
       return json_({ ok: false, access: access.status, error: "Access " + access.status });
     }
-    setUserContext_(key);
+    setUserContext_(access.who.key);
     const args = e.parameter.args ? JSON.parse(e.parameter.args) : [];
     return json_({ ok: true, data: dispatch_(action, args) });
   } catch (err) {
