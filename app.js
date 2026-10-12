@@ -303,13 +303,6 @@ function submitRegister() {
     });
 }
 
-/* Forget the session (MasterCAL and the VehicleHUB tabs) and go back to login. */
-function logout() {
-  setToken("");
-  try { sessionStorage.removeItem("vm_token"); } catch (e) {}
-  location.reload();
-}
-
 function showGate(status) {
   if (status === "LOGIN") { setToken(""); showLogin("නැවත login වෙන්න."); return; }
 
