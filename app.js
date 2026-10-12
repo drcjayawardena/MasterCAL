@@ -69,7 +69,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle");   /* show the calculating spinner for calc actions */
   if (VEHICLE_WRITE_ACTIONS[action]) calcLastKey = "";   /* server state changes -> next calcInputs must really run */
   if (isCalc) calcStart();
 
@@ -1355,7 +1355,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   newcall: "newcallPanel" };
+                   vcheck: "vcheckPanel", newcall: "newcallPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -1372,6 +1372,7 @@ function setupTabs() {
       if (which === "threewheel" && !wasActive) load3W(true);
       if (which === "bike" && !wasActive) loadBike(true);
       if (HUB_TABS[which]) openHub(which);
+      if (which === "vcheck") setupVehicleCheck();
     });
   });
 }
@@ -2074,4 +2075,75 @@ function hubShowView(t) {
   if (typeof w.go !== "function") return;
   nav.dataset.mcView = "1";
   try { w.go(t.view); } catch (e) { console.error("VehicleHub " + t.view + ":", e); }
+}
+
+
+/* =========================================================
+   VEHICLE CHECKING TAB
+   Make + model + year -> the server (backend/VehicleCheck.gs) reads the
+   matching ads on ikman.lk and riyasewana.com and returns a price summary
+   and the ads. riyasewana.com may refuse the server; then only a link to
+   the same search is shown.
+========================================================= */
+
+var vc_ready = false;
+
+function setupVehicleCheck() {
+  if (vc_ready) return;
+  vc_ready = true;
+  document.getElementById("vcForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    runVehicleCheck();
+  });
+}
+
+function vcRs(n) { return n ? "Rs " + Number(n).toLocaleString("en-US") : "-"; }
+
+function runVehicleCheck() {
+  const make  = document.getElementById("vcMake").value.trim();
+  const model = document.getElementById("vcModel").value.trim();
+  const year  = document.getElementById("vcYear").value.trim();
+  const out = document.getElementById("vcOut");
+  const btn = document.getElementById("vcGo");
+  if (!make || !model) { out.innerHTML = '<p class="vcErr">Make සහ model දාන්න.</p>'; return; }
+
+  btn.disabled = true;
+  btn.textContent = "Checking…";
+  out.innerHTML = '<p class="vcHint">ikman.lk සහ riyasewana.com බලනවා…</p>';
+
+  api("checkVehicle", [make, model, year])
+    .then(function (r) {
+      out.innerHTML = vcSiteHtml(r.ikman, "ikman.lk") + vcSiteHtml(r.riyasewana, "riyasewana.com");
+    })
+    .catch(function (e) {
+      if (e.access) { showGate(e.access); return; }
+      out.innerHTML = '<p class="vcErr">' + escapeHtml(e.message || "Check කරන්න බැරි වුණා.") + '</p>';
+    })
+    .then(function () { btn.disabled = false; btn.textContent = "Check"; });
+}
+
+function vcSiteHtml(r, name) {
+  r = r || { ads: [] };
+  const link = r.searchUrl
+    ? ' <a href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">' + escapeHtml(name) + ' එකේ බලන්න ↗</a>' : "";
+  let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
+
+  if (r.blocked) {
+    return h + '<p class="vcHint">' + escapeHtml(name) + ' එක අපේ server එකට data දෙන්නේ නෑ. උඩ link එකෙන් ඒ search එකම open කරලා බලන්න.</p></section>';
+  }
+  if (r.error) return h + '<p class="vcErr">' + escapeHtml(r.error) + '</p></section>';
+  if (!r.ads.length) return h + '<p class="vcHint">ගැළපෙන ads හම්බ වුණේ නෑ.</p></section>';
+
+  const s = r.summary || {};
+  h += '<div class="vcStats">' +
+    '<div><b>' + s.count + '</b><span>Ads</span></div>' +
+    '<div><b>' + vcRs(s.min) + '</b><span>අඩුම මිල</span></div>' +
+    '<div><b>' + vcRs(s.median) + '</b><span>මැද මිල</span></div>' +
+    '<div><b>' + vcRs(s.max) + '</b><span>වැඩිම මිල</span></div></div>';
+  h += '<ul class="vcAds">' + r.ads.map(function (a) {
+    return '<li><a href="' + escapeHtml(a.url) + '" target="_blank" rel="noopener">' + escapeHtml(a.title) + '</a>' +
+      '<span class="vcPrice">' + escapeHtml(a.price || "-") + '</span>' +
+      '<span class="vcMeta">' + escapeHtml([a.details, a.location, a.when].filter(Boolean).join(" · ")) + '</span></li>';
+  }).join("") + '</ul></section>';
+  return h;
 }
