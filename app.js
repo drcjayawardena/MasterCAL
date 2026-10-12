@@ -1355,7 +1355,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   newcall: "newcallPanel", matches: "matchesPanel" };
+                   newcall: "newcallPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -2037,19 +2037,17 @@ function setBikeValue(cell, value) {
 
 
 /* =========================================================
-   VEHICLEHUB TABS  (New Call + Matches)
-   Both open the VehicleHub app, which is served from the same origin as
+   VEHICLE HUB TAB
+   Opens the VehicleHub app, which is served from the same origin as
    MasterCAL (drcjayawardena.github.io), inside an iframe, loaded on first
    open. VehicleHub logs in with the MasterCAL session (localStorage
-   "mastercal_token"), then this code switches it to the right view:
-     New Call -> VehicleHub "Add a new call"
-     Matches  -> VehicleHub Matches
+   "mastercal_token"), then this code switches it to its "Add a new call"
+   view (its own menu still reaches Matches and the rest).
 ========================================================= */
 
 const VEHICLEHUB_URL = "https://drcjayawardena.github.io/VehicleHUB/";
 const HUB_TABS = {
-  newcall: { frame: "newcallFrame", link: "newcallOpen", view: "newcall" },
-  matches: { frame: "matchesFrame", link: "matchesOpen", view: "matches" }
+  newcall: { frame: "newcallFrame", link: "newcallOpen", view: "newcall" }
 };
 var hubTimers = {};
 
