@@ -2161,6 +2161,26 @@ const VC_YEARS = {
     "Splendor": [1994, 0] },
   "Yamaha": { "FZ": [2008, 0], "Fascino": [2015, 0], "Ray ZR": [2016, 0], "R15": [2008, 0] }
 };
+/* Common grades as sellers write them in ad titles. Models not listed have no
+   Grade choice (the Grade dropdown stays on "any grade"). */
+const VC_GRADES = {
+  "Toyota": { "Aqua": ["S", "G", "L", "X-Urban", "Crossover", "Z"], "Axio": ["X", "G", "Luxel", "Hybrid"],
+    "Allion": ["A15", "A18", "G"], "Premio": ["F", "G", "X", "EX"], "Prius": ["S", "G", "L", "A", "Touring"],
+    "Vitz": ["F", "U", "RS", "Jewela", "Safety"], "Yaris": ["X", "G", "Z", "Hybrid"], "C-HR": ["S", "G", "GT"],
+    "Corolla": ["Hybrid", "G", "X"], "Passo": ["X", "Moda"], "Raize": ["X", "G", "Z"], "Roomy": ["X", "G", "Custom"],
+    "Land Cruiser Prado": ["TX", "TZ"], "KDH": ["GL", "DX", "Super GL"] },
+  "Suzuki": { "Wagon R": ["FX", "FZ", "Hybrid"], "Alto": ["L", "S", "X", "800", "K10"], "Swift": ["RS", "XG", "XL", "Hybrid"],
+    "Spacia": ["Hybrid X", "Custom"], "Hustler": ["G", "X", "Turbo"], "Every": ["PA", "PC", "Join"] },
+  "Honda": { "Vezel": ["Hybrid", "Hybrid Z", "RS", "X", "Z", "e:HEV"], "Fit": ["13G", "15X", "Hybrid", "RS", "L", "Home"],
+    "Grace": ["Hybrid DX", "Hybrid LX", "Hybrid EX"], "Civic": ["EX", "LX", "Type R"], "Insight": ["G", "L", "EX"],
+    "Freed": ["G", "Hybrid", "Spike"], "Fit Shuttle": ["Hybrid", "Hybrid C"] },
+  "Nissan": { "Leaf": ["S", "X", "G", "e+"], "Note": ["e-Power", "X", "Medalist"], "Dayz": ["X", "S", "Highway Star"],
+    "X-Trail": ["20X", "Hybrid", "Mode Premier"], "March": ["S", "X", "Bolero"] },
+  "Mitsubishi": { "Outlander": ["PHEV", "G", "24G"], "Montero": ["Sport", "GLS"], "eK Wagon": ["E", "M", "G"] },
+  "Mazda": { "Axela": ["15S", "Hybrid", "20S"], "Demio": ["13C", "XD", "13S"] },
+  "Daihatsu": { "Mira": ["e:S", "X", "G"], "Move": ["X", "Custom"], "Tanto": ["X", "Custom"] },
+  "Perodua": { "Axia": ["E", "G", "SE", "AV"], "Bezza": ["G", "X", "AV"], "Myvi": ["G", "X", "H", "AV"] }
+};
 const VC_OTHER = "__other";
 const VC_FIRST_YEAR = 1990;
 
@@ -2201,6 +2221,15 @@ function setupVehicleCheck() {
   vcFill(makeSel, Object.keys(VC_MODELS).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Make තෝරන්න"]);
   vcFill(modelSel, [], ["", "මුලින් Make තෝරන්න"]);
   modelSel.disabled = true;
+  /* Grade depends on the model; disabled when we list no grades for it */
+  const gradeSel = document.getElementById("vcGrade");
+  const fillGrades = function () {
+    const g = (VC_GRADES[makeSel.value] || {})[modelSel.value] || [];
+    vcFill(gradeSel, g.map(vcPair), ["", g.length ? "ඕනෑම grade එකක්" : "Grade නෑ"]);
+    gradeSel.disabled = !g.length;
+  };
+  fillGrades();
+
   /* Year depends on the model: only the years that model was made */
   const fillYears = function () {
     if (!modelSel.value) {
@@ -2227,10 +2256,11 @@ function setupVehicleCheck() {
       if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
     }
     vcOtherToggle(modelSel, modelOther);
+    fillGrades();
     fillYears();
     if (m === VC_OTHER) makeOther.focus();
   });
-  modelSel.addEventListener("change", function () { vcOtherToggle(modelSel, modelOther); fillYears(); });
+  modelSel.addEventListener("change", function () { vcOtherToggle(modelSel, modelOther); fillGrades(); fillYears(); });
   document.getElementById("vcForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     runVehicleCheck();
@@ -2247,6 +2277,7 @@ function runVehicleCheck() {
   const make  = pick("vcMake");
   const model = pick("vcModel");
   const year  = document.getElementById("vcYear").value.trim();
+  const grade = document.getElementById("vcGrade").value.trim();
   const out = document.getElementById("vcOut");
   const btn = document.getElementById("vcGo");
   if (!make || !model) { out.innerHTML = '<p class="vcErr">Make සහ model දාන්න.</p>'; return; }
@@ -2255,7 +2286,7 @@ function runVehicleCheck() {
   btn.textContent = "Checking…";
   out.innerHTML = '<p class="vcHint">ikman.lk සහ riyasewana.com බලනවා…</p>';
 
-  api("checkVehicle", [make, model, year])
+  api("checkVehicle", [make, model, year, grade])
     .then(function (r) {
       out.innerHTML = vcSiteHtml(r.ikman, "ikman.lk") + vcSiteHtml(r.riyasewana, "riyasewana.com");
     })

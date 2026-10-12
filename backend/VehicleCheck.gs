@@ -2,7 +2,8 @@
  * MasterCAL Pro
  * VehicleCheck.gs — "Vehicle Checking" tab
  *
- * checkVehicle  args = [ make, model, year ]
+ * checkVehicle  args = [ make, model, year, grade? ]
+ * A grade (e.g. "S", "Hybrid Z") keeps only the ads whose title names it.
  * Looks up ads for that vehicle on ikman.lk and riyasewana.com and returns
  * a short summary (how many ads, lowest / middle / highest price) plus the
  * ads themselves, newest first as the sites list them.
@@ -17,22 +18,23 @@ const VC_CACHE_SECONDS = 1800;
 const VC_MAX_ADS = 25;
 const VC_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
-function checkVehicle_(make, model, year) {
+function checkVehicle_(make, model, year, grade) {
   make  = String(make  || "").trim().slice(0, 40);
   model = String(model || "").trim().slice(0, 40);
   year  = String(year  || "").trim();
+  grade = String(grade || "").trim().slice(0, 30);
   if (!make || !model) throw new Error("Make සහ model දාන්න.");
   if (year && !/^(19|20)\d\d$/.test(year)) throw new Error("හරි අවුරුද්දක් දාන්න (e.g. 2015).");
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc2_" + (make + "|" + model + "|" + year).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc3_" + (make + "|" + model + "|" + year + "|" + grade).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
-    make: make, model: model, year: year,
-    ikman: vcSafe_(function () { return vcIkman_(make, model, year); }),
-    riyasewana: vcSafe_(function () { return vcRiyasewana_(make, model, year); })
+    make: make, model: model, year: year, grade: grade,
+    ikman: vcGrade_(vcSafe_(function () { return vcIkman_(make, model, year); }), grade),
+    riyasewana: vcGrade_(vcSafe_(function () { return vcRiyasewana_(make, model, year); }), grade)
   };
   if (cache) { try { cache.put(ck, JSON.stringify(out), VC_CACHE_SECONDS); } catch (e) {} }
   return out;
@@ -61,6 +63,20 @@ function vcFits_(title, model, year) {
   const t = " " + String(title).toLowerCase().replace(/[^a-z0-9]+/g, " ") + " ";
   if (year && t.indexOf(" " + year + " ") < 0) return false;
   return vcSlug_(model).split("-").every(function (w) { return t.indexOf(w) >= 0; });
+}
+
+/* Keep only the ads whose title names the grade as whole words: "S" matches
+   "Aqua S Grade" and "Aqua S-Grade" but not the s inside "Prius". */
+function vcGrade_(r, grade) {
+  if (!grade || !r || !r.ads) return r;
+  const g = String(grade).toLowerCase().replace(/[^a-z0-9+]+/g, " ").trim();
+  if (!g) return r;
+  r.ads = r.ads.filter(function (a) {
+    const t = " " + String(a.title).toLowerCase().replace(/[^a-z0-9+]+/g, " ") + " ";
+    return t.indexOf(" " + g + " ") >= 0;
+  });
+  r.summary = vcSummary_(r.ads);
+  return r;
 }
 
 /* Count + lowest / middle / highest price of a list of ads. */
