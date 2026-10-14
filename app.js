@@ -70,7 +70,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init" && action !== "checkVehicle");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "whoami");   /* show the calculating spinner for calc actions */
   if (VEHICLE_WRITE_ACTIONS[action]) calcLastKey = "";   /* server state changes -> next calcInputs must really run */
   if (isCalc) calcStart();
 
@@ -238,7 +238,7 @@ function submitLogin() {
 
   api("login", [user, pass])
     .then(function (data) {
-      if (data && data.token) { setToken(data.token); lsSet("mastercal_name", data.name || ""); loadApp(); return; }
+      if (data && data.token) { setToken(data.token); lsSet("mastercal_name", data.name || ""); lsSet("mastercal_phone", data.phone || ""); loadApp(); return; }
       showGate((data && data.status) || "PENDING");
     })
     .catch(function (e) {
@@ -2339,7 +2339,35 @@ const WA_QUOTES = [
   { after: "bkGrid",         kind: "bk",      title: "Bike Lease" }
 ];
 
+/* Quotations are sent from a phone only (WhatsApp opens in the phone's app). */
+function isPhone() {
+  const ua = navigator.userAgent || "";
+  return /Android|iPhone|iPod|Mobile|Windows Phone/i.test(ua) ||
+         (/iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1 && window.matchMedia("(pointer: coarse)").matches);
+}
+
+/* Officer's name + mobile for the quotation: saved at login; older sessions ask the server once. */
+function loadOfficerInfo() {
+  if (lsGet("mastercal_name") && lsGet("mastercal_phone")) return;
+  const tok = getToken();
+  if (!tok) return;
+  api("whoami", [tok]).then(function (d) {
+    if (!d) return;
+    lsSet("mastercal_name", d.name || "");
+    lsSet("mastercal_phone", d.phone || "");
+  }).catch(function () {});
+}
+
+/* +94771234567 -> 077 123 4567 */
+function localPhone(p) {
+  let d = String(p || "").replace(/[^\d]/g, "");
+  if (d.indexOf("94") === 0 && d.length === 11) d = "0" + d.slice(2);
+  return d.length === 10 ? d.slice(0, 3) + " " + d.slice(3, 6) + " " + d.slice(6) : String(p || "");
+}
+
 function setupWhatsAppQuotes() {
+  if (!isPhone()) return;
+  loadOfficerInfo();
   WA_QUOTES.forEach(function (q) {
     const anchor = document.getElementById(q.after);
     if (!anchor || document.getElementById("waq_" + q.kind)) return;
@@ -2386,7 +2414,9 @@ function qFields(root) {
     const label = lab ? lab.textContent.replace(/\s+/g, " ").trim() : "";
     let val = qVal(f.querySelector("select, input"));
     if (/AMOUNT|FACILITY|INSURANCE/i.test(label) && qNum(val)) val = qMoney(val);
-    if (label && val && Q_FIELD_RE.test(label) && !Q_SKIP_RE.test(label)) out.push([label, val]);
+    if (!label || !val || !Q_FIELD_RE.test(label)) return;
+    if (/FACILITY/i.test(label)) { out.push(["FACILITY AMOUNT", val]); return; }   /* its label may carry the BIC */
+    if (!Q_SKIP_RE.test(label)) out.push([label.replace(/\s+-\s+.*$/, ""), val]);
   });
   return out;
 }
@@ -2401,7 +2431,7 @@ function qRows(table) {
     const sel = td[0].querySelector("select");
     const label = sel ? "RMV (" + qVal(sel) + ")" : qVal(td[0]);   /* the RMV rows are type dropdowns */
     const amount = qVal(td[1].querySelector("input") || td[1]);
-    if (label && qNum(amount)) out.push([label, amount]);
+    if (label && qNum(amount) && !/\bBIC\b/i.test(label)) out.push([label, amount]);   /* BIC is never shown */
   });
   return out;
 }
@@ -2444,8 +2474,8 @@ function quoteText(q) {
     d.charges.forEach(function (r) { t.push("- " + r[0] + ": " + r[1]); });
   }
   t.push("", "මෙය ඇස්තමේන්තුවක් පමණයි. වැඩි විස්තර සඳහා අමතන්න.");
-  const who = lsGet("mastercal_name");   /* officer's name, saved at login */
-  if (who) t.push("- " + who);
+  const who = lsGet("mastercal_name"), tel = lsGet("mastercal_phone");   /* the officer */
+  if (who || tel) t.push("", [who, tel ? localPhone(tel) : ""].filter(Boolean).join(" - "));
   return t.join("\n");
 }
 
