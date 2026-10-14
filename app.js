@@ -143,6 +143,7 @@ function init() {
   setupTwScheduleToggle();
   setupBkScheduleToggle();
   setupTabs();
+  setupWhatsAppQuotes();
 
   /* Gate: log in before doing anything. */
   if (!getToken()) { showLogin(); return; }
@@ -237,7 +238,7 @@ function submitLogin() {
 
   api("login", [user, pass])
     .then(function (data) {
-      if (data && data.token) { setToken(data.token); loadApp(); return; }
+      if (data && data.token) { setToken(data.token); lsSet("mastercal_name", data.name || ""); loadApp(); return; }
       showGate((data && data.status) || "PENDING");
     })
     .catch(function (e) {
@@ -2321,4 +2322,140 @@ function vcSiteHtml(r, name) {
       '<span class="vcMeta">' + escapeHtml([a.details, a.location, a.when].filter(Boolean).join(" · ")) + '</span></li>';
   }).join("") + '</ul></section>';
   return h;
+}
+
+
+/* =========================================================
+   SEND QUOTATION ON WHATSAPP
+   Each calculator (Vehicle Lease, Three-Wheel, Bike) gets a bar with the
+   customer's WhatsApp number and a button. The button opens WhatsApp
+   (wa.me) with the quotation typed in; the officer just presses Send.
+   No number -> WhatsApp asks which chat to send it to.
+========================================================= */
+
+const WA_QUOTES = [
+  { after: "chargesSection", kind: "vehicle", title: "Vehicle Lease" },
+  { after: "twGrid",         kind: "tw",      title: "Three-Wheel Lease" },
+  { after: "bkGrid",         kind: "bk",      title: "Bike Lease" }
+];
+
+function setupWhatsAppQuotes() {
+  WA_QUOTES.forEach(function (q) {
+    const anchor = document.getElementById(q.after);
+    if (!anchor || document.getElementById("waq_" + q.kind)) return;
+    const bar = document.createElement("div");
+    bar.className = "waQuote";
+    bar.innerHTML =
+      '<div class="waQuoteTitle">Quotation එක WhatsApp එකෙන් යවන්න</div>' +
+      '<div class="waQuoteRow">' +
+      '<input id="waq_' + q.kind + '" type="tel" inputmode="tel" placeholder="Customer WhatsApp (07XXXXXXXX)">' +
+      '<button type="button" class="waQuoteBtn">WhatsApp එකෙන් යවන්න</button></div>';
+    bar.querySelector("button").addEventListener("click", function () { sendQuoteWhatsApp(q); });
+    anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+  });
+}
+
+/* 0771234567 / +94 77 123 4567 -> 94771234567 ("" when blank or too short) */
+function waNumber(raw) {
+  let d = String(raw || "").replace(/[^\d]/g, "");
+  if (d.indexOf("00") === 0) d = d.slice(2);
+  if (d.length === 10 && d.charAt(0) === "0") d = "94" + d.slice(1);
+  if (d.length === 9) d = "94" + d;
+  return d.length >= 11 ? d : "";
+}
+
+/* the shown value of an input / select / text cell */
+function qVal(el) {
+  if (!el) return "";
+  if (el.tagName === "SELECT") return el.selectedIndex >= 0 ? el.options[el.selectedIndex].text.trim() : "";
+  if (el.tagName === "INPUT") return String(el.value || "").trim();
+  return String(el.textContent || "").trim();
+}
+
+function qNum(v) { return Number(String(v).replace(/[^\d.\-]/g, "")) || 0; }
+function qMoney(v) { return qNum(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+/* Customer-facing inputs of a 3W / bike card: vehicle, facility amount, period, insurance. */
+const Q_FIELD_RE = /MAKE|MODEL|YEAR|TYPE|FACILITY|AMOUNT|PERIOD|INSURANCE/i;
+const Q_SKIP_RE = /IRR|BIC|EXPOSURE|VALUATION/i;
+
+function qFields(root) {
+  const out = [];
+  root.querySelectorAll(".field").forEach(function (f) {
+    const lab = f.querySelector("label");
+    const label = lab ? lab.textContent.replace(/\s+/g, " ").trim() : "";
+    let val = qVal(f.querySelector("select, input"));
+    if (/AMOUNT|FACILITY|INSURANCE/i.test(label) && qNum(val)) val = qMoney(val);
+    if (label && val && Q_FIELD_RE.test(label) && !Q_SKIP_RE.test(label)) out.push([label, val]);
+  });
+  return out;
+}
+
+/* label/amount rows of a summary table, skipping zero amounts */
+function qRows(table) {
+  const out = [];
+  if (!table) return out;
+  table.querySelectorAll("tr").forEach(function (tr) {
+    const td = tr.querySelectorAll("td");
+    if (td.length < 2) return;
+    const sel = td[0].querySelector("select");
+    const label = sel ? "RMV (" + qVal(sel) + ")" : qVal(td[0]);   /* the RMV rows are type dropdowns */
+    const amount = qVal(td[1].querySelector("input") || td[1]);
+    if (label && qNum(amount)) out.push([label, amount]);
+  });
+  return out;
+}
+
+function quoteLines(kind) {
+  const L = [];
+  if (kind === "vehicle") {
+    [["Product", "productType"], ["Facility Amount", "facilityAmount"], ["Insurance", "insurance"],
+     ["Period (months)", "period"]].forEach(function (p) {
+      let v = qVal(document.getElementById(p[1]));
+      if (v && p[1] !== "period" && p[1] !== "productType" && qNum(v))
+        v = qMoney(v);
+      if (v) L.push([p[0], v]);
+    });
+    L.push(["Monthly Rental", qVal(document.getElementById("monthlyRental"))]);
+    if (qNum(qVal(document.getElementById("bulkAmount")))) {
+      L.push(["Residual Rental", qVal(document.getElementById("lastMonthRental"))]);
+      L.push(["Residual Value", qVal(document.getElementById("bulkAmount"))]);
+    }
+    return { main: L, total: qVal(document.getElementById("chargesTotal")), charges: qRows(document.getElementById("chargesBody")) };
+  }
+  const grid = document.getElementById(kind === "tw" ? "twGrid" : "bkGrid");
+  const cards = grid ? grid.querySelectorAll(".tw-card") : [];
+  if (!cards.length) return null;
+  qFields(cards[0]).concat(cards[1] ? qFields(cards[1]) : []).forEach(function (r) { L.push(r); });
+  L.push(["Monthly Rental", qVal(document.getElementById(kind + "_monthlyRental"))]);
+  return { main: L, total: qVal(document.getElementById(kind + "_chargesTotal")),
+           charges: cards[2] ? qRows(cards[2].querySelector("table")) : [] };
+}
+
+function quoteText(q) {
+  const d = quoteLines(q.kind);
+  if (!d) return "";
+  const t = ["ආයුබෝවන්,", "ඔබ ඉල්ලූ *" + q.title + "* quotation එක:", ""];
+  d.main.forEach(function (r) {
+    t.push(/Monthly Rental/.test(r[0]) ? "*Monthly Rental: " + r[1] + "*" : r[0] + ": " + r[1]);
+  });
+  if (qNum(d.total)) {
+    t.push("", "*Upfront Charges: " + d.total + "*");
+    d.charges.forEach(function (r) { t.push("- " + r[0] + ": " + r[1]); });
+  }
+  t.push("", "මෙය ඇස්තමේන්තුවක් පමණයි. වැඩි විස්තර සඳහා අමතන්න.");
+  const who = lsGet("mastercal_name");   /* officer's name, saved at login */
+  if (who) t.push("- " + who);
+  return t.join("\n");
+}
+
+function sendQuoteWhatsApp(q) {
+  const d = quoteLines(q.kind);
+  const rental = d && d.main.filter(function (r) { return /Monthly Rental/.test(r[0]); })[0];
+  if (!rental || !qNum(rental[1])) { alert("මුලින් calculation එක කරන්න (Monthly Rental එක 0යි)."); return; }
+  const box = document.getElementById("waq_" + q.kind);
+  const raw = box ? box.value : "";
+  const num = waNumber(raw);
+  if (String(raw).trim() && !num) { alert("හරි WhatsApp number එකක් දාන්න (e.g. 0771234567)."); return; }
+  window.open("https://wa.me/" + num + "?text=" + encodeURIComponent(quoteText(q)), "_blank", "noopener");
 }
