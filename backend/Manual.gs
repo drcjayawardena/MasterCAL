@@ -59,11 +59,15 @@ function manualInline_(s) {
   return escapeHtml_(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 }
 
+/* The officers' WhatsApp group ("VehicleHUB Team"); also written in the user_approved WhatsApp template. */
+const TEAM_GROUP_URL = "https://chat.whatsapp.com/GzYYI1SveTv5QoLZa7S1GK";
+
 function manualHtml_(name) {
   var h = '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#20323a;max-width:600px">' +
     '<h2 style="color:#1c5e3a;margin:0 0 6px">VehicleHUB User Manual</h2>' +
     '<p>ආයුබෝවන් ' + escapeHtml_(name || "") + ', ඔබේ MasterCAL account එක approve කළා ✅. ' +
-    'දැන් <a href="' + MANUAL_APP_URL + '">MasterCAL</a> සහ VehicleHUB දෙකටම ඔබේ username + password එකෙන් login වෙන්න පුළුවන්.</p>';
+    'දැන් <a href="' + MANUAL_APP_URL + '">MasterCAL</a> සහ VehicleHUB දෙකටම ඔබේ username + password එකෙන් login වෙන්න පුළුවන්.</p>' +
+    '<p>👥 Officers ලාගේ WhatsApp group එකට එකතු වෙන්න: <a href="' + TEAM_GROUP_URL + '">' + TEAM_GROUP_URL + '</a></p>';
   VH_MANUAL.forEach(function (sec) {
     h += '<h3 style="color:#1c5e3a;margin:20px 0 6px">' + escapeHtml_(sec[0]) + '</h3>';
     var list = "";
@@ -80,7 +84,8 @@ function manualHtml_(name) {
 
 function manualText_(name) {
   var t = "ආයුබෝවන් " + (name || "") + ", ඔබේ MasterCAL account එක approve කළා.\n" +
-    "MasterCAL සහ VehicleHUB දෙකටම ඔබේ username + password එකෙන් login වෙන්න පුළුවන්: " + MANUAL_APP_URL + "\n\n" +
+    "MasterCAL සහ VehicleHUB දෙකටම ඔබේ username + password එකෙන් login වෙන්න පුළුවන්: " + MANUAL_APP_URL + "\n" +
+    "Officers ලාගේ WhatsApp group එකට එකතු වෙන්න: " + TEAM_GROUP_URL + "\n\n" +
     "VEHICLEHUB USER MANUAL\n";
   VH_MANUAL.forEach(function (sec) {
     t += "\n" + sec[0] + "\n" + sec[1].map(function (l) { return l.replace(/\*\*/g, ""); }).join("\n") + "\n";

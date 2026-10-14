@@ -208,7 +208,11 @@ function handleEmailApproval_(action, email, token) {
       s.getRange(i + 1, 3).setValue(status);
       if (status === "APPROVED") s.getRange(i + 1, 5).setValue(new Date());
       accessCacheClear_(email);       /* after the sheet change, so nothing stale can be re-cached */
-      if (status === "APPROVED" && was !== "APPROVED") sendManualToRow_(s.getRange(i + 1, 1, 1, 8).getValues()[0]);   /* Manual.gs */
+      if (status === "APPROVED" && was !== "APPROVED") {
+        const row = s.getRange(i + 1, 1, 1, 8).getValues()[0];
+        sendManualToRow_(row);        /* Manual.gs */
+        sendApprovedWhatsApp_(row);   /* WhatsApp.gs */
+      }
       return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status, status === "APPROVED");
     }
   }
@@ -267,9 +271,12 @@ function menuApproveUser_() {
       s.getRange(i + 1, 3).setValue("APPROVED");
       s.getRange(i + 1, 5).setValue(new Date());
       accessCacheClear_(email);
-      const sent = was !== "APPROVED" && sendManualToRow_(s.getRange(i + 1, 1, 1, 8).getValues()[0]);   /* Manual.gs */
+      const row = s.getRange(i + 1, 1, 1, 8).getValues()[0];
+      const sent = was !== "APPROVED" && sendManualToRow_(row);       /* Manual.gs */
+      const wa = was !== "APPROVED" && sendApprovedWhatsApp_(row);    /* WhatsApp.gs */
       ui.alert("Approved ✅", keyToPhone_(email) + " approved." +
-        (sent ? "\nVehicleHUB user manual e-mailed." : ""), ui.ButtonSet.OK);
+        (sent ? "\nVehicleHUB user manual e-mailed." : "") +
+        (wa ? "\nWhatsApp message sent." : ""), ui.ButtonSet.OK);
       return;
     }
   }
