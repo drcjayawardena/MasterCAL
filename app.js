@@ -614,8 +614,11 @@ function showOutputs(result) {
                    false -> it is hidden while the amount is 0 */
 var CAP_SHOW_ZERO = true;
 
+var lastCapAmounts = null;   /* [BIC, insurance, stamp duty] capitalized amounts, for the quotation */
+
 function applyCapAmounts(amounts) {
   if (!amounts) return;
+  lastCapAmounts = amounts;
   var map = { lblBic: amounts[0], lblInsurance: amounts[1], lblStampDuty: amounts[2] };
   Object.keys(map).forEach(function (id) {
     var el = document.getElementById(id);
@@ -2346,9 +2349,9 @@ function isPhone() {
          (/iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1 && window.matchMedia("(pointer: coarse)").matches);
 }
 
-/* Officer's name + mobile for the quotation: saved at login; older sessions ask the server once. */
+/* Officer's mobile for the quotation: saved at login; older sessions ask the server once. */
 function loadOfficerInfo() {
-  if (lsGet("mastercal_name") && lsGet("mastercal_phone")) return;
+  if (lsGet("mastercal_phone")) return;
   const tok = getToken();
   if (!tok) return;
   api("whoami", [tok]).then(function (d) {
@@ -2403,86 +2406,56 @@ function qVal(el) {
 function qNum(v) { return Number(String(v).replace(/[^\d.\-]/g, "")) || 0; }
 function qMoney(v) { return qNum(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
-/* Customer-facing inputs of a 3W / bike card: vehicle, facility amount, period, insurance. */
-const Q_FIELD_RE = /MAKE|MODEL|YEAR|TYPE|FACILITY|AMOUNT|PERIOD|INSURANCE/i;
-const Q_SKIP_RE = /IRR|BIC|EXPOSURE|VALUATION/i;
 
-function qFields(root) {
-  const out = [];
-  root.querySelectorAll(".field").forEach(function (f) {
-    const lab = f.querySelector("label");
-    const label = lab ? lab.textContent.replace(/\s+/g, " ").trim() : "";
-    let val = qVal(f.querySelector("select, input"));
-    if (/AMOUNT|FACILITY|INSURANCE/i.test(label) && qNum(val)) val = qMoney(val);
-    if (!label || !val || !Q_FIELD_RE.test(label)) return;
-    if (/FACILITY/i.test(label)) { out.push(["FACILITY AMOUNT", val]); return; }   /* its label may carry the BIC */
-    if (!Q_SKIP_RE.test(label)) out.push([label.replace(/\s+-\s+.*$/, ""), val]);
-  });
-  return out;
-}
 
-/* label/amount rows of a summary table, skipping zero amounts */
-function qRows(table) {
-  const out = [];
-  if (!table) return out;
-  table.querySelectorAll("tr").forEach(function (tr) {
-    const td = tr.querySelectorAll("td");
-    if (td.length < 2) return;
-    const sel = td[0].querySelector("select");
-    const label = sel ? "RMV (" + qVal(sel) + ")" : qVal(td[0]);   /* the RMV rows are type dropdowns */
-    const amount = qVal(td[1].querySelector("input") || td[1]);
-    if (label && qNum(amount) && !/\bBIC\b/i.test(label)) out.push([label, amount]);   /* BIC is never shown */
-  });
-  return out;
-}
-
+/* The quotation, in the layout the owner gave:
+     Facility Amount, Capitalized Insurance, Capitalized StampDuty, Period,
+     *Monthly Rental*, *Upfront Charges* (total only), then the officer's number.
+   BIC is never shown. */
 function quoteLines(kind) {
   const L = [];
+  let rental, total;
   if (kind === "vehicle") {
-    [["Product", "productType"], ["Facility Amount", "facilityAmount"], ["Insurance", "insurance"],
-     ["Period (months)", "period"]].forEach(function (p) {
-      let v = qVal(document.getElementById(p[1]));
-      if (v && p[1] !== "period" && p[1] !== "productType" && qNum(v))
-        v = qMoney(v);
-      if (v) L.push([p[0], v]);
+    const fa = qVal(document.getElementById("facilityAmount"));
+    if (qNum(fa)) L.push(["Facility Amount", qMoney(fa)]);
+    const cap = lastCapAmounts || [];
+    if (nonZeroAmt(cap[1])) L.push(["Capitalized Insurance", qMoney(cap[1])]);
+    if (nonZeroAmt(cap[2])) L.push(["Capitalized StampDuty", qMoney(cap[2])]);
+    const per = qVal(document.getElementById("period"));
+    if (per) L.push(["Period (months)", per]);
+    rental = qVal(document.getElementById("monthlyRental"));
+    total = qVal(document.getElementById("chargesTotal"));
+  } else {
+    const grid = document.getElementById(kind === "tw" ? "twGrid" : "bkGrid");
+    if (!grid || !grid.querySelector(".tw-card")) return null;
+    grid.querySelectorAll(".field").forEach(function (f) {
+      const lab = f.querySelector("label");
+      const label = lab ? lab.textContent.replace(/\s+/g, " ").trim() : "";
+      const val = qVal(f.querySelector("select, input"));
+      if (/FACILITY/i.test(label) && qNum(val)) L.push(["Facility Amount", qMoney(val)]);
+      if (/^PERIOD/i.test(label) && val) L.push(["Period (months)", val]);
     });
-    L.push(["Monthly Rental", qVal(document.getElementById("monthlyRental"))]);
-    if (qNum(qVal(document.getElementById("bulkAmount")))) {
-      L.push(["Residual Rental", qVal(document.getElementById("lastMonthRental"))]);
-      L.push(["Residual Value", qVal(document.getElementById("bulkAmount"))]);
-    }
-    return { main: L, total: qVal(document.getElementById("chargesTotal")), charges: qRows(document.getElementById("chargesBody")) };
+    rental = qVal(document.getElementById(kind + "_monthlyRental"));
+    total = qVal(document.getElementById(kind + "_chargesTotal"));
   }
-  const grid = document.getElementById(kind === "tw" ? "twGrid" : "bkGrid");
-  const cards = grid ? grid.querySelectorAll(".tw-card") : [];
-  if (!cards.length) return null;
-  qFields(cards[0]).concat(cards[1] ? qFields(cards[1]) : []).forEach(function (r) { L.push(r); });
-  L.push(["Monthly Rental", qVal(document.getElementById(kind + "_monthlyRental"))]);
-  return { main: L, total: qVal(document.getElementById(kind + "_chargesTotal")),
-           charges: cards[2] ? qRows(cards[2].querySelector("table")) : [] };
+  return { main: L, rental: rental, total: total };
 }
 
 function quoteText(q) {
   const d = quoteLines(q.kind);
   if (!d) return "";
   const t = ["ආයුබෝවන්,", "ඔබ ඉල්ලූ *" + q.title + "* quotation එක:", ""];
-  d.main.forEach(function (r) {
-    t.push(/Monthly Rental/.test(r[0]) ? "*Monthly Rental: " + r[1] + "*" : r[0] + ": " + r[1]);
-  });
-  if (qNum(d.total)) {
-    t.push("", "*Upfront Charges: " + d.total + "*");
-    d.charges.forEach(function (r) { t.push("- " + r[0] + ": " + r[1]); });
-  }
-  t.push("", "මෙය ඇස්තමේන්තුවක් පමණයි. වැඩි විස්තර සඳහා අමතන්න.");
-  const who = lsGet("mastercal_name"), tel = lsGet("mastercal_phone");   /* the officer */
-  if (who || tel) t.push("", [who, tel ? localPhone(tel) : ""].filter(Boolean).join(" - "));
+  d.main.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
+  t.push("", "*Monthly Rental: " + d.rental + "*");
+  if (qNum(d.total)) t.push("", "*Upfront Charges: " + d.total + "*");
+  const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
+  t.push("", "මෙය ඇස්තමේන්තුවක් පමණයි. වැඩි විස්තර සඳහා අමතන්න." + (tel ? " (" + localPhone(tel) + ")" : ""));
   return t.join("\n");
 }
 
 function sendQuoteWhatsApp(q) {
   const d = quoteLines(q.kind);
-  const rental = d && d.main.filter(function (r) { return /Monthly Rental/.test(r[0]); })[0];
-  if (!rental || !qNum(rental[1])) { alert("මුලින් calculation එක කරන්න (Monthly Rental එක 0යි)."); return; }
+  if (!d || !qNum(d.rental)) { alert("මුලින් calculation එක කරන්න (Monthly Rental එක 0යි)."); return; }
   const box = document.getElementById("waq_" + q.kind);
   const raw = box ? box.value : "";
   const num = waNumber(raw);
