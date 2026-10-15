@@ -2399,10 +2399,28 @@ function setupWhatsAppQuotes() {
       '<div class="waQuoteTitle">Quotation එක WhatsApp එකෙන් යවන්න</div>' +
       '<div class="waQuoteRow">' +
       '<input id="waq_' + q.kind + '" type="tel" inputmode="tel" placeholder="Customer WhatsApp (07XXXXXXXX)">' +
-      '<button type="button" class="waQuoteBtn">WhatsApp එකෙන් යවන්න</button></div>';
-    bar.querySelector("button").addEventListener("click", function () { sendQuoteWhatsApp(q); });
+      (canPickContact() ? '<button type="button" class="waQuotePick" aria-label="Contacts">📇 Contacts</button>' : '') +
+      '<button type="button" class="waQuoteBtn">WhatsApp එකෙන් යවන්න</button></div>' +
+      (canPickContact() ? '' : '<div class="waQuoteHint">Number එක හිස්ව තියලා button එක ඔබන්න — WhatsApp එකේ contact එක තෝරන්න පුළුවන්.</div>');
+    bar.querySelector(".waQuoteBtn").addEventListener("click", function () { sendQuoteWhatsApp(q); });
+    const pick = bar.querySelector(".waQuotePick");
+    if (pick) pick.addEventListener("click", function () { pickContactInto(document.getElementById("waq_" + q.kind)); });
     anchor.parentNode.insertBefore(bar, anchor.nextSibling);
   });
+}
+
+/* Phone contacts picker (Android Chrome). iPhone has none: there WhatsApp's own chat list is used. */
+function canPickContact() {
+  return !!(navigator.contacts && navigator.contacts.select && window.ContactsManager);
+}
+function pickContactInto(box) {
+  navigator.contacts.select(["name", "tel"], { multiple: false }).then(function (list) {
+    const tels = (list && list[0] && list[0].tel) || [];
+    if (!tels.length) return;
+    /* prefer a Sri Lankan mobile (07…, +947…) when the contact has several numbers */
+    const mob = tels.filter(function (t) { return /^(\+?94|0)?7\d{8}$/.test(String(t).replace(/[^\d+]/g, "")); });
+    box.value = String(mob[0] || tels[0]).trim();
+  }).catch(function () {});
 }
 
 /* 0771234567 / +94 77 123 4567 -> 94771234567 ("" when blank or too short) */
