@@ -2414,7 +2414,7 @@ function qMoney(v) { return qNum(v).toLocaleString("en-US", { minimumFractionDig
    BIC is never shown. */
 function quoteLines(kind) {
   const L = [];
-  let rental, total;
+  let rental, total, bullets = [];
   if (kind === "vehicle") {
     const fa = qVal(document.getElementById("facilityAmount"));
     if (qNum(fa)) L.push(["Facility Amount", qMoney(fa)]);
@@ -2425,6 +2425,7 @@ function quoteLines(kind) {
     if (per) L.push(["Period (months)", per]);
     rental = qVal(document.getElementById("monthlyRental"));
     total = qVal(document.getElementById("chargesTotal"));
+    bullets = quoteBullets();
   } else {
     const grid = document.getElementById(kind === "tw" ? "twGrid" : "bkGrid");
     if (!grid || !grid.querySelector(".tw-card")) return null;
@@ -2438,7 +2439,20 @@ function quoteLines(kind) {
     rental = qVal(document.getElementById(kind + "_monthlyRental"));
     total = qVal(document.getElementById(kind + "_chargesTotal"));
   }
-  return { main: L, rental: rental, total: total };
+  return { main: L, rental: rental, total: total, bullets: bullets };
+}
+
+/* Bullet payment rows with a FROM month and an AMOUNT: "Month 12" (manual) or "Month 1–12" (slabbed). */
+function quoteBullets() {
+  const out = [];
+  const slab = String(value("scheduleType") || "").toUpperCase() === "SLABBED SCHEDULE";
+  document.querySelectorAll("#scheduleBody tr[data-index]").forEach(function (tr) {
+    const ins = tr.querySelectorAll("input");
+    const from = qVal(ins[0]), to = qVal(ins[1]), amt = qVal(ins[2]);
+    if (!from || !qNum(amt)) return;
+    out.push(["Month " + from + (slab && to && to !== from ? "–" + to : ""), qMoney(amt)]);
+  });
+  return out;
 }
 
 function quoteText(q) {
@@ -2446,7 +2460,12 @@ function quoteText(q) {
   if (!d) return "";
   const t = ["ආයුබෝවන්,", "ඔබ ඉල්ලූ *" + q.title + "* quotation එක:", ""];
   d.main.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
-  t.push("", "*Monthly Rental: " + d.rental + "*");
+  const hasBullet = d.bullets && d.bullets.length;
+  t.push("", "*Monthly Rental" + (hasBullet ? " (with Bullet)" : "") + ": " + d.rental + "*");
+  if (hasBullet) {
+    t.push("", "*Bullet Payments:*");
+    d.bullets.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
+  }
   if (qNum(d.total)) t.push("", "*Upfront Charges: " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
   t.push("", "මෙය ඇස්තමේන්තුවක් පමණයි. වැඩි විස්තර සඳහා අමතන්න." + (tel ? " (" + localPhone(tel) + ")" : ""));
