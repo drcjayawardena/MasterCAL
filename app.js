@@ -2455,12 +2455,12 @@ function quoteBullets() {
   return out;
 }
 
-/* Link for the customer to ask for a vehicle (VehicleHUB public request page, no login).
+/* Link for the customer to ask for a vehicle, or (sell) to sell theirs (VehicleHUB public request page, no login).
    ref = this officer, so the request comes straight to them. */
-function quoteRequestLink(q, num) {
+function quoteRequestLink(q, num, sell) {
   const ref = lsGet("vehiclehub_username") || getUsername();
   const v = { vehicle: "car", tw: "tw", bk: "bike" }[q.kind] || "";
-  let u = VEHICLEHUB_URL + "request.html?q=1" + (v ? "&v=" + v : "");
+  let u = VEHICLEHUB_URL + "request.html?q=1" + (sell ? "&type=seller" : "") + (v ? "&v=" + v : "");
   if (ref) u += "&ref=" + encodeURIComponent(ref);
   if (num) u += "&p=" + num;
   return u;
@@ -2481,6 +2481,7 @@ function quoteText(q, num) {
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
   t.push("", "මෙය ඇස්තමේන්තුවක් පමණයි. වැඩි විස්තර සඳහා අමතන්න." + (tel ? " (" + localPhone(tel) + ")" : ""));
   t.push("", "🚗 ඔබට ගැලපෙන වාහනය අපි හොයලා දෙන්නම්. මෙතනින් කියන්න:", quoteRequestLink(q, num));
+  t.push("", "💰 ඔබේ වාහනය අපි විකුණලා දෙන්නම්. මෙතනින් කියන්න:", quoteRequestLink(q, num, true));
   return t.join("\n");
 }
 
