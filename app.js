@@ -208,17 +208,34 @@ function gateEnter(fn) {
   });
 }
 
+/* "Show password" tick: lets the user see what was typed (or what the phone autofilled). */
+function showPassBox() {
+  return '<label class="gateShowPass"><input type="checkbox" id="gateShowPass"> Password එක පෙන්වන්න</label>';
+}
+function wireShowPass() {
+  const box = document.getElementById("gateShowPass");
+  if (!box) return;
+  box.addEventListener("change", function () {
+    ["gatePass", "gatePass2"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.type = box.checked ? "text" : "password";
+    });
+  });
+}
+
 /* -------- Login: username + password (the same login opens VehicleHUB) -------- */
 function showLogin(msg) {
   gateShow(
     '<h2>Login</h2>' +
     '<p>MasterCAL username සහ password එක දාන්න. මේ login එකෙන්ම VehicleHUB එකත් open වෙනවා.</p>' +
     '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username" value="' + escapeHtml(getUsername()) + '">' +
-    '<input id="gatePass" type="password" autocomplete="current-password" placeholder="Password">' +
+    '<input id="gatePass" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Password">' +
+    showPassBox() +
     '<button id="gateSend" class="gateBtn">Login</button>' +
     '<div id="gateErr" class="gateErr">' + escapeHtml(msg || "") + '</div>' +
     '<button id="gateReg" class="gateBtnLink">Login එකක් නැද්ද? Register වෙන්න</button>');
   document.getElementById("gateSend").addEventListener("click", submitLogin);
+  wireShowPass();
   document.getElementById("gateReg").addEventListener("click", showRegister);
   gateEnter(submitLogin);
   document.getElementById(getUsername() ? "gatePass" : "gateUser").focus();
@@ -263,10 +280,12 @@ function showRegister() {
     '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username (a-z, 0-9)">' +
     '<input id="gatePass" type="password" autocomplete="new-password" placeholder="Password (අවම අකුරු 6)">' +
     '<input id="gatePass2" type="password" autocomplete="new-password" placeholder="Password again">' +
+    showPassBox() +
     '<button id="gateSend" class="gateBtn">Register</button>' +
     '<div id="gateErr" class="gateErr"></div>' +
     '<button id="gateBack" class="gateBtnLink">Back to login</button>');
   document.getElementById("gateSend").addEventListener("click", submitRegister);
+  wireShowPass();
   document.getElementById("gateBack").addEventListener("click", function () { showLogin(); });
   gateEnter(submitRegister);
 }
