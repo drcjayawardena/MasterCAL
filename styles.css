@@ -422,14 +422,12 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .tw-readonly{ background:var(--row); color:var(--ink); font-weight:700; cursor:default; }
 .tw-readonly:focus{ box-shadow:none; border-color:var(--field-bd); }
 
-/* on small phones, stack the 3W fields (label above, full-width control) */
+/* on small phones keep label and control on one row; the control takes a bit more room */
 @media (max-width:560px){
   .facility .field,
-  .tw-card .field{ display:block; }
-  .facility .field label,
-  .tw-card .field label{ margin-bottom:5px; }
+  .tw-card .field{ gap:10px; }
   .facility .field select, .facility .field input,
-  .tw-card .field select, .tw-card .field input{ width:100%; max-width:none; }
+  .tw-card .field select, .tw-card .field input{ width:56%; max-width:none; }
   .tw-biglabel{ flex-basis:40%; font-size:12px; }
 }
 
