@@ -676,3 +676,9 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .waQuoteBtn:hover{ background:#1ebe5b; }
 .waQuotePick{ flex:0 0 auto; height:40px; padding:0 12px; border:1px solid var(--field-bd); border-radius:8px; background:var(--field); font-size:14px; font-weight:600; cursor:pointer; }
 .waQuoteHint{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+/* three-wheel / bike: two cards side by side from tablet width up */
+@media (min-width:760px){
+  .tw-grid.tw-grid2{ grid-template-columns:repeat(2, 1fr); align-items:stretch; }
+  .tw-grid.tw-grid2 .tw-card{ display:flex; flex-direction:column; }
+}

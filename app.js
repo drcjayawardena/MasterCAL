@@ -1505,7 +1505,11 @@ function build3W(data) {
   if (!grid) return;
   grid.innerHTML = "";
 
-  /* Card 1 — Valuation & Exposure (+ PAYMENT DETAIL block) */
+  /* Two cards, as in the owner's layout:
+     left  = Valuation & Exposure, then Initial Charges;
+     right = Rental Calculation inputs, then Payment Detail. */
+  grid.classList.add("tw-grid2");
+
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
@@ -1515,18 +1519,30 @@ function build3W(data) {
     twOutRow("Maximum Exposure", "tw_maxExposure") +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
+    '</table>' +
+    '<div class="cardTitle tw-subtitle">Initial Charges</div>' +
+    twBigRow("TOTAL CHARGES", "tw_chargesTotal") +
+    '<table class="summaryTable">' +
+    twOutRow("Crib Charges", "tw_cribCharge") +
+    twOutRow("Insurance", "tw_insCharge") +
+    twOutRow("Valuation Charges", "tw_valCharge") +
+    twOutRow("Service Charges", "tw_svcCharge") +
+    twOutRow("VAT 18.00%", "tw_vat") +
     '</table>');
+  /* Only the RMV CHARGES (B23) input sits below the charges (CRIB B22 stays hidden). */
+  const c1inputs = document.createElement("div");
+  c1inputs.className = "tw-card-inputs";
+  c1inputs.appendChild(twField("B23", data));
+  c1.appendChild(c1inputs);
   grid.appendChild(c1);
 
-  /* Card 2 — Rental Calculation (inputs only) */
   const c2 = document.createElement("div");
   c2.className = "tw-card";
-  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
-    twBigRow("MONTHLY RENTAL", "tw_monthlyRental");
+  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
   ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
-  /* PAYMENT DETAIL sits at the bottom of the Rental Calculation card. */
   c2.insertAdjacentHTML("beforeend",
-    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
+    '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
+    twBigRow("MONTHLY RENTAL", "tw_monthlyRental") +
     '<table class="summaryTable tw-pay">' +
     twOutRow("Exposure", "tw_exposurePct") +
     twOutRow("Total Paid", "tw_totPaid") +
@@ -1534,27 +1550,6 @@ function build3W(data) {
     twOutRow("Rate / 100,000", "tw_rate100") +
     '</table>');
   grid.appendChild(c2);
-
-  /* Card 3 — Initial Charges: TOTAL tile -> summary rows -> inputs at bottom */
-  const c3 = document.createElement("div");
-  c3.className = "tw-card";
-  c3.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
-    twBigRow("TOTAL CHARGES", "tw_chargesTotal") +
-    '<table class="summaryTable">' +
-    twOutRow("Crib Charges", "tw_cribCharge") +
-    twOutRow("RMV Charges", "tw_rmvCharge") +
-    twOutRow("Insurance", "tw_insCharge") +
-    twOutRow("Valuation Charges", "tw_valCharge") +
-    twOutRow("Service Charges", "tw_svcCharge") +
-    twOutRow("VAT 18.00%", "tw_vat") +
-    '</table>';
-  /* Only the RMV CHARGES (B23) input sits below the summary.
-     CRIB CHARGES (B22) input is intentionally hidden per the layout. */
-  const c3inputs = document.createElement("div");
-  c3inputs.className = "tw-card-inputs";
-  ["B23"].forEach(function (cell) { c3inputs.appendChild(twField(cell, data)); });
-  c3.appendChild(c3inputs);
-  grid.appendChild(c3);
 }
 
 var tw_lastData = null;   /* keep the latest 3W payload for the schedule */
@@ -1847,7 +1842,9 @@ function buildBike() {
   if (!grid) return;
   grid.innerHTML = "";
 
-  /* Card 1 — Valuation & Exposure (+ PAYMENT DETAIL) */
+  /* Same two-card layout as the three-wheel tab. */
+  grid.classList.add("tw-grid2");
+
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
@@ -1857,18 +1854,29 @@ function buildBike() {
     bkOutRow("Maximum Exposure", "bk_maxExposure") +
     bkOutRow("CF Valuation", "bk_cfValuation") +
     bkOutRow("Max Facility Value", "bk_maxFacility") +
+    '</table>' +
+    '<div class="cardTitle tw-subtitle">Initial Charges</div>' +
+    bkBigRow("TOTAL CHARGES", "bk_chargesTotal") +
+    '<table class="summaryTable">' +
+    bkOutRow("Crib Charges", "bk_cribCharge") +
+    bkOutRow("Valuation Charges", "bk_valCharge") +
+    bkOutRow("Service Charges", "bk_svcCharge") +
+    bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
     '</table>');
+  /* CRIB input B19 is not shown, like the 3W layout. */
+  const c1inputs = document.createElement("div");
+  c1inputs.className = "tw-card-inputs";
+  c1inputs.appendChild(bkField("B20"));
+  c1.appendChild(c1inputs);
   grid.appendChild(c1);
 
-  /* Card 2 — Rental Calculation */
   const c2 = document.createElement("div");
   c2.className = "tw-card";
-  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
-    bkBigRow("MONTHLY RENTAL", "bk_monthlyRental");
+  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
   ["B7", "B8", "B9", "B10", "B11"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
-  /* PAYMENT DETAIL sits at the bottom of the Rental Calculation card. */
   c2.insertAdjacentHTML("beforeend",
-    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
+    '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
+    bkBigRow("MONTHLY RENTAL", "bk_monthlyRental") +
     '<table class="summaryTable tw-pay">' +
     bkOutRow("Exposure", "bk_exposurePct") +
     bkOutRow("Total Paid", "bk_totPaid") +
@@ -1876,24 +1884,6 @@ function buildBike() {
     bkOutRow("Rate / 100,000", "bk_rate100") +
     '</table>');
   grid.appendChild(c2);
-
-  /* Card 3 — Initial Charges (CRIB input B19 is not shown, like the 3W layout) */
-  const c3 = document.createElement("div");
-  c3.className = "tw-card";
-  c3.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
-    bkBigRow("TOTAL CHARGES", "bk_chargesTotal") +
-    '<table class="summaryTable">' +
-    bkOutRow("Crib Charges", "bk_cribCharge") +
-    bkOutRow("RMV Charges", "bk_rmvCharge") +
-    bkOutRow("Valuation Charges", "bk_valCharge") +
-    bkOutRow("Service Charges", "bk_svcCharge") +
-    bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
-    '</table>';
-  const c3inputs = document.createElement("div");
-  c3inputs.className = "tw-card-inputs";
-  c3inputs.appendChild(bkField("B20"));
-  c3.appendChild(c3inputs);
-  grid.appendChild(c3);
 }
 
 function renderBike(data) {
