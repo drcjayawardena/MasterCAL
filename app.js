@@ -210,7 +210,7 @@ function gateEnter(fn) {
 
 /* "Show password" tick: lets the user see what was typed (or what the phone autofilled). */
 function showPassBox() {
-  return '<label class="gateShowPass"><input type="checkbox" id="gateShowPass"> Password එක පෙන්වන්න</label>';
+  return '<label class="gateShowPass"><input type="checkbox" id="gateShowPass"> Show password</label>';
 }
 function wireShowPass() {
   const box = document.getElementById("gateShowPass");
@@ -227,13 +227,13 @@ function wireShowPass() {
 function showLogin(msg) {
   gateShow(
     '<h2>Login</h2>' +
-    '<p>MasterCAL username සහ password එක දාන්න. මේ login එකෙන්ම VehicleHUB එකත් open වෙනවා.</p>' +
+    '<p>Sign in with your MasterCAL username and password. The same account also gives you access to VehicleHUB.</p>' +
     '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username" value="' + escapeHtml(getUsername()) + '">' +
     '<input id="gatePass" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Password">' +
     showPassBox() +
     '<button id="gateSend" class="gateBtn">Login</button>' +
     '<div id="gateErr" class="gateErr">' + escapeHtml(msg || "") + '</div>' +
-    '<button id="gateReg" class="gateBtnLink">Login එකක් නැද්ද? Register වෙන්න</button>');
+    '<button id="gateReg" class="gateBtnLink">Don&#39;t have an account? Register</button>');
   document.getElementById("gateSend").addEventListener("click", submitLogin);
   wireShowPass();
   document.getElementById("gateReg").addEventListener("click", showRegister);
@@ -246,7 +246,7 @@ function submitLogin() {
   const pass = document.getElementById("gatePass").value || "";
   const err  = document.getElementById("gateErr");
   const btn  = document.getElementById("gateSend");
-  if (!user || !pass) { err.textContent = "Username සහ password දාන්න."; return; }
+  if (!user || !pass) { err.textContent = "Please enter your username and password."; return; }
 
   err.textContent = "";
   btn.disabled = true;
@@ -262,7 +262,7 @@ function submitLogin() {
       btn.disabled = false;
       btn.textContent = "Login";
       if (e.access === "BLOCKED") { showGate("BLOCKED"); return; }
-      err.textContent = e.message || "Login වෙන්න බැරි වුණා.";
+      err.textContent = e.message || "Unable to sign in. Please try again.";
     });
 }
 
@@ -272,13 +272,13 @@ function submitLogin() {
 function showRegister() {
   gateShow(
     '<h2>Register</h2>' +
-    '<p>ඔයාගේ විස්තර සහ අලුත් username, password එකක් දාන්න. ' +
-    'Admin approve කරාට පස්සේ MasterCAL සහ VehicleHUB දෙකටම මේ login එකෙන් එන්න පුළුවන්.</p>' +
+    '<p>Enter your details and choose a username and password. ' +
+    'Once an administrator approves your request, you can use this account for both MasterCAL and VehicleHUB.</p>' +
     '<input id="gateName" type="text" autocomplete="name" placeholder="Your name">' +
     '<input id="gatePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="WhatsApp number (e.g. 0771234567)">' +
     '<input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">' +
     '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username (a-z, 0-9)">' +
-    '<input id="gatePass" type="password" autocomplete="new-password" placeholder="Password (අවම අකුරු 6)">' +
+    '<input id="gatePass" type="password" autocomplete="new-password" placeholder="Password (minimum 6 characters)">' +
     '<input id="gatePass2" type="password" autocomplete="new-password" placeholder="Password again">' +
     showPassBox() +
     '<button id="gateSend" class="gateBtn">Register</button>' +
@@ -300,12 +300,12 @@ function submitRegister() {
   const err   = document.getElementById("gateErr");
   const btn   = document.getElementById("gateSend");
 
-  if (!name)  { err.textContent = "ඔයාගේ නම දාන්න."; return; }
-  if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "හරි WhatsApp number එකක් දාන්න."; return; }
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "හරි email එකක් දාන්න."; return; }
-  if (!/^[a-z0-9._-]{3,30}$/.test(user)) { err.textContent = "Username: අකුරු 3–30 (a-z, 0-9, . _ -)."; return; }
-  if (pass.length < 6) { err.textContent = "Password එකට අවම අකුරු 6ක් ඕනේ."; return; }
-  if (pass !== pass2) { err.textContent = "Passwords දෙක සමාන නෑ."; return; }
+  if (!name)  { err.textContent = "Please enter your name."; return; }
+  if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "Please enter a valid WhatsApp number."; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Please enter a valid email address."; return; }
+  if (!/^[a-z0-9._-]{3,30}$/.test(user)) { err.textContent = "Username must be 3–30 characters (a-z, 0-9, . _ -)."; return; }
+  if (pass.length < 6) { err.textContent = "Password must be at least 6 characters."; return; }
+  if (pass !== pass2) { err.textContent = "The passwords do not match."; return; }
 
   err.textContent = "";
   btn.disabled = true;
@@ -320,18 +320,18 @@ function submitRegister() {
       btn.disabled = false;
       btn.textContent = "Register";
       if (e.access === "BLOCKED") { showGate("BLOCKED"); return; }
-      err.textContent = e.message || "Request එක යවන්න බැරි වුණා.";
+      err.textContent = e.message || "Unable to send your request. Please try again.";
     });
 }
 
 function showGate(status) {
-  if (status === "LOGIN") { setToken(""); showLogin("නැවත login වෙන්න."); return; }
+  if (status === "LOGIN") { setToken(""); showLogin("Your session has ended. Please sign in again."); return; }
 
   if (status === "BLOCKED") {
     setToken("");
     gateShow(
       '<h2>Access Denied</h2>' +
-      '<p>ඔයාගේ access එක block කරලා. Admin එක්ක කතා කරන්න.</p>' +
+      '<p>Your access has been blocked. Please contact the administrator.</p>' +
       '<div class="gateMuted">' + escapeHtml(getUsername()) + '</div>' +
       '<button id="gateBack" class="gateBtnLink">Back to login</button>');
     document.getElementById("gateBack").addEventListener("click", function () { showLogin(); });
@@ -342,8 +342,8 @@ function showGate(status) {
   setToken("");
   gateShow(
     '<h2>Approval Pending ⏳</h2>' +
-    '<p>ඔයාගේ request එක admin approval එකට යවලා.<br>' +
-    'Approve වුණාට පස්සේ login වෙන්න.</p>' +
+    '<p>Your request has been sent to the administrator for approval.<br>' +
+    'You can sign in once it is approved.</p>' +
     '<div class="gateMuted">' + escapeHtml(getUsername()) + '</div>' +
     '<button id="gateRetry" class="gateBtn">Login</button>');
   document.getElementById("gateRetry").addEventListener("click", function () { showLogin(); });
@@ -831,7 +831,7 @@ function addlChargeInput(amount) {
 
 function setAdditionalChargeUI(value) {
   const v = String(value).replace(/,/g, "").trim();
-  if (v !== "" && !(Number(v) >= 0)) { alert("හරි amount එකක් දාන්න."); return; }
+  if (v !== "" && !(Number(v) >= 0)) { alert("Please enter a valid amount."); return; }
   api("setAdditionalCharge", [v])
     .then(function (r) { if (r && r.outputs) showOutputs(r.outputs); })
     .catch(function (e) {
@@ -1505,7 +1505,11 @@ function build3W(data) {
   if (!grid) return;
   grid.innerHTML = "";
 
-  /* Card 1 — Valuation & Exposure (+ PAYMENT DETAIL block) */
+  /* Two cards, as in the owner's layout:
+     left  = Valuation & Exposure, then Initial Charges;
+     right = Rental Calculation inputs, then Payment Detail. */
+  grid.classList.add("tw-grid2");
+
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
@@ -1515,18 +1519,30 @@ function build3W(data) {
     twOutRow("Maximum Exposure", "tw_maxExposure") +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
+    '</table>' +
+    '<div class="cardTitle tw-subtitle">Initial Charges</div>' +
+    twBigRow("TOTAL CHARGES", "tw_chargesTotal") +
+    '<table class="summaryTable">' +
+    twOutRow("Crib Charges", "tw_cribCharge") +
+    twOutRow("Insurance", "tw_insCharge") +
+    twOutRow("Valuation Charges", "tw_valCharge") +
+    twOutRow("Service Charges", "tw_svcCharge") +
+    twOutRow("VAT 18.00%", "tw_vat") +
     '</table>');
+  /* Only the RMV CHARGES (B23) input sits below the charges (CRIB B22 stays hidden). */
+  const c1inputs = document.createElement("div");
+  c1inputs.className = "tw-card-inputs";
+  c1inputs.appendChild(twField("B23", data));
+  c1.appendChild(c1inputs);
   grid.appendChild(c1);
 
-  /* Card 2 — Rental Calculation (inputs only) */
   const c2 = document.createElement("div");
   c2.className = "tw-card";
-  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
-    twBigRow("MONTHLY RENTAL", "tw_monthlyRental");
+  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
   ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
-  /* PAYMENT DETAIL sits at the bottom of the Rental Calculation card. */
   c2.insertAdjacentHTML("beforeend",
-    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
+    '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
+    twBigRow("MONTHLY RENTAL", "tw_monthlyRental") +
     '<table class="summaryTable tw-pay">' +
     twOutRow("Exposure", "tw_exposurePct") +
     twOutRow("Total Paid", "tw_totPaid") +
@@ -1534,27 +1550,6 @@ function build3W(data) {
     twOutRow("Rate / 100,000", "tw_rate100") +
     '</table>');
   grid.appendChild(c2);
-
-  /* Card 3 — Initial Charges: TOTAL tile -> summary rows -> inputs at bottom */
-  const c3 = document.createElement("div");
-  c3.className = "tw-card";
-  c3.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
-    twBigRow("TOTAL CHARGES", "tw_chargesTotal") +
-    '<table class="summaryTable">' +
-    twOutRow("Crib Charges", "tw_cribCharge") +
-    twOutRow("RMV Charges", "tw_rmvCharge") +
-    twOutRow("Insurance", "tw_insCharge") +
-    twOutRow("Valuation Charges", "tw_valCharge") +
-    twOutRow("Service Charges", "tw_svcCharge") +
-    twOutRow("VAT 18.00%", "tw_vat") +
-    '</table>';
-  /* Only the RMV CHARGES (B23) input sits below the summary.
-     CRIB CHARGES (B22) input is intentionally hidden per the layout. */
-  const c3inputs = document.createElement("div");
-  c3inputs.className = "tw-card-inputs";
-  ["B23"].forEach(function (cell) { c3inputs.appendChild(twField(cell, data)); });
-  c3.appendChild(c3inputs);
-  grid.appendChild(c3);
 }
 
 var tw_lastData = null;   /* keep the latest 3W payload for the schedule */
@@ -1847,7 +1842,9 @@ function buildBike() {
   if (!grid) return;
   grid.innerHTML = "";
 
-  /* Card 1 — Valuation & Exposure (+ PAYMENT DETAIL) */
+  /* Same two-card layout as the three-wheel tab. */
+  grid.classList.add("tw-grid2");
+
   const c1 = document.createElement("div");
   c1.className = "tw-card";
   c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
@@ -1857,18 +1854,29 @@ function buildBike() {
     bkOutRow("Maximum Exposure", "bk_maxExposure") +
     bkOutRow("CF Valuation", "bk_cfValuation") +
     bkOutRow("Max Facility Value", "bk_maxFacility") +
+    '</table>' +
+    '<div class="cardTitle tw-subtitle">Initial Charges</div>' +
+    bkBigRow("TOTAL CHARGES", "bk_chargesTotal") +
+    '<table class="summaryTable">' +
+    bkOutRow("Crib Charges", "bk_cribCharge") +
+    bkOutRow("Valuation Charges", "bk_valCharge") +
+    bkOutRow("Service Charges", "bk_svcCharge") +
+    bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
     '</table>');
+  /* CRIB input B19 is not shown, like the 3W layout. */
+  const c1inputs = document.createElement("div");
+  c1inputs.className = "tw-card-inputs";
+  c1inputs.appendChild(bkField("B20"));
+  c1.appendChild(c1inputs);
   grid.appendChild(c1);
 
-  /* Card 2 — Rental Calculation */
   const c2 = document.createElement("div");
   c2.className = "tw-card";
-  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>' +
-    bkBigRow("MONTHLY RENTAL", "bk_monthlyRental");
+  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
   ["B7", "B8", "B9", "B10", "B11"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
-  /* PAYMENT DETAIL sits at the bottom of the Rental Calculation card. */
   c2.insertAdjacentHTML("beforeend",
-    '<div class="cardTitle tw-subtitle">PAYMENT DETAIL</div>' +
+    '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
+    bkBigRow("MONTHLY RENTAL", "bk_monthlyRental") +
     '<table class="summaryTable tw-pay">' +
     bkOutRow("Exposure", "bk_exposurePct") +
     bkOutRow("Total Paid", "bk_totPaid") +
@@ -1876,24 +1884,6 @@ function buildBike() {
     bkOutRow("Rate / 100,000", "bk_rate100") +
     '</table>');
   grid.appendChild(c2);
-
-  /* Card 3 — Initial Charges (CRIB input B19 is not shown, like the 3W layout) */
-  const c3 = document.createElement("div");
-  c3.className = "tw-card";
-  c3.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
-    bkBigRow("TOTAL CHARGES", "bk_chargesTotal") +
-    '<table class="summaryTable">' +
-    bkOutRow("Crib Charges", "bk_cribCharge") +
-    bkOutRow("RMV Charges", "bk_rmvCharge") +
-    bkOutRow("Valuation Charges", "bk_valCharge") +
-    bkOutRow("Service Charges", "bk_svcCharge") +
-    bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
-    '</table>';
-  const c3inputs = document.createElement("div");
-  c3inputs.className = "tw-card-inputs";
-  c3inputs.appendChild(bkField("B20"));
-  c3.appendChild(c3inputs);
-  grid.appendChild(c3);
 }
 
 function renderBike(data) {
@@ -2241,14 +2231,14 @@ function setupVehicleCheck() {
   const yearSel = document.getElementById("vcYear");
   const makeOther = document.getElementById("vcMakeOther"), modelOther = document.getElementById("vcModelOther");
 
-  vcFill(makeSel, Object.keys(VC_MODELS).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Make තෝරන්න"]);
-  vcFill(modelSel, [], ["", "මුලින් Make තෝරන්න"]);
+  vcFill(makeSel, Object.keys(VC_MODELS).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Select make"]);
+  vcFill(modelSel, [], ["", "Select a make first"]);
   modelSel.disabled = true;
   /* Grade depends on the model; disabled when we list no grades for it */
   const gradeSel = document.getElementById("vcGrade");
   const fillGrades = function () {
     const g = (VC_GRADES[makeSel.value] || {})[modelSel.value] || [];
-    vcFill(gradeSel, g.map(vcPair), ["", g.length ? "ඕනෑම grade එකක්" : "Grade නෑ"]);
+    vcFill(gradeSel, g.map(vcPair), ["", g.length ? "Any grade" : "No grades"]);
     gradeSel.disabled = !g.length;
   };
   fillGrades();
@@ -2256,12 +2246,12 @@ function setupVehicleCheck() {
   /* Year depends on the model: only the years that model was made */
   const fillYears = function () {
     if (!modelSel.value) {
-      vcFill(yearSel, [], ["", "මුලින් Model තෝරන්න"]);
+      vcFill(yearSel, [], ["", "Select a model first"]);
       yearSel.disabled = true;
       return;
     }
     const keep = yearSel.value;
-    vcFill(yearSel, vcYearsFor(makeSel.value, modelSel.value), ["", "ඕනෑම අවුරුද්දක්"]);
+    vcFill(yearSel, vcYearsFor(makeSel.value, modelSel.value), ["", "Any year"]);
     yearSel.disabled = false;
     if (keep && yearSel.querySelector('option[value="' + keep + '"]')) yearSel.value = keep;
   };
@@ -2271,10 +2261,10 @@ function setupVehicleCheck() {
     const m = makeSel.value;
     vcOtherToggle(makeSel, makeOther);
     if (!m) {
-      vcFill(modelSel, [], ["", "මුලින් Make තෝරන්න"]);
+      vcFill(modelSel, [], ["", "Select a make first"]);
       modelSel.disabled = true;
     } else {
-      vcFill(modelSel, (VC_MODELS[m] || []).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Model තෝරන්න"]);
+      vcFill(modelSel, (VC_MODELS[m] || []).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Select model"]);
       modelSel.disabled = false;
       if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
     }
@@ -2303,11 +2293,11 @@ function runVehicleCheck() {
   const grade = document.getElementById("vcGrade").value.trim();
   const out = document.getElementById("vcOut");
   const btn = document.getElementById("vcGo");
-  if (!make || !model) { out.innerHTML = '<p class="vcErr">Make සහ model දාන්න.</p>'; return; }
+  if (!make || !model) { out.innerHTML = '<p class="vcErr">Please select a make and model.</p>'; return; }
 
   btn.disabled = true;
   btn.textContent = "Checking…";
-  out.innerHTML = '<p class="vcHint">ikman.lk සහ riyasewana.com බලනවා…</p>';
+  out.innerHTML = '<p class="vcHint">Checking ikman.lk and riyasewana.com…</p>';
 
   api("checkVehicle", [make, model, year, grade])
     .then(function (r) {
@@ -2315,7 +2305,7 @@ function runVehicleCheck() {
     })
     .catch(function (e) {
       if (e.access) { showGate(e.access); return; }
-      out.innerHTML = '<p class="vcErr">' + escapeHtml(e.message || "Check කරන්න බැරි වුණා.") + '</p>';
+      out.innerHTML = '<p class="vcErr">' + escapeHtml(e.message || "Unable to check prices. Please try again.") + '</p>';
     })
     .then(function () { btn.disabled = false; btn.textContent = "Check"; });
 }
@@ -2323,21 +2313,21 @@ function runVehicleCheck() {
 function vcSiteHtml(r, name) {
   r = r || { ads: [] };
   const link = r.searchUrl
-    ? ' <a href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">' + escapeHtml(name) + ' එකේ බලන්න ↗</a>' : "";
+    ? ' <a href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">View on ' + escapeHtml(name) + ' ↗</a>' : "";
   let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
 
   if (r.blocked) {
-    return h + '<p class="vcHint">' + escapeHtml(name) + ' එක අපේ server එකට data දෙන්නේ නෑ. උඩ link එකෙන් ඒ search එකම open කරලා බලන්න.</p></section>';
+    return h + '<p class="vcHint">' + escapeHtml(name) + ' does not share its data with our server. Use the link above to open the same search.</p></section>';
   }
   if (r.error) return h + '<p class="vcErr">' + escapeHtml(r.error) + '</p></section>';
-  if (!r.ads.length) return h + '<p class="vcHint">ගැළපෙන ads හම්බ වුණේ නෑ.</p></section>';
+  if (!r.ads.length) return h + '<p class="vcHint">No matching ads were found.</p></section>';
 
   const s = r.summary || {};
   h += '<div class="vcStats">' +
     '<div><b>' + s.count + '</b><span>Ads</span></div>' +
-    '<div><b>' + vcRs(s.min) + '</b><span>අඩුම මිල</span></div>' +
-    '<div><b>' + vcRs(s.median) + '</b><span>මැද මිල</span></div>' +
-    '<div><b>' + vcRs(s.max) + '</b><span>වැඩිම මිල</span></div></div>';
+    '<div><b>' + vcRs(s.min) + '</b><span>Lowest price</span></div>' +
+    '<div><b>' + vcRs(s.median) + '</b><span>Median price</span></div>' +
+    '<div><b>' + vcRs(s.max) + '</b><span>Highest price</span></div></div>';
   h += '<ul class="vcAds">' + r.ads.map(function (a) {
     return '<li><a href="' + escapeHtml(a.url) + '" target="_blank" rel="noopener">' + escapeHtml(a.title) + '</a>' +
       '<span class="vcPrice">' + escapeHtml(a.price || "-") + '</span>' +
@@ -2396,12 +2386,12 @@ function setupWhatsAppQuotes() {
     const bar = document.createElement("div");
     bar.className = "waQuote";
     bar.innerHTML =
-      '<div class="waQuoteTitle">Quotation එක WhatsApp එකෙන් යවන්න</div>' +
+      '<div class="waQuoteTitle">Send quotation via WhatsApp</div>' +
       '<div class="waQuoteRow">' +
       '<input id="waq_' + q.kind + '" type="tel" inputmode="tel" placeholder="Customer WhatsApp (07XXXXXXXX)">' +
       (canPickContact() ? '<button type="button" class="waQuotePick" aria-label="Contacts">📇 Contacts</button>' : '') +
-      '<button type="button" class="waQuoteBtn">WhatsApp එකෙන් යවන්න</button></div>' +
-      (canPickContact() ? '' : '<div class="waQuoteHint">Number එක හිස්ව තියලා button එක ඔබන්න — WhatsApp එකේ contact එක තෝරන්න පුළුවන්.</div>');
+      '<button type="button" class="waQuoteBtn">Send via WhatsApp</button></div>' +
+      (canPickContact() ? '' : '<div class="waQuoteHint">Leave the number blank and tap Send to choose the customer from your WhatsApp contacts.</div>');
     bar.querySelector(".waQuoteBtn").addEventListener("click", function () { sendQuoteWhatsApp(q); });
     const pick = bar.querySelector(".waQuotePick");
     if (pick) pick.addEventListener("click", function () { pickContactInto(document.getElementById("waq_" + q.kind)); });
@@ -2506,7 +2496,7 @@ function quoteRequestLink(q, num, sell) {
 function quoteText(q, num) {
   const d = quoteLines(q.kind);
   if (!d) return "";
-  const t = ["ආයුබෝවන්,", "ඔබ ඉල්ලූ *" + q.title + "* quotation එක:", ""];
+  const t = ["Dear Customer,", "Please find below your requested *" + q.title + "* quotation:", ""];
   d.main.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
   const hasBullet = d.bullets && d.bullets.length;
   t.push("", "*Monthly Rental" + (hasBullet ? " (with Bullet)" : "") + ": " + d.rental + "*");
@@ -2516,18 +2506,18 @@ function quoteText(q, num) {
   }
   if (qNum(d.total)) t.push("", "*Upfront Charges: " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
-  t.push("", "මෙය ඇස්තමේන්තුවක් පමණයි. වැඩි විස්තර සඳහා අමතන්න." + (tel ? " (" + localPhone(tel) + ")" : ""));
-  t.push("", "🚗 ඔබට ගැලපෙන වාහනය අපි හොයලා දෙන්නම්. මෙතනින් කියන්න:", quoteRequestLink(q, num));
-  t.push("", "💰 ඔබේ වාහනය අපි විකුණලා දෙන්නම්. මෙතනින් කියන්න:", quoteRequestLink(q, num, true));
+  t.push("", "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + localPhone(tel) : "") + ".");
+  t.push("", "🚗 Looking for a vehicle? Tell us what you need and we will find it for you:", quoteRequestLink(q, num));
+  t.push("", "💰 Selling your vehicle? Share the details and we will find a buyer:", quoteRequestLink(q, num, true));
   return t.join("\n");
 }
 
 function sendQuoteWhatsApp(q) {
   const d = quoteLines(q.kind);
-  if (!d || !qNum(d.rental)) { alert("මුලින් calculation එක කරන්න (Monthly Rental එක 0යි)."); return; }
+  if (!d || !qNum(d.rental)) { alert("Please complete the calculation first (the monthly rental is zero)."); return; }
   const box = document.getElementById("waq_" + q.kind);
   const raw = box ? box.value : "";
   const num = waNumber(raw);
-  if (String(raw).trim() && !num) { alert("හරි WhatsApp number එකක් දාන්න (e.g. 0771234567)."); return; }
+  if (String(raw).trim() && !num) { alert("Please enter a valid WhatsApp number (e.g. 0771234567)."); return; }
   window.open("https://wa.me/" + num + "?text=" + encodeURIComponent(quoteText(q, num)), "_blank", "noopener");
 }

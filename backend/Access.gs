@@ -257,11 +257,11 @@ function menuTestEmail_() {
 function menuApproveUser_() {
   const ui = SpreadsheetApp.getUi();
   const r = ui.prompt("Approve user",
-    "Approve කරන්න ඕන WhatsApp number එක type කරන්න (e.g. 0771234567):", ui.ButtonSet.OK_CANCEL);
+    "Enter the WhatsApp number of the user to approve (e.g. 0771234567):", ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
 
   const email = phoneKey_(r.getResponseText());
-  if (!email) { ui.alert("හරි WhatsApp number එකක් දාන්න."); return; }
+  if (!email) { ui.alert("Please enter a valid WhatsApp number."); return; }
 
   const s = getUsersSheet_();
   const data = usersData_(s);
@@ -287,10 +287,10 @@ function menuApproveUser_() {
 function menuBlockUser_() {
   const ui = SpreadsheetApp.getUi();
   const r = ui.prompt("Block user",
-    "Block කරන්න ඕන WhatsApp number එක type කරන්න:", ui.ButtonSet.OK_CANCEL);
+    "Enter the WhatsApp number of the user to block:", ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
   const email = phoneKey_(r.getResponseText());
-  if (!email) { ui.alert("හරි WhatsApp number එකක් දාන්න."); return; }
+  if (!email) { ui.alert("Please enter a valid WhatsApp number."); return; }
   const s = getUsersSheet_();
   const data = usersData_(s);
   for (let i = 1; i < data.length; i++) {
@@ -301,7 +301,7 @@ function menuBlockUser_() {
       return;
     }
   }
-  ui.alert("Not found", keyToPhone_(email) + " list එකේ නෑ.", ui.ButtonSet.OK);
+  ui.alert("Not found", keyToPhone_(email) + " was not found in the user list.", ui.ButtonSet.OK);
 }
 
 /* Build an APPROVED_USERS sheet listing everyone approved. */
@@ -341,8 +341,8 @@ function menuPendingCount_() {
     if (String(data[i][2]).trim().toUpperCase() === "PENDING") p++;
   }
   ui.alert("Pending users",
-    p + " user(s) waiting.\nUSERS sheet එකේ Status එක APPROVED කරන්න, " +
-    "නැත්නම් menu එකෙන් Approve කරන්න.", ui.ButtonSet.OK);
+    p + " user(s) waiting.\nSet their Status to APPROVED in the USERS sheet, " +
+    "or use Approve a user in the menu.", ui.ButtonSet.OK);
 }
 
 /* Menu: old e-mail rows in USERS (from before WhatsApp sign-in). They can no longer sign in;
