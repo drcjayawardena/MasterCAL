@@ -288,7 +288,7 @@ function setAdditionalCharge(value) {
   const cell = addlChargeCell_();
   if (!cell) throw new Error("ADDITIONAL SERVICE CHARGES row not found in the sheet.");
   const v = String(value == null ? "" : value).replace(/,/g, "").trim();
-  if (v !== "" && !(Number(v) >= 0)) throw new Error("හරි amount එකක් දාන්න.");
+  if (v !== "" && !(Number(v) >= 0)) throw new Error("Please enter a valid amount.");
   const s = sh();
   if (v === "") s.getRange(cell).clearContent(); else s.getRange(cell).setValue(Number(v));
   SpreadsheetApp.flush();

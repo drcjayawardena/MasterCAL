@@ -124,19 +124,19 @@ function login_(args) {
   args = args || [];
   const uname = normUsername_(args[0]);
   const password = String(args[1] || "");
-  if (!uname || !password) return { ok: false, error: "Username සහ password දාන්න." };
+  if (!uname || !password) return { ok: false, error: "Please enter your username and password." };
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
   const failKey = "lfail_" + uname;
   const fails = cache ? Number(cache.get(failKey) || 0) : 0;
-  if (fails >= LOGIN_MAX_FAILS) return { ok: false, error: "වැරදි password ගොඩක් දැම්මා. විනාඩි 15කින් ආයේ try කරන්න." };
+  if (fails >= LOGIN_MAX_FAILS) return { ok: false, error: "Too many unsuccessful attempts. Please try again in 15 minutes." };
 
   const data = usersRows_(getUsersSheet_());
   const i = findUsername_(data, uname);
   if (i < 0 || !checkPassword_(password, data[i][PASS_COL - 1])) {
     if (cache) { try { cache.put(failKey, String(fails + 1), LOGIN_LOCK_SECONDS); } catch (e) {} }
-    return { ok: false, error: "Username හෝ password වැරදියි." };
+    return { ok: false, error: "Incorrect username or password." };
   }
   if (cache) { try { cache.remove(failKey); } catch (e) {} }
 
@@ -165,10 +165,10 @@ function whoami_(args) {
 function menuResetLogin_() {
   const ui = SpreadsheetApp.getUi();
   const r = ui.prompt("Reset a user's login",
-    "Login එක reset කරන්න ඕන WhatsApp number එක type කරන්න:", ui.ButtonSet.OK_CANCEL);
+    "Enter the WhatsApp number of the user whose login should be reset:", ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
   const key = phoneKey_(r.getResponseText());
-  if (!key) { ui.alert("හරි WhatsApp number එකක් දාන්න."); return; }
+  if (!key) { ui.alert("Please enter a valid WhatsApp number."); return; }
   const s = getUsersSheet_();
   const data = usersRows_(s);
   for (var i = 1; i < data.length; i++) {
@@ -179,5 +179,5 @@ function menuResetLogin_() {
       return;
     }
   }
-  ui.alert("Not found", keyToPhone_(key) + " list එකේ නෑ.", ui.ButtonSet.OK);
+  ui.alert("Not found", keyToPhone_(key) + " was not found in the user list.", ui.ButtonSet.OK);
 }

@@ -49,13 +49,13 @@ function register_(args) {
   if (!key)  return { ok: false, error: "Enter a valid WhatsApp number." };
   if (!name) return { ok: false, error: "Enter your name." };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return { ok: false, error: "Enter a valid e-mail address." };
-  if (!validUsername_(uname)) return { ok: false, error: "Username: අකුරු 3–30 (a-z, 0-9, . _ -)." };
-  if (pass.length < 6 || pass.length > 100) return { ok: false, error: "Password එකට අවම අකුරු 6ක් ඕනේ." };
+  if (!validUsername_(uname)) return { ok: false, error: "Username must be 3–30 characters (a-z, 0-9, . _ -)." };
+  if (pass.length < 6 || pass.length > 100) return { ok: false, error: "Password must be at least 6 characters." };
 
   var status = registerUser_(key, name, mail, uname, hashPassword_(pass));
   if (status === "BLOCKED") return { ok: false, access: "BLOCKED", error: "This account is blocked." };
-  if (status === "USERNAME_TAKEN") return { ok: false, error: "ඒ username එක වෙන කෙනෙක් ගත්තා. වෙන එකක් දාන්න." };
-  if (status === "HAS_LOGIN") return { ok: false, error: "මේ number එකට දැනටමත් login එකක් තියෙනවා. Login වෙන්න, නැත්නම් admin ගෙන් reset කරගන්න." };
+  if (status === "USERNAME_TAKEN") return { ok: false, error: "That username is already taken. Please choose another." };
+  if (status === "HAS_LOGIN") return { ok: false, error: "An account already exists for this number. Please sign in, or ask the administrator to reset it." };
   return { ok: true, data: { status: status, phone: key.slice(3), name: name, username: uname } };
 }
 

@@ -23,8 +23,8 @@ function checkVehicle_(make, model, year, grade) {
   model = String(model || "").trim().slice(0, 40);
   year  = String(year  || "").trim();
   grade = String(grade || "").trim().slice(0, 30);
-  if (!make || !model) throw new Error("Make සහ model දාන්න.");
-  if (year && !/^(19|20)\d\d$/.test(year)) throw new Error("හරි අවුරුද්දක් දාන්න (e.g. 2015).");
+  if (!make || !model) throw new Error("Please select a make and model.");
+  if (year && !/^(19|20)\d\d$/.test(year)) throw new Error("Please enter a valid year (e.g. 2015).");
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}

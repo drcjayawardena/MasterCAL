@@ -26,8 +26,8 @@ function menuRefreshCopies_() {
   const ui = SpreadsheetApp.getUi();
   const resp = ui.alert(
     "Refresh all user copies?",
-    "මේකෙන් user copies ඔක්කොම delete වෙනවා. Users ට ඊළඟ වතාවේ " +
-    "අලුත් profiles එක්ක fresh copy හැදෙනවා. Continue?",
+    "This deletes all user copies. Each user will get a fresh copy with the latest profiles " +
+    "the next time they open the app. Continue?",
     ui.ButtonSet.YES_NO);
   if (resp !== ui.Button.YES) return;
   const n = adminDeleteAllCopies();
