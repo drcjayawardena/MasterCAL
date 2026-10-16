@@ -116,15 +116,31 @@
         <input id="period" type="number" inputmode="numeric">
       </div>
 
-      <!-- ADD BULLET PAYMENT now lives at the bottom of the Facility card -->
-      <div class="facilityButtons">
-        <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
-          ADD BULLET PAYMENT
-        </button>
+      <!-- MONTHLY RENTAL sits under the facility inputs -->
+      <div class="summary">
+        <div class="tw-bigrow">
+          <div class="tw-biglabel" id="monthlyRentalTitle">Monthly Rental</div>
+          <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
+        </div>
+        <table class="summaryTable">
+          <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
+          <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
+          <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
+        </table>
       </div>
 
     </div>
 
+
+    <!-- MIDDLE COLUMN: ADD BULLET PAYMENT on top, the bullet schedule under it,
+         Rental with Residual at the bottom -->
+    <div class="bulletColumn">
+
+    <div class="bulletButtonCard">
+      <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
+        ADD BULLET PAYMENT
+      </button>
+    </div>
 
     <!-- BULLET PAYMENT SCHEDULE -->
     <div class="scheduleCard" id="scheduleCard">
@@ -155,29 +171,11 @@
     </div>
 
 
-    <!-- RENTAL CALCULATION (one card: Monthly Rental + Rental with Residual) -->
-    <div class="summaryColumn">
+    <!-- RENTAL WITH RESIDUAL -->
+    <div class="summaryColumn residualCard">
 
-      <div class="cardTitle">Rental Calculation</div>
-
-      <!-- MONTHLY RENTAL -->
-      <div class="summary">
-        <div class="tw-bigrow">
-          <div class="tw-biglabel" id="monthlyRentalTitle">Monthly Rental</div>
-          <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
-        </div>
-        <table class="summaryTable">
-          <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
-          <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
-          <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
-        </table>
-      </div>
-
-      <div class="summarySpacer"></div>
-
-      <!-- RENTAL WITH RESIDUAL -->
       <div class="bulk">
-        <div class="cardTitle tw-subtitle">Rental with Residual</div>
+        <div class="cardTitle">Rental with Residual</div>
         <div class="tw-bigrow">
           <div class="tw-biglabel">Residual Rental</div>
           <div class="bigValue blue"><span id="lastMonthRental">0.00</span></div>
@@ -190,6 +188,9 @@
       </div>
 
     </div>
+
+    </div>
+    <!-- END .bulletColumn -->
 
   </div>
   <!-- END .main -->
