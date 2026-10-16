@@ -1540,15 +1540,17 @@ function build3W(data) {
   c2.className = "tw-card";
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
   ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
+  /* No Payment Detail heading here (six inputs leave no room); alignPayTiles
+     lines MONTHLY RENTAL up with TOTAL CHARGES on the left. */
   c2.insertAdjacentHTML("beforeend",
-    '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
+    '<div class="tw-paywrap">' +
     twBigRow("MONTHLY RENTAL", "tw_monthlyRental") +
-    '<table class="summaryTable tw-pay">' +
+    '<table class="summaryTable">' +
     twOutRow("Exposure", "tw_exposurePct") +
     twOutRow("Total Paid", "tw_totPaid") +
     twOutRow("Total Interest", "tw_totInterest") +
     twOutRow("Rate / 100,000", "tw_rate100") +
-    '</table>');
+    '</table></div>');
   grid.appendChild(c2);
 }
 
@@ -1629,6 +1631,7 @@ function render3W(data) {
 
   /* keep the rental schedule in sync when it's open */
   if (isTwScheduleVisible()) renderTwSchedule();
+  alignPayTiles();
 }
 
 
@@ -1875,16 +1878,37 @@ function buildBike() {
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
   ["B7", "B8", "B9", "B10", "B11"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
   c2.insertAdjacentHTML("beforeend",
+    '<div class="tw-paywrap">' +
     '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
     bkBigRow("MONTHLY RENTAL", "bk_monthlyRental") +
-    '<table class="summaryTable tw-pay">' +
+    '<table class="summaryTable">' +
     bkOutRow("Exposure", "bk_exposurePct") +
     bkOutRow("Total Paid", "bk_totPaid") +
     bkOutRow("Total Interest", "bk_totInterest") +
     bkOutRow("Rate / 100,000", "bk_rate100") +
-    '</table>');
+    '</table></div>');
   grid.appendChild(c2);
 }
+
+/* Two-card tabs: push the right card's MONTHLY RENTAL block down so its tile
+   lines up with TOTAL CHARGES on the left (side-by-side layout only). */
+function alignPayTiles() {
+  ["twGrid", "bkGrid"].forEach(function (id) {
+    const grid = document.getElementById(id);
+    if (!grid || !grid.offsetParent) return;
+    const cards = grid.querySelectorAll(".tw-card");
+    const wrap = grid.querySelector(".tw-paywrap");
+    if (cards.length < 2 || !wrap) return;
+    wrap.style.marginTop = "";
+    const left = cards[0].querySelector(".tw-bigrow");
+    const right = wrap.querySelector(".tw-bigrow");
+    if (!left || !right) return;
+    const sideBySide = cards[0].getBoundingClientRect().top === cards[1].getBoundingClientRect().top;
+    const diff = left.getBoundingClientRect().top - right.getBoundingClientRect().top;
+    if (sideBySide && diff > 0) wrap.style.marginTop = diff + "px";
+  });
+}
+window.addEventListener("resize", alignPayTiles);
 
 function renderBike(data) {
   if (!data) return;
@@ -1959,6 +1983,7 @@ function renderBike(data) {
   set("bk_vat", o.vat);
 
   if (isBkScheduleVisible()) renderBkSchedule();
+  alignPayTiles();
 }
 
 
