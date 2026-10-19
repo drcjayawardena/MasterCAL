@@ -2326,7 +2326,7 @@ function runVehicleCheck() {
 
   api("checkVehicle", [make, model, year, grade])
     .then(function (r) {
-      out.innerHTML = vcSiteHtml(r.ikman, "ikman.lk") + vcSiteHtml(r.riyasewana, "riyasewana.com");
+      out.innerHTML = vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
     })
     .catch(function (e) {
       if (e.access) { showGate(e.access); return; }
