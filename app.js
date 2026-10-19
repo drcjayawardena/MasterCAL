@@ -2125,7 +2125,7 @@ const HUB_TABS = { newcall: { frame: "newcallFrame" } };
 function openHub(tab) {
   const t = HUB_TABS[tab]; if (!t) return;
   const f = document.getElementById(t.frame);
-  if (f && !f.getAttribute("src")) f.src = VEHICLEHUB_URL;
+  if (f && !f.getAttribute("src")) f.src = VEHICLEHUB_URL + "?embed=mastercal";
 }
 
 
