@@ -1411,7 +1411,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   vcheck: "vcheckPanel", newcall: "newcallPanel" };
+                   vcheck: "vcheckPanel", hubVehicles: "hubPanel", hubBuyers: "hubPanel", hubMatches: "hubPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -1419,9 +1419,10 @@ function setupTabs() {
       const wasActive = this.classList.contains("active");
       document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("active"); });
       this.classList.add("active");
-      Object.keys(PANELS).forEach(function (key) {
-        const p = document.getElementById(PANELS[key]);
-        if (p) p.hidden = (key !== which);
+      const selectedPanel = PANELS[which];
+      Array.from(new Set(Object.values(PANELS))).forEach(function (panelId) {
+        const p = document.getElementById(panelId);
+        if (p) p.hidden = (panelId !== selectedPanel);
       });
       /* Opening the 3W / BIKE tab starts a fresh calculation: the Rental
          Calculation inputs are cleared (re-clicking the open tab does nothing). */
@@ -2117,12 +2118,37 @@ function setBikeValue(cell, value) {
 ========================================================= */
 
 const VEHICLEHUB_URL = "https://drcjayawardena.github.io/VehicleHUB/";
-const HUB_TABS = { newcall: { frame: "newcallFrame" } };
+const VEHICLEHUB_ORIGIN = new URL(VEHICLEHUB_URL).origin;
+const HUB_TABS = {
+  hubVehicles: { view: "vehicles" },
+  hubBuyers: { view: "buyers" },
+  hubMatches: { view: "matches" }
+};
+let HUB_ACTIVE_TAB = "";
+let HUB_FRAME_READY = false;
+
+window.addEventListener("message", function (event) {
+  const frame = document.getElementById("hubFrame");
+  if (!frame || event.origin !== VEHICLEHUB_ORIGIN || event.source !== frame.contentWindow) return;
+  if (event.data && event.data.type === "vehiclehub:ready") {
+    HUB_FRAME_READY = true;
+    if (HUB_ACTIVE_TAB) openHub(HUB_ACTIVE_TAB);
+  }
+});
 
 function openHub(tab) {
   const t = HUB_TABS[tab]; if (!t) return;
-  const f = document.getElementById(t.frame);
-  if (f && !f.getAttribute("src")) f.src = VEHICLEHUB_URL + "?embed=mastercal";
+  const f = document.getElementById("hubFrame");
+  if (!f) return;
+  HUB_ACTIVE_TAB = tab;
+  f.dataset.view = t.view;
+  if (!f.getAttribute("src")) {
+    f.src = VEHICLEHUB_URL + "?embed=mastercal&view=" + encodeURIComponent(t.view);
+    return;
+  }
+  if (HUB_FRAME_READY) {
+    f.contentWindow.postMessage({ type: "mastercal:show-view", view: t.view }, VEHICLEHUB_ORIGIN);
+  }
 }
 
 
