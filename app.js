@@ -227,8 +227,8 @@ function wireShowPass() {
 function showLogin(msg) {
   gateShow(
     '<h2>Login</h2>' +
-    '<p>Sign in with your MasterCAL username and password. The same account also gives you access to VehicleHUB.</p>' +
-    '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username" value="' + escapeHtml(getUsername()) + '">' +
+    '<p>Sign in with your WhatsApp number and password. Previously created usernames still work. The same account also gives you access to VehicleHUB.</p>' +
+    '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="WhatsApp number (or previous username)" value="' + escapeHtml(getUsername()) + '">' +
     '<input id="gatePass" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Password">' +
     showPassBox() +
     '<button id="gateSend" class="gateBtn">Login</button>' +
@@ -266,18 +266,17 @@ function submitLogin() {
     });
 }
 
-/* -------- Registration: name + WhatsApp + e-mail + username + password --------
+/* -------- Registration: name + WhatsApp + e-mail + password --------
    The request waits for the admin's approval. Users from before passwords
    register here once with their same WhatsApp number. */
 function showRegister() {
   gateShow(
     '<h2>Register</h2>' +
-    '<p>Enter your details and choose a username and password. ' +
+    '<p>Your WhatsApp number will be your username. Choose a password. ' +
     'Once an administrator approves your request, you can use this account for both MasterCAL and VehicleHUB.</p>' +
     '<input id="gateName" type="text" autocomplete="name" placeholder="Your name">' +
     '<input id="gatePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="WhatsApp number (e.g. 0771234567)">' +
     '<input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">' +
-    '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="Username (a-z, 0-9)">' +
     '<input id="gatePass" type="password" autocomplete="new-password" placeholder="Password (minimum 6 characters)">' +
     '<input id="gatePass2" type="password" autocomplete="new-password" placeholder="Password again">' +
     showPassBox() +
@@ -294,7 +293,6 @@ function submitRegister() {
   const name  = (document.getElementById("gateName").value || "").trim();
   const phone = (document.getElementById("gatePhone").value || "").trim();
   const email = (document.getElementById("gateEmail").value || "").trim();
-  const user  = (document.getElementById("gateUser").value || "").trim().toLowerCase();
   const pass  = document.getElementById("gatePass").value || "";
   const pass2 = document.getElementById("gatePass2").value || "";
   const err   = document.getElementById("gateErr");
@@ -303,7 +301,6 @@ function submitRegister() {
   if (!name)  { err.textContent = "Please enter your name."; return; }
   if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "Please enter a valid WhatsApp number."; return; }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Please enter a valid email address."; return; }
-  if (!/^[a-z0-9._-]{3,30}$/.test(user)) { err.textContent = "Username must be 3–30 characters (a-z, 0-9, . _ -)."; return; }
   if (pass.length < 6) { err.textContent = "Password must be at least 6 characters."; return; }
   if (pass !== pass2) { err.textContent = "The passwords do not match."; return; }
 
@@ -311,9 +308,9 @@ function submitRegister() {
   btn.disabled = true;
   btn.textContent = "Sending…";
 
-  api("register", [phone, name, email, user, pass])
-    .then(function () {
-      lsSet("mastercal_username", user);
+  api("register", [phone, name, email, phone, pass])
+    .then(function (data) {
+      lsSet("mastercal_username", data && data.username || phone);
       showGate("PENDING");
     })
     .catch(function (e) {
