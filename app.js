@@ -2168,7 +2168,7 @@ const VC_MODELS = {
   "Toyota": ["Aqua", "Allion", "Axio", "Belta", "Camry", "C-HR", "Corolla", "Corona", "Fortuner", "Hiace", "Hilux", "KDH",
              "Land Cruiser", "Land Cruiser Prado", "Noah", "Passo", "Premio", "Prius", "Raize", "Roomy", "Rush", "Shell", "Starlet", "TownAce", "Vios", "Vitz", "Yaris"],
   "Suzuki": ["A-Star", "Alto", "Celerio", "Dzire", "Ertiga", "Every", "Estilo", "Hustler", "Jimny", "Spacia",
-             "Swift", "Vitara", "Wagon R", "Wagon R FX", "Wagon R Stingray"],
+             "Swift", "Vitara", "Wagon R", "Wagon R FX", "Wagon R Stingray", "GN125"],
   "Honda": ["Accord", "City", "Civic", "CR-V", "Fit", "Fit Shuttle", "Freed", "Grace", "Insight", "N Box", "Odyssey", "PCX", "Shuttle", "Vezel", "WR-V",
             "CB Shine", "CD 125", "Dio", "Hornet", "X-Blade"],
   "Nissan": ["Caravan", "Cefiro", "Clipper", "Dayz", "Leaf", "March", "Navara", "Note", "Roox", "Sunny", "Tiida", "Vanette", "X-Trail"],
