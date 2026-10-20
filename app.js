@@ -2242,15 +2242,46 @@ const VC_GRADES = {
   "Daihatsu": { "Mira": ["e:S", "X", "G"], "Move": ["X", "Custom"], "Tanto": ["X", "Custom"] },
   "Perodua": { "Axia": ["E", "G", "SE", "AV"], "Bezza": ["G", "X", "AV"], "Myvi": ["G", "X", "H", "AV"] }
 };
+/* Approximate year availability for grades whose production periods differ
+   materially. Each entry is [first year, last year]; 0 means still current.
+   Unlisted grades retain the model's full year range rather than guessing. */
+const VC_GRADE_YEARS = {
+  "Toyota": {
+    "Aqua": { "S": [2011, 0], "G": [2011, 0], "L": [2011, 2017], "X-Urban": [2014, 2017], "Crossover": [2017, 2021], "Z": [2021, 0] },
+    "Axio": { "X": [2006, 0], "G": [2006, 2023], "Luxel": [2006, 2012], "Hybrid": [2013, 2023] },
+    "Vitz": { "F": [1999, 2019], "U": [1999, 2019], "RS": [2001, 2019], "Jewela": [2010, 2019], "Safety": [2017, 2019] },
+    "Prius": { "S": [1997, 0], "G": [1997, 0], "L": [2009, 2015], "A": [2015, 0], "Touring": [2009, 0] }
+  },
+  "Suzuki": {
+    "Wagon R": { "FX": [1993, 0], "FZ": [2012, 0], "Hybrid": [2017, 0] },
+    "Alto": { "L": [1990, 0], "S": [1990, 0], "X": [1990, 0], "800": [2012, 2019], "K10": [2000, 0] },
+    "Swift": { "RS": [2004, 0], "XG": [2004, 0], "XL": [2004, 0], "Hybrid": [2017, 0] }
+  },
+  "Honda": {
+    "Vezel": { "Hybrid": [2013, 0], "Hybrid Z": [2013, 2021], "RS": [2016, 0], "X": [2013, 0], "Z": [2013, 2021], "e:HEV": [2021, 0] },
+    "Fit": { "13G": [2013, 2020], "15X": [2007, 2013], "Hybrid": [2010, 2020], "RS": [2007, 2020], "L": [2013, 0], "Home": [2020, 0] },
+    "Grace": { "Hybrid DX": [2014, 2020], "Hybrid LX": [2014, 2020], "Hybrid EX": [2014, 2020] }
+  },
+  "Nissan": {
+    "Leaf": { "S": [2010, 0], "X": [2010, 0], "G": [2010, 0], "e+": [2019, 0] },
+    "Note": { "e-Power": [2016, 0], "X": [2004, 0], "Medalist": [2012, 2020] },
+    "Dayz": { "X": [2013, 0], "S": [2013, 0], "Highway Star": [2013, 0] },
+    "X-Trail": { "20X": [2000, 2022], "Hybrid": [2015, 2022], "Mode Premier": [2015, 2022] }
+  }
+};
 const VC_OTHER = "__other";
 const VC_FIRST_YEAR = 1990;
 
-/* Year list for the chosen make + model: newest first. */
-function vcYearsFor(make, model) {
+/* Year list for the chosen make + model + grade: newest first. */
+function vcYearsFor(make, model, grade) {
   const now = new Date().getFullYear();
-  const r = (VC_YEARS[make] || {})[model] || [VC_FIRST_YEAR, 0];
+  const modelRange = (VC_YEARS[make] || {})[model] || [VC_FIRST_YEAR, 0];
+  const gradeRange = (((VC_GRADE_YEARS[make] || {})[model] || {})[grade]) || modelRange;
+  const first = Math.max(modelRange[0], gradeRange[0], VC_FIRST_YEAR);
+  const modelLast = modelRange[1] || now, gradeLast = gradeRange[1] || now;
+  const last = Math.min(modelLast, gradeLast);
   const out = [];
-  for (let y = r[1] || now; y >= Math.max(r[0], VC_FIRST_YEAR); y--) out.push(vcPair(String(y)));
+  for (let y = last; y >= first; y--) out.push(vcPair(String(y)));
   return out;
 }
 
@@ -2322,6 +2353,7 @@ function setupVehicleCheck() {
     if (m === VC_OTHER) makeOther.focus();
   });
   modelSel.addEventListener("change", function () { vcOtherToggle(modelSel, modelOther); fillGrades(); fillYears(); });
+  gradeSel.addEventListener("change", fillYears);
   document.getElementById("vcForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     runVehicleCheck();
