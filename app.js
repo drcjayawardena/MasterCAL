@@ -2186,6 +2186,27 @@ const VC_MODELS = {
   "Hero": ["Dash", "Destini", "Hunk", "Maestro", "Pleasure", "Splendor"],
   "Yamaha": ["FZ", "Fascino", "Ray ZR", "R15"]
 };
+const VC_VEHICLE_TYPES = ["Car", "SUV / Jeep", "Van / MPV", "Cab / Pickup", "Three Wheeler", "Motorcycle"];
+/* Models not listed here are treated as Cars. */
+const VC_MODEL_TYPES = {
+  "Toyota": { "C-HR": "SUV / Jeep", "Fortuner": "SUV / Jeep", "Land Cruiser": "SUV / Jeep", "Land Cruiser Prado": "SUV / Jeep", "Raize": "SUV / Jeep", "Rush": "SUV / Jeep", "Hiace": "Van / MPV", "KDH": "Van / MPV", "Hilux": "Cab / Pickup" },
+  "Suzuki": { "Ertiga": "Van / MPV", "Every": "Van / MPV", "Spacia": "Van / MPV", "Hustler": "SUV / Jeep", "Jimny": "SUV / Jeep", "Vitara": "SUV / Jeep" },
+  "Honda": { "CR-V": "SUV / Jeep", "Vezel": "SUV / Jeep", "WR-V": "SUV / Jeep", "Freed": "Van / MPV", "Fit Shuttle": "Van / MPV", "CB Shine": "Motorcycle", "CD 125": "Motorcycle", "Dio": "Motorcycle", "Hornet": "Motorcycle", "X-Blade": "Motorcycle" },
+  "Nissan": { "Caravan": "Van / MPV", "Navara": "Cab / Pickup", "X-Trail": "SUV / Jeep" },
+  "Mitsubishi": { "Montero": "SUV / Jeep", "Outlander": "SUV / Jeep", "Pajero": "SUV / Jeep", "Eclipse Cross": "SUV / Jeep", "L200": "Cab / Pickup" },
+  "Mazda": { "BT-50": "Cab / Pickup", "CX-3": "SUV / Jeep", "CX-5": "SUV / Jeep" },
+  "Micro": { "Actyon": "SUV / Jeep", "Kyron": "SUV / Jeep", "Rexton": "SUV / Jeep" },
+  "Hyundai": { "Creta": "SUV / Jeep", "Santa Fe": "SUV / Jeep", "Tucson": "SUV / Jeep", "Venue": "SUV / Jeep" },
+  "Kia": { "Sorento": "SUV / Jeep", "Sportage": "SUV / Jeep", "Sonet": "SUV / Jeep", "Stonic": "SUV / Jeep" },
+  "Daihatsu": { "Hijet": "Van / MPV", "Rocky": "SUV / Jeep", "Terios": "SUV / Jeep" },
+  "Tata": { "Ace": "Cab / Pickup", "Super Ace": "Cab / Pickup", "Xenon": "Cab / Pickup" },
+  "Mahindra": { "Bolero": "SUV / Jeep", "KUV100": "SUV / Jeep", "Maxximo": "Cab / Pickup", "Scorpio": "SUV / Jeep", "XUV500": "SUV / Jeep" },
+  "Bajaj": { "RE Three Wheeler": "Three Wheeler", "Discover": "Motorcycle", "Platina": "Motorcycle", "Pulsar": "Motorcycle", "CT 100": "Motorcycle" },
+  "TVS": { "King Three Wheeler": "Three Wheeler", "Apache": "Motorcycle", "Metro": "Motorcycle", "Ntorq": "Motorcycle", "Scooty Pep": "Motorcycle" },
+  "Hero": { "Dash": "Motorcycle", "Destini": "Motorcycle", "Hunk": "Motorcycle", "Maestro": "Motorcycle", "Pleasure": "Motorcycle", "Splendor": "Motorcycle" },
+  "Yamaha": { "FZ": "Motorcycle", "Fascino": "Motorcycle", "Ray ZR": "Motorcycle", "R15": "Motorcycle" }
+};
+function vcTypeFor(make, model) { return ((VC_MODEL_TYPES[make] || {})[model]) || "Car"; }
 /* Years each model was made: [first, last] (0 = still made). Approximate; a
    model not listed here (or "Other") shows every year from VC_FIRST_YEAR. */
 const VC_YEARS = {
@@ -2306,11 +2327,14 @@ function vcOtherToggle(sel, box) {
 function setupVehicleCheck() {
   if (vc_ready) return;
   vc_ready = true;
+  const typeSel = document.getElementById("vcType");
   const makeSel = document.getElementById("vcMake"), modelSel = document.getElementById("vcModel");
   const yearSel = document.getElementById("vcYear");
   const makeOther = document.getElementById("vcMakeOther"), modelOther = document.getElementById("vcModelOther");
 
-  vcFill(makeSel, Object.keys(VC_MODELS).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Select make"]);
+  vcFill(typeSel, VC_VEHICLE_TYPES.map(vcPair), ["", "Select vehicle type"]);
+  vcFill(makeSel, [], ["", "Select a vehicle type first"]);
+  makeSel.disabled = true;
   vcFill(modelSel, [], ["", "Select a make first"]);
   modelSel.disabled = true;
   /* Grade depends on the model; disabled when we list no grades for it */
@@ -2322,7 +2346,7 @@ function setupVehicleCheck() {
   };
   fillGrades();
 
-  /* Year depends on the model: only the years that model was made */
+  /* Year depends on model and, when available, the selected grade's production years. */
   const fillYears = function () {
     if (!modelSel.value) {
       vcFill(yearSel, [], ["", "Select a model first"]);
@@ -2330,11 +2354,24 @@ function setupVehicleCheck() {
       return;
     }
     const keep = yearSel.value;
-    vcFill(yearSel, vcYearsFor(makeSel.value, modelSel.value), ["", "Any year"]);
+    vcFill(yearSel, vcYearsFor(makeSel.value, modelSel.value, gradeSel.value), ["", "Any year"]);
     yearSel.disabled = false;
     if (keep && yearSel.querySelector('option[value="' + keep + '"]')) yearSel.value = keep;
   };
   fillYears();
+
+  typeSel.addEventListener("change", function () {
+    const type = typeSel.value;
+    const makes = Object.keys(VC_MODELS).filter(function (make) {
+      return VC_MODELS[make].some(function (model) { return vcTypeFor(make, model) === type; });
+    });
+    vcFill(makeSel, makes.map(vcPair).concat([[VC_OTHER, "Otherâ¦"]]), ["", type ? "Select make" : "Select a vehicle type first"]);
+    makeSel.disabled = !type;
+    vcFill(modelSel, [], ["", "Select a make first"]);
+    modelSel.disabled = true;
+    fillGrades();
+    fillYears();
+  });
 
   makeSel.addEventListener("change", function () {
     const m = makeSel.value;
@@ -2343,7 +2380,8 @@ function setupVehicleCheck() {
       vcFill(modelSel, [], ["", "Select a make first"]);
       modelSel.disabled = true;
     } else {
-      vcFill(modelSel, (VC_MODELS[m] || []).map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Select model"]);
+      const models = (VC_MODELS[m] || []).filter(function (model) { return vcTypeFor(m, model) === typeSel.value; });
+      vcFill(modelSel, models.map(vcPair).concat([[VC_OTHER, "Otherâ¦"]]), ["", "Select model"]);
       modelSel.disabled = false;
       if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
     }
