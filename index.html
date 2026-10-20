@@ -272,6 +272,7 @@
   <!-- ============ VEHICLE CHECKING (ikman.lk / riyasewana.com ad prices, filled by app.js) ============ -->
   <div id="vcheckPanel" class="vcPanel" hidden>
     <form id="vcForm" class="vcForm" autocomplete="off">
+      <label><span>Vehicle Type</span><select id="vcType" required></select></label>
       <label><span>Make</span><select id="vcMake" required></select>
         <input id="vcMakeOther" type="text" placeholder="Enter make" hidden></label>
       <label><span>Model</span><select id="vcModel" required></select>
@@ -292,7 +293,7 @@
 <!-- END .page -->
 
 
-<script src="app.js?v=88"></script>
+<script src="app.js?v=89"></script>
 
 <script>
   /* Register the service worker (PWA install + offline shell). */
