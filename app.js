@@ -1,3 +1,5 @@
+Warning: fs was declared with const; use let for reassignable variables.
+Warning: s was declared with const; use let for reassignable variables.
 /* =========================================================
    MasterCAL Pro — app.js (PWA front end)
    Calls the Apps Script JSON API via fetch().
@@ -1775,9 +1777,10 @@ var bk_lastData = null;   /* latest payload, used by the schedule */
 const BK_LABELS = {
   B2: "MAKE", B3: "MODEL", B4: "YEAR", B5: "Maximum Exposure",
   B7: "FACILITY AMOUNT", B8: "BIC ( % )", B9: "INSURANCE",
-  B10: "PERIOD", B11: "IRR ( % )", B20: "RMV CHARGES"
+  B10: "CAPITALISED RMV CHARGES", B11: "PERIOD", B12: "IRR ( % )",
+  B20: "CRIB CHARGES", B21: "RMV CHARGES"
 };
-const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B20"];
+const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B10", "B21"];
 
 function loadBike(reset) {
   const l = document.getElementById("bkLoading");
@@ -1864,23 +1867,24 @@ function buildBike() {
     bkOutRow("Service Charges", "bk_svcCharge") +
     bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
     '</table>');
-  /* CRIB input B19 is not shown, like the 3W layout. */
+  /* CRIB input B20 is not shown, like the 3W layout. */
   const c1inputs = document.createElement("div");
   c1inputs.className = "tw-card-inputs";
-  c1inputs.appendChild(bkField("B20"));
+  c1inputs.appendChild(bkField("B21"));
   c1.appendChild(c1inputs);
   grid.appendChild(c1);
 
   const c2 = document.createElement("div");
   c2.className = "tw-card";
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
-  ["B7", "B8", "B9", "B10", "B11"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
+  ["B7", "B8", "B9", "B10", "B11", "B12"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
   c2.insertAdjacentHTML("beforeend",
     '<div class="tw-paywrap">' +
     '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
     bkBigRow("MONTHLY RENTAL", "bk_monthlyRental") +
     '<table class="summaryTable">' +
     bkOutRow("Exposure", "bk_exposurePct") +
+    bkOutRow("Capitalised RMV", "bk_capitalizedRmv") +
     bkOutRow("Total Paid", "bk_totPaid") +
     bkOutRow("Total Interest", "bk_totInterest") +
     bkOutRow("Rate / 100,000", "bk_rate100") +
@@ -1969,6 +1973,7 @@ function renderBike(data) {
   set("bk_cfValuation", o.cfValuation);
   set("bk_maxFacility", o.maxFacility);
   set("bk_exposurePct", data.exposurePct);
+  set("bk_capitalizedRmv", o.capitalizedRmv);
   set("bk_totPaid", o.totPaid);
   set("bk_totInterest", o.totInterest);
   set("bk_rate100", o.rate100);
@@ -1980,6 +1985,15 @@ function renderBike(data) {
   set("bk_svcCharge", o.svcCharge);
   set("bk_vat", o.vat);
 
+  /* BIKE!D21 = YES disables initial RMV Charges (B21), not capitalised B10. */
+  const rmvEl = document.getElementById("bk_B21");
+  if (rmvEl) {
+    const dis = !!data.rmvDisabled;
+    rmvEl.disabled = dis;
+    rmvEl.classList.toggle("is-disabled", dis);
+    if (dis) rmvEl.value = "";
+  }
+
   if (isBkScheduleVisible()) renderBkSchedule();
   alignPayTiles();
 }
@@ -1989,7 +2003,7 @@ function renderBike(data) {
    BIKE RENTAL SCHEDULE  (computed client-side, same method as 3W)
      financed principal P = Total Paid − Total Interest
      monthly rental R     = Monthly Rental
-     term n               = PERIOD (B10)
+     term n               = PERIOD (B11)
    The monthly rate is solved so the annuity amortizes to 0, so the
    schedule's totals match the sheet exactly.
 ========================================================= */
@@ -2057,7 +2071,7 @@ function renderBkSchedule() {
 
   const o = bk_lastData.out || {};
   const inp = bk_lastData.inputs || {};
-  const n = Math.round(bkNum(inp.B10 && inp.B10.value));
+  const n = Math.round(bkNum(inp.B11 && inp.B11.value));
   const R = bkNum(o.monthlyRental);
   const P = bkNum(o.totPaid) - bkNum(o.totInterest);
 
@@ -2110,11 +2124,10 @@ function setBikeValue(cell, value) {
 
 
 /* =========================================================
-   VEHICLE HUB TAB
-   Opens the VehicleHub app, which is served from the same origin as
-   MasterCAL (drcjayawardena.github.io), inside an iframe, loaded on first
-   open. VehicleHub logs in with the MasterCAL session (localStorage
-   "mastercal_token") and starts on its Dashboard.
+   VEHICLEHUB SECTIONS
+   One same-origin iframe is reused for Vehicles, Buyers and Matches.
+   The embedded VehicleHUB hides its standalone sidebar and switches views
+   through a validated postMessage, preserving its existing SSO session.
 ========================================================= */
 
 const VEHICLEHUB_URL = "https://drcjayawardena.github.io/VehicleHUB/";
@@ -2249,7 +2262,6 @@ const VC_MODEL_TYPES = {
   "Hero": { "Dash": "Motorcycle", "Destini": "Motorcycle", "Hunk": "Motorcycle", "Maestro": "Motorcycle", "Pleasure": "Motorcycle", "Splendor": "Motorcycle" },
   "Yamaha": { "FZ": "Motorcycle", "Fascino": "Motorcycle", "Ray ZR": "Motorcycle", "R15": "Motorcycle" }
 };
-
 function vcTypeFor(make, model) { return ((VC_MODEL_TYPES[make] || {})[model]) || "Car"; }
 /* Years each model was made: [first, last] (0 = still made). Approximate; a
    model not listed here (or "Other") shows every year from VC_FIRST_YEAR. */
@@ -2410,7 +2422,7 @@ function setupVehicleCheck() {
     const makes = Object.keys(VC_MODELS).filter(function (make) {
       return VC_MODELS[make].some(function (model) { return vcTypeFor(make, model) === type; });
     });
-    vcFill(makeSel, makes.map(vcPair).concat([[VC_OTHER, "Otherâ¦"]]), ["", type ? "Select make" : "Select a vehicle type first"]);
+    vcFill(makeSel, makes.map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", type ? "Select make" : "Select a vehicle type first"]);
     makeSel.disabled = !type;
     vcFill(modelSel, [], ["", "Select a make first"]);
     modelSel.disabled = true;
@@ -2426,7 +2438,7 @@ function setupVehicleCheck() {
       modelSel.disabled = true;
     } else {
       const models = (VC_MODELS[m] || []).filter(function (model) { return vcTypeFor(m, model) === typeSel.value; });
-      vcFill(modelSel, models.map(vcPair).concat([[VC_OTHER, "Otherâ¦"]]), ["", "Select model"]);
+      vcFill(modelSel, models.map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Select model"]);
       modelSel.disabled = false;
       if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
     }
