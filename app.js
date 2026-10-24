@@ -2215,7 +2215,7 @@ const VC_MODELS = {
 const VC_VEHICLE_TYPES = ["Car", "SUV / Jeep", "Van / MPV", "Cab / Pickup", "Three Wheeler", "Motorcycle"];
 /* Models not listed here are treated as Cars. */
 const VC_MODEL_TYPES = {
-  "Toyota": { "C-HR": "SUV / Jeep", "Fortuner": "SUV / Jeep", "Land Cruiser": "SUV / Jeep", "Land Cruiser Prado": "SUV / Jeep", "Raize": "SUV / Jeep", "Rush": "SUV / Jeep", "Hiace": "Van / MPV", "KDH": "Van / MPV", "Noah": "Van / MPV", "TownAce": "Van / MPV", "Dolphin": "Van / MPV", "Shell": "Van / MPV", "Hilux": "Cab / Pickup" },
+  "Toyota": { "C-HR": "SUV / Jeep", "Fortuner": "SUV / Jeep", "Land Cruiser": "SUV / Jeep", "Land Cruiser Prado": "SUV / Jeep", "Raize": "SUV / Jeep", "Rush": "SUV / Jeep", "Hiace": "Van / MPV", "KDH": "Van / MPV", "Noah": "Van / MPV", "TownAce": "Van / MPV", "Shell": "Van / MPV", "Hilux": "Cab / Pickup" },
   "Suzuki": { "Ertiga": "Van / MPV", "Every": "Van / MPV", "Spacia": "Van / MPV", "Hustler": "SUV / Jeep", "Jimny": "SUV / Jeep", "Vitara": "SUV / Jeep", "GN125": "Motorcycle" },
   "Honda": { "CR-V": "SUV / Jeep", "Vezel": "SUV / Jeep", "WR-V": "SUV / Jeep", "Freed": "Van / MPV", "Fit Shuttle": "Van / MPV", "Odyssey": "Van / MPV", "PCX": "Motorcycle", "CB Shine": "Motorcycle", "CD 125": "Motorcycle", "Dio": "Motorcycle", "Hornet": "Motorcycle", "X-Blade": "Motorcycle" },
   "Nissan": { "Caravan": "Van / MPV", "Clipper": "Van / MPV", "Roox": "Van / MPV", "Vanette": "Van / MPV", "Navara": "Cab / Pickup", "X-Trail": "SUV / Jeep" },
@@ -2226,7 +2226,7 @@ const VC_MODEL_TYPES = {
   "Kia": { "Sorento": "SUV / Jeep", "Sportage": "SUV / Jeep", "Sonet": "SUV / Jeep", "Stonic": "SUV / Jeep" },
   "Audi": { "Q3": "SUV / Jeep", "Q5": "SUV / Jeep", "Q7": "SUV / Jeep" },
   "BMW": { "X1": "SUV / Jeep", "X3": "SUV / Jeep", "X5": "SUV / Jeep" },
-  "BYD": { "Atto 3": "SUV / Jeep" },
+  "BYD": { "Atto 3": "SUV / Jeep", "Dolphin": "Car", "Seal": "Car" },
   "Ford": { "Everest": "SUV / Jeep", "Ranger": "Cab / Pickup" },
   "Haval": { "H6": "SUV / Jeep", "Jolion": "SUV / Jeep" },
   "Isuzu": { "D-Max": "Cab / Pickup", "Fargo": "Van / MPV" },
@@ -2285,7 +2285,8 @@ const VC_YEARS = {
   "TVS": { "King Three Wheeler": [2008, 0], "Apache": [2005, 0], "Metro": [2009, 0], "Ntorq": [2018, 0], "Scooty Pep": [2005, 0] },
   "Hero": { "Dash": [2014, 0], "Destini": [2018, 0], "Hunk": [2007, 0], "Maestro": [2012, 0], "Pleasure": [2006, 0],
     "Splendor": [1994, 0] },
-  "Yamaha": { "FZ": [2008, 0], "Fascino": [2015, 0], "Ray ZR": [2016, 0], "R15": [2008, 0] }
+  "Yamaha": { "FZ": [2008, 0], "Fascino": [2015, 0], "Ray ZR": [2016, 0], "R15": [2008, 0] },
+  "BYD": { "Atto 3": [2022, 0], "Dolphin": [2021, 0], "Seal": [2022, 0] }
 };
 /* Common grades as sellers write them in ad titles. Models not listed have no
    Grade choice (the Grade dropdown stays on "any grade"). */
