@@ -1775,9 +1775,10 @@ var bk_lastData = null;   /* latest payload, used by the schedule */
 const BK_LABELS = {
   B2: "MAKE", B3: "MODEL", B4: "YEAR", B5: "Maximum Exposure",
   B7: "FACILITY AMOUNT", B8: "BIC ( % )", B9: "INSURANCE",
-  B10: "PERIOD", B11: "IRR ( % )", B20: "RMV CHARGES"
+  B10: "RMV CHARGES ( CAPITALISED )", B11: "PERIOD", B12: "IRR ( % )",
+  B20: "CRIB CHARGES", B21: "INITIAL RMV CHARGES"
 };
-const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B20"];
+const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B10", "B21"];
 
 function loadBike(reset) {
   const l = document.getElementById("bkLoading");
@@ -1864,17 +1865,17 @@ function buildBike() {
     bkOutRow("Service Charges", "bk_svcCharge") +
     bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
     '</table>');
-  /* CRIB input B19 is not shown, like the 3W layout. */
+  /* CRIB input B20 is not shown, like the 3W layout. */
   const c1inputs = document.createElement("div");
   c1inputs.className = "tw-card-inputs";
-  c1inputs.appendChild(bkField("B20"));
+  c1inputs.appendChild(bkField("B21"));
   c1.appendChild(c1inputs);
   grid.appendChild(c1);
 
   const c2 = document.createElement("div");
   c2.className = "tw-card";
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
-  ["B7", "B8", "B9", "B10", "B11"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
+  ["B7", "B8", "B9", "B10", "B11", "B12"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
   c2.insertAdjacentHTML("beforeend",
     '<div class="tw-paywrap">' +
     '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
@@ -1957,8 +1958,19 @@ function renderBike(data) {
   if (lb7 && data.labelFacility) lb7.textContent = data.labelFacility;
   const bicLbl = document.getElementById("bklbl_B8");
   if (bicLbl) bicLbl.textContent = "BIC ( % )" + (o.bic && bkNum(o.bic) > 0 ? "  -  " + o.bic : "");
+  const rmvCapLbl = document.getElementById("bklbl_B10");
+  if (rmvCapLbl) rmvCapLbl.textContent = BK_LABELS.B10 + (o.capitalizedRmv && bkNum(o.capitalizedRmv) > 0 ? "  -  " + o.capitalizedRmv : "");
   const vatLbl = document.getElementById("bk_vatLabel");
   if (vatLbl) vatLbl.textContent = data.vatLabel || "VAT";
+
+  /* BIKE!D21 = YES -> initial RMV charges are covered: disable B21 (same as 3W). */
+  const rmvEl = document.getElementById("bk_B21");
+  if (rmvEl) {
+    const off = !!data.rmvDisabled;
+    rmvEl.disabled = off;
+    rmvEl.classList.toggle("is-disabled", off);
+    if (off) rmvEl.value = "";
+  }
 
   /* results */
   const set = function (id, v) {
@@ -1989,7 +2001,7 @@ function renderBike(data) {
    BIKE RENTAL SCHEDULE  (computed client-side, same method as 3W)
      financed principal P = Total Paid − Total Interest
      monthly rental R     = Monthly Rental
-     term n               = PERIOD (B10)
+     term n               = PERIOD (B11)
    The monthly rate is solved so the annuity amortizes to 0, so the
    schedule's totals match the sheet exactly.
 ========================================================= */
@@ -2057,7 +2069,7 @@ function renderBkSchedule() {
 
   const o = bk_lastData.out || {};
   const inp = bk_lastData.inputs || {};
-  const n = Math.round(bkNum(inp.B10 && inp.B10.value));
+  const n = Math.round(bkNum(inp.B11 && inp.B11.value));   /* PERIOD is B11 in the new layout */
   const R = bkNum(o.monthlyRental);
   const P = bkNum(o.totPaid) - bkNum(o.totInterest);
 
@@ -2682,4 +2694,3 @@ function sendQuoteWhatsApp(q) {
   if (String(raw).trim() && !num) { alert("Please enter a valid WhatsApp number (e.g. 0771234567)."); return; }
   window.open("https://wa.me/" + num + "?text=" + encodeURIComponent(quoteText(q, num)), "_blank", "noopener");
 }
-
