@@ -2670,18 +2670,22 @@ function quoteText(q, num) {
   const d = quoteLines(q.kind);
   if (!d) return "";
   const t = ["Dear Customer,", "Please find below your requested *" + q.title + "* quotation:", ""];
-  d.main.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
+  d.main.forEach(function (r) {
+    if (r[0] === "Facility Amount") t.push("Facility Amount  : " + r[1]);
+    else if (r[0] === "Period (months)") t.push("Period (months) : " + qMoney(r[1]));   /* 24 -> 24.00 */
+    else t.push(r[0] + " : " + r[1]);
+  });
   const hasBullet = d.bullets && d.bullets.length;
-  t.push("", "*Monthly Rental" + (hasBullet ? " (with Bullet)" : "") + ": " + d.rental + "*");
+  t.push("", "*Monthly Rental" + (hasBullet ? " (with Bullet)" : "") + "  : " + d.rental + "*");
   if (hasBullet) {
     t.push("", "*Bullet Payments:*");
     d.bullets.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
   }
-  if (qNum(d.total)) t.push("", "*Upfront Charges: " + d.total + "*");
+  if (qNum(d.total)) t.push("", "*Initial Charges    : " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
   t.push("", "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + localPhone(tel) : "") + ".");
-  t.push("", "🚗 Looking for a vehicle? Tell us what you need and we will find it for you:", quoteRequestLink(q, num));
-  t.push("", "💰 Selling your vehicle? Share the details and we will find a buyer:", quoteRequestLink(q, num, true));
+  t.push("", "🚗 ඔබට වාහනයක් අවශ්‍යද? ඔබට අවශ්‍ය දේ අපට කියන්න, අපි ඔබ වෙනුවෙන් එය සොයා දෙන්නෙමු:", quoteRequestLink(q, num));
+  t.push("", "💰 ඔබේ වාහනය විකුණන්නද? විස්තර අප සමඟ බෙදාගන්න, අපි ඔබට ගැනුම්කරුවෙකු සොයා දෙන්නෙමු:", quoteRequestLink(q, num, true));
   return t.join("\n");
 }
 
