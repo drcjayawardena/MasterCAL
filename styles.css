@@ -134,9 +134,6 @@ body{
   margin-bottom:5px;
 }
 
-/* spacer between the two summary cards (stacked view) */
-.summarySpacer{ height:14px; }
-
 /* ---------- grid lines between rows inside cards ---------- */
 .facility .field,
 .tw-card .field{
@@ -237,11 +234,6 @@ input.is-disabled, select.is-disabled{
 }
 .addBulletPaymentButton:hover,
 .rentalScheduleToggle:hover{ background:var(--brand-700); }
-
-/* buttons pinned to the bottom of a card */
-.chargesButtons{ margin-top:auto; padding-top:14px; display:flex; flex-direction:column; gap:8px; }
-.chargesButtons .addBulletPaymentButton,
-.chargesButtons .rentalScheduleToggle{ width:100%; margin:0; }
 
 /* ADD BULLET PAYMENT button: its own small card at the top of the middle column */
 .bulletButtonCard .addBulletPaymentButton{ width:100%; margin:0; }
@@ -413,10 +405,6 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 /* Initial-Charges input block sits below the summary table */
 .tw-card-inputs{ margin-top:10px; }
 
-/* dark line separating the RMV input from Total Capitalized / Flat Rate */
-.tw-cap-divider{ border-top:2px solid var(--ink); margin:10px 0 4px; }
-.tw-cap-table{ margin-top:0; }
-
 /* the "PAYMENT DETAIL" sub-heading inside a 3W card */
 .tw-card .tw-subtitle{ margin-top:12px; }
 .summaryColumn .tw-subtitle{ margin-top:12px; }
@@ -478,13 +466,6 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .gateBtn:hover{ background:var(--brand-700); }
 .gateBtn:disabled{ opacity:.6; cursor:default; }
 
-/* 6-digit OTP code entry */
-.gateCard input.gateCode{
-  height:36px; text-align:center; font-size:22px; font-weight:700;
-  letter-spacing:10px; padding:0;
-}
-.gateCard input.gateCode::placeholder{ letter-spacing:8px; color:#cfd8dc; }
-
 .gateBtnLink{
   width:100%; background:none; border:0; color:var(--brand);
   font-size:12.5px; font-weight:600; cursor:pointer; margin-top:10px; padding:6px;
@@ -538,7 +519,6 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   .scheduleTableContainer{ flex:1; min-height:0; }
 
   .summaryColumn{ display:flex; flex-direction:column; }
-  .summarySpacer{ display:none; }
   .summary,
   .bulk{ flex:0 0 auto; }
   .summaryTable, .chargesTable{ border-spacing:0 4px; }
