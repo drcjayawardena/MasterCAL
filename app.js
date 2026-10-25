@@ -812,8 +812,6 @@ function addlChargeInput(amount) {
   if (!addlInput) {
     addlInput = document.createElement("input");
     addlInput.type = "text";
-    addlInput.id = "additionalServiceCharge";
-    addlInput.name = "additionalServiceCharge";
     addlInput.inputMode = "decimal";
     addlInput.className = "chargesInput";
     addlInput.placeholder = "Amount";
@@ -1484,7 +1482,6 @@ function twField(cell, data) {
     });
   }
   el.id = "tw_" + cell;
-  lab.htmlFor = el.id;
   wrap.appendChild(el);
   return wrap;
 }
@@ -1826,7 +1823,6 @@ function bkField(cell) {
     });
   }
   el.id = "bk_" + cell;
-  lab.htmlFor = el.id;
   wrap.appendChild(el);
   return wrap;
 }
