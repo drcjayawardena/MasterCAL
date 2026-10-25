@@ -1974,6 +1974,18 @@ function renderBike(data) {
     if (!el) return;
     if (el.tagName === "SELECT") {
       const cur = String(info.value == null ? "" : info.value);
+      if (info.options === undefined && el.options.length > 1) {
+        /* the server did not resend this list (it cannot have changed): keep it, only set the value */
+        let has = false;
+        for (let i = 0; i < el.options.length; i++) if (el.options[i].value === cur) { has = true; break; }
+        if (cur !== "" && !has) {
+          const o1 = document.createElement("option");
+          o1.value = cur; o1.textContent = cur;
+          el.appendChild(o1);
+        }
+        el.value = cur;
+        return;
+      }
       const opts = info.options || [];
       el.innerHTML = "";
       const blank = document.createElement("option");
@@ -2161,9 +2173,20 @@ function bk_setBusy(on) {
 }
 
 function setBikeValue(cell, value) {
+  /* a number field that still holds what the sheet already has: no need to ask the server */
+  const cur = bk_lastData && bk_lastData.inputs && bk_lastData.inputs[cell];
+  if (cur && BK_SELECT_CELLS.indexOf(cell) === -1) {
+    const v = String(value == null ? "" : value).trim(), c = String(cur.value == null ? "" : cur.value).trim();
+    if ((v === "" && c === "") ||
+        (v !== "" && c !== "" && /^[\d.,\s]+%?$/.test(v) && bkNum(v) === bkNum(c))) return;
+  }
+
   bk_setBusy(true);
   api("setBike", [cell, value])
-    .then(function (data) { renderBike(data); })
+    .then(function (data) {
+      if (data && data.ms != null) console.log("Bike " + cell + ": server " + data.ms + " ms");
+      renderBike(data);
+    })
     .catch(function (e) {
       console.error("Bike set error:", e);
       alert("Could not update the bike value.\n\n" + e.message);
