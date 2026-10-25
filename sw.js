@@ -12,7 +12,7 @@
  * pick up the new version.
  ******************************************************/
 
-const CACHE_VERSION = "mastercal-v93";
+const CACHE_VERSION = "mastercal-v92";
 
 const SHELL = [
   "./",
@@ -80,3 +80,4 @@ self.addEventListener("fetch", function (event) {
     })
   );
 });
+
