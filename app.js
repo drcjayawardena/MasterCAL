@@ -90,12 +90,6 @@ async function api(action, args) {
 
     const json = await res.json();
 
-    /* The master sheet changed: this user's copy is rebuilt first, then the page reloads. */
-    if (json && json.stale) {
-      runCopyUpdate();
-      return new Promise(function () {});
-    }
-
     if (!json || json.ok !== true) {
       const e = new Error((json && json.error) || "API error");
       if (json && json.access) e.access = json.access;   /* LOGIN / PENDING / BLOCKED */
@@ -107,51 +101,6 @@ async function api(action, args) {
   } finally {
     if (isCalc) calcEnd();
   }
-}
-
-
-/* =========================================================
-   COPY UPDATE
-   The admin changed the master sheet -> the server answers { stale: true }.
-   We show the loading animation ("Updating…"), ask the server to build a
-   fresh copy for this user (syncCopy), then reload the page.
-========================================================= */
-
-var copyUpdating = null;
-
-function runCopyUpdate() {
-  if (copyUpdating) return copyUpdating;
-
-  let tries = 0;
-  try {
-    tries = Number(sessionStorage.getItem("mc_sync_tries") || 0) + 1;
-    sessionStorage.setItem("mc_sync_tries", String(tries));
-  } catch (e) {}
-  if (tries > 3) {                       /* never loop forever */
-    try { sessionStorage.removeItem("mc_sync_tries"); } catch (e) {}
-    hideLoading();
-    alert("MasterCAL is still being updated. Please try again in a minute.");
-    return null;
-  }
-
-  showLoading("Updating MasterCAL… this can take a few seconds.");
-  copyUpdating = fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "syncCopy", args: [], token: getToken() }),
-    redirect: "follow"
-  })
-    .then(function (res) { return res.json(); })
-    .then(function (json) {
-      if (!json || json.ok !== true) throw new Error((json && json.error) || "Update failed");
-      location.reload();
-    })
-    .catch(function (e) {
-      copyUpdating = null;
-      hideLoading();
-      alert("Could not update MasterCAL.\n\n" + e.message + "\n\nPlease try again.");
-    });
-  return copyUpdating;
 }
 
 
@@ -212,7 +161,6 @@ function loadApp() {
     .then(function (result) {
 
       hideLoading();
-      try { sessionStorage.removeItem("mc_sync_tries"); } catch (e) {}
 
       if (!result) return;
 
@@ -864,6 +812,8 @@ function addlChargeInput(amount) {
   if (!addlInput) {
     addlInput = document.createElement("input");
     addlInput.type = "text";
+    addlInput.id = "additionalServiceCharge";
+    addlInput.name = "additionalServiceCharge";
     addlInput.inputMode = "decimal";
     addlInput.className = "chargesInput";
     addlInput.placeholder = "Amount";
@@ -1534,6 +1484,7 @@ function twField(cell, data) {
     });
   }
   el.id = "tw_" + cell;
+  lab.htmlFor = el.id;
   wrap.appendChild(el);
   return wrap;
 }
@@ -1827,10 +1778,9 @@ var bk_lastData = null;   /* latest payload, used by the schedule */
 const BK_LABELS = {
   B2: "MAKE", B3: "MODEL", B4: "YEAR", B5: "Maximum Exposure",
   B7: "FACILITY AMOUNT", B8: "BIC ( % )", B9: "INSURANCE",
-  B10: "RMV CHARGES ( CAPITALISED )", B11: "PERIOD", B12: "IRR ( % )",
-  B20: "CRIB CHARGES", B21: "INITIAL RMV CHARGES"
+  B10: "PERIOD", B11: "IRR ( % )", B20: "RMV CHARGES"
 };
-const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B10", "B21"];
+const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B20"];
 
 function loadBike(reset) {
   const l = document.getElementById("bkLoading");
@@ -1876,6 +1826,7 @@ function bkField(cell) {
     });
   }
   el.id = "bk_" + cell;
+  lab.htmlFor = el.id;
   wrap.appendChild(el);
   return wrap;
 }
@@ -1917,17 +1868,17 @@ function buildBike() {
     bkOutRow("Service Charges", "bk_svcCharge") +
     bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
     '</table>');
-  /* CRIB input B20 is not shown, like the 3W layout. */
+  /* CRIB input B19 is not shown, like the 3W layout. */
   const c1inputs = document.createElement("div");
   c1inputs.className = "tw-card-inputs";
-  c1inputs.appendChild(bkField("B21"));
+  c1inputs.appendChild(bkField("B20"));
   c1.appendChild(c1inputs);
   grid.appendChild(c1);
 
   const c2 = document.createElement("div");
   c2.className = "tw-card";
   c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
-  ["B7", "B8", "B9", "B10", "B11", "B12"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
+  ["B7", "B8", "B9", "B10", "B11"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
   c2.insertAdjacentHTML("beforeend",
     '<div class="tw-paywrap">' +
     '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
@@ -1974,18 +1925,6 @@ function renderBike(data) {
     if (!el) return;
     if (el.tagName === "SELECT") {
       const cur = String(info.value == null ? "" : info.value);
-      if (info.options === undefined && el.options.length > 1) {
-        /* the server did not resend this list (it cannot have changed): keep it, only set the value */
-        let has = false;
-        for (let i = 0; i < el.options.length; i++) if (el.options[i].value === cur) { has = true; break; }
-        if (cur !== "" && !has) {
-          const o1 = document.createElement("option");
-          o1.value = cur; o1.textContent = cur;
-          el.appendChild(o1);
-        }
-        el.value = cur;
-        return;
-      }
       const opts = info.options || [];
       el.innerHTML = "";
       const blank = document.createElement("option");
@@ -2022,19 +1961,8 @@ function renderBike(data) {
   if (lb7 && data.labelFacility) lb7.textContent = data.labelFacility;
   const bicLbl = document.getElementById("bklbl_B8");
   if (bicLbl) bicLbl.textContent = "BIC ( % )" + (o.bic && bkNum(o.bic) > 0 ? "  -  " + o.bic : "");
-  const rmvCapLbl = document.getElementById("bklbl_B10");
-  if (rmvCapLbl) rmvCapLbl.textContent = BK_LABELS.B10 + (o.capitalizedRmv && bkNum(o.capitalizedRmv) > 0 ? "  -  " + o.capitalizedRmv : "");
   const vatLbl = document.getElementById("bk_vatLabel");
   if (vatLbl) vatLbl.textContent = data.vatLabel || "VAT";
-
-  /* BIKE!D21 = YES -> initial RMV charges are covered: disable B21 (same as 3W). */
-  const rmvEl = document.getElementById("bk_B21");
-  if (rmvEl) {
-    const off = !!data.rmvDisabled;
-    rmvEl.disabled = off;
-    rmvEl.classList.toggle("is-disabled", off);
-    if (off) rmvEl.value = "";
-  }
 
   /* results */
   const set = function (id, v) {
@@ -2065,7 +1993,7 @@ function renderBike(data) {
    BIKE RENTAL SCHEDULE  (computed client-side, same method as 3W)
      financed principal P = Total Paid − Total Interest
      monthly rental R     = Monthly Rental
-     term n               = PERIOD (B11)
+     term n               = PERIOD (B10)
    The monthly rate is solved so the annuity amortizes to 0, so the
    schedule's totals match the sheet exactly.
 ========================================================= */
@@ -2133,7 +2061,7 @@ function renderBkSchedule() {
 
   const o = bk_lastData.out || {};
   const inp = bk_lastData.inputs || {};
-  const n = Math.round(bkNum(inp.B11 && inp.B11.value));   /* PERIOD is B11 in the new layout */
+  const n = Math.round(bkNum(inp.B10 && inp.B10.value));
   const R = bkNum(o.monthlyRental);
   const P = bkNum(o.totPaid) - bkNum(o.totInterest);
 
@@ -2173,20 +2101,9 @@ function bk_setBusy(on) {
 }
 
 function setBikeValue(cell, value) {
-  /* a number field that still holds what the sheet already has: no need to ask the server */
-  const cur = bk_lastData && bk_lastData.inputs && bk_lastData.inputs[cell];
-  if (cur && BK_SELECT_CELLS.indexOf(cell) === -1) {
-    const v = String(value == null ? "" : value).trim(), c = String(cur.value == null ? "" : cur.value).trim();
-    if ((v === "" && c === "") ||
-        (v !== "" && c !== "" && /^[\d.,\s]+%?$/.test(v) && bkNum(v) === bkNum(c))) return;
-  }
-
   bk_setBusy(true);
   api("setBike", [cell, value])
-    .then(function (data) {
-      if (data && data.ms != null) console.log("Bike " + cell + ": server " + data.ms + " ms");
-      renderBike(data);
-    })
+    .then(function (data) { renderBike(data); })
     .catch(function (e) {
       console.error("Bike set error:", e);
       alert("Could not update the bike value.\n\n" + e.message);
@@ -2741,29 +2658,22 @@ function quoteRequestLink(q, num, sell) {
   return u;
 }
 
-/* A plain mark: emoji arrive as "?" when the message opens in WhatsApp on a computer. */
-const QUOTE_MARK = "•";
-
 function quoteText(q, num) {
   const d = quoteLines(q.kind);
   if (!d) return "";
   const t = ["Dear Customer,", "Please find below your requested *" + q.title + "* quotation:", ""];
-  d.main.forEach(function (r) {
-    if (r[0] === "Facility Amount") t.push("Facility Amount  : " + r[1]);
-    else if (r[0] === "Period (months)") t.push("Period (months) : " + qMoney(r[1]));   /* 24 -> 24.00 */
-    else t.push(r[0] + " : " + r[1]);
-  });
+  d.main.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
   const hasBullet = d.bullets && d.bullets.length;
-  t.push("", "*Monthly Rental" + (hasBullet ? " (with Bullet)" : "") + "  : " + d.rental + "*");
+  t.push("", "*Monthly Rental" + (hasBullet ? " (with Bullet)" : "") + ": " + d.rental + "*");
   if (hasBullet) {
     t.push("", "*Bullet Payments:*");
     d.bullets.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
   }
-  if (qNum(d.total)) t.push("", "*Initial Charges    : " + d.total + "*");
+  if (qNum(d.total)) t.push("", "*Upfront Charges: " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
   t.push("", "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + localPhone(tel) : "") + ".");
-  t.push("", QUOTE_MARK + " ඔබට වාහනයක් අවශ්‍යද? ඔබට අවශ්‍ය දේ අපට කියන්න, අපි ඔබ වෙනුවෙන් එය සොයා දෙන්නෙමු:", quoteRequestLink(q, num));
-  t.push("", QUOTE_MARK + " ඔබේ වාහනය විකුණන්නද? විස්තර අප සමඟ බෙදාගන්න, අපි ඔබට ගැනුම්කරුවෙකු සොයා දෙන්නෙමු:", quoteRequestLink(q, num, true));
+  t.push("", "🚗 Looking for a vehicle? Tell us what you need and we will find it for you:", quoteRequestLink(q, num));
+  t.push("", "💰 Selling your vehicle? Share the details and we will find a buyer:", quoteRequestLink(q, num, true));
   return t.join("\n");
 }
 
