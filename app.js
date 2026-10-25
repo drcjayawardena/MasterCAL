@@ -90,6 +90,12 @@ async function api(action, args) {
 
     const json = await res.json();
 
+    /* The master sheet changed: this user's copy is rebuilt first, then the page reloads. */
+    if (json && json.stale) {
+      runCopyUpdate();
+      return new Promise(function () {});
+    }
+
     if (!json || json.ok !== true) {
       const e = new Error((json && json.error) || "API error");
       if (json && json.access) e.access = json.access;   /* LOGIN / PENDING / BLOCKED */
@@ -101,6 +107,51 @@ async function api(action, args) {
   } finally {
     if (isCalc) calcEnd();
   }
+}
+
+
+/* =========================================================
+   COPY UPDATE
+   The admin changed the master sheet -> the server answers { stale: true }.
+   We show the loading animation ("Updating…"), ask the server to build a
+   fresh copy for this user (syncCopy), then reload the page.
+========================================================= */
+
+var copyUpdating = null;
+
+function runCopyUpdate() {
+  if (copyUpdating) return copyUpdating;
+
+  let tries = 0;
+  try {
+    tries = Number(sessionStorage.getItem("mc_sync_tries") || 0) + 1;
+    sessionStorage.setItem("mc_sync_tries", String(tries));
+  } catch (e) {}
+  if (tries > 3) {                       /* never loop forever */
+    try { sessionStorage.removeItem("mc_sync_tries"); } catch (e) {}
+    hideLoading();
+    alert("MasterCAL is still being updated. Please try again in a minute.");
+    return null;
+  }
+
+  showLoading("Updating MasterCAL… this can take a few seconds.");
+  copyUpdating = fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "syncCopy", args: [], token: getToken() }),
+    redirect: "follow"
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (json) {
+      if (!json || json.ok !== true) throw new Error((json && json.error) || "Update failed");
+      location.reload();
+    })
+    .catch(function (e) {
+      copyUpdating = null;
+      hideLoading();
+      alert("Could not update MasterCAL.\n\n" + e.message + "\n\nPlease try again.");
+    });
+  return copyUpdating;
 }
 
 
@@ -161,6 +212,7 @@ function loadApp() {
     .then(function (result) {
 
       hideLoading();
+      try { sessionStorage.removeItem("mc_sync_tries"); } catch (e) {}
 
       if (!result) return;
 
@@ -2666,6 +2718,9 @@ function quoteRequestLink(q, num, sell) {
   return u;
 }
 
+/* A plain mark: emoji arrive as "?" when the message opens in WhatsApp on a computer. */
+const QUOTE_MARK = "•";
+
 function quoteText(q, num) {
   const d = quoteLines(q.kind);
   if (!d) return "";
@@ -2684,8 +2739,8 @@ function quoteText(q, num) {
   if (qNum(d.total)) t.push("", "*Initial Charges    : " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
   t.push("", "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + localPhone(tel) : "") + ".");
-  t.push("", "🚗 ඔබට වාහනයක් අවශ්‍යද? ඔබට අවශ්‍ය දේ අපට කියන්න, අපි ඔබ වෙනුවෙන් එය සොයා දෙන්නෙමු:", quoteRequestLink(q, num));
-  t.push("", "💰 ඔබේ වාහනය විකුණන්නද? විස්තර අප සමඟ බෙදාගන්න, අපි ඔබට ගැනුම්කරුවෙකු සොයා දෙන්නෙමු:", quoteRequestLink(q, num, true));
+  t.push("", QUOTE_MARK + " ඔබට වාහනයක් අවශ්‍යද? ඔබට අවශ්‍ය දේ අපට කියන්න, අපි ඔබ වෙනුවෙන් එය සොයා දෙන්නෙමු:", quoteRequestLink(q, num));
+  t.push("", QUOTE_MARK + " ඔබේ වාහනය විකුණන්නද? විස්තර අප සමඟ බෙදාගන්න, අපි ඔබට ගැනුම්කරුවෙකු සොයා දෙන්නෙමු:", quoteRequestLink(q, num, true));
   return t.join("\n");
 }
 
