@@ -1,5 +1,3 @@
-Warning: fs was declared with const; use let for reassignable variables.
-Warning: s was declared with const; use let for reassignable variables.
 /* =========================================================
    MasterCAL Pro — app.js (PWA front end)
    Calls the Apps Script JSON API via fetch().
