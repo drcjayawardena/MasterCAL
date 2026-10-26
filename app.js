@@ -2395,13 +2395,20 @@ const VC_GRADES = {
 };
 /* Approximate year availability for grades whose production periods differ
    materially. Each entry is [first year, last year]; 0 means still current.
-   Unlisted grades retain the model's full year range rather than guessing. */
+   A grade that is not listed keeps the model's full year range rather than guessing,
+   so add its [first, last] here when you know it. Always keep the range inside the
+   model's own VC_YEARS range, or the Year list comes out empty. */
 const VC_GRADE_YEARS = {
   "Toyota": {
     "Aqua": { "S": [2011, 0], "G": [2011, 0], "L": [2011, 2017], "X-Urban": [2014, 2017], "Crossover": [2017, 2021], "Z": [2021, 0] },
     "Axio": { "X": [2006, 0], "G": [2006, 2023], "Luxel": [2006, 2012], "Hybrid": [2013, 2023] },
     "Vitz": { "F": [1999, 2019], "U": [1999, 2019], "RS": [2001, 2019], "Jewela": [2010, 2019], "Safety": [2017, 2019] },
-    "Prius": { "S": [1997, 0], "G": [1997, 0], "L": [2009, 2015], "A": [2015, 0], "Touring": [2009, 0] }
+    "Prius": { "S": [1997, 0], "G": [1997, 0], "L": [2009, 2015], "A": [2015, 0], "Touring": [2009, 0] },
+    "Allion": { "A15": [2001, 2021], "A18": [2001, 2021], "G": [2007, 2021] },
+    "Premio": { "F": [2001, 2021], "G": [2001, 2021], "X": [2001, 2021], "EX": [2007, 2021] },
+    "Yaris": { "Hybrid": [2012, 0], "Z": [2020, 0] },
+    "Corolla": { "Hybrid": [2013, 0] },
+    "Passo": { "Moda": [2010, 0] }
   },
   "Suzuki": {
     "Wagon R": { "FX": [1993, 0], "FZ": [2012, 0], "Hybrid": [2017, 0] },
@@ -2411,14 +2418,21 @@ const VC_GRADE_YEARS = {
   "Honda": {
     "Vezel": { "Hybrid": [2013, 0], "Hybrid Z": [2013, 2021], "RS": [2016, 0], "X": [2013, 0], "Z": [2013, 2021], "e:HEV": [2021, 0] },
     "Fit": { "13G": [2013, 2020], "15X": [2007, 2013], "Hybrid": [2010, 2020], "RS": [2007, 2020], "L": [2013, 0], "Home": [2020, 0] },
-    "Grace": { "Hybrid DX": [2014, 2020], "Hybrid LX": [2014, 2020], "Hybrid EX": [2014, 2020] }
+    "Grace": { "Hybrid DX": [2014, 2020], "Hybrid LX": [2014, 2020], "Hybrid EX": [2014, 2020] },
+    "Insight": { "G": [2009, 2014], "L": [2009, 2014] },
+    "Freed": { "Hybrid": [2011, 0], "Spike": [2010, 2016] },
+    "Civic": { "Type R": [1997, 0] }
   },
   "Nissan": {
     "Leaf": { "S": [2010, 0], "X": [2010, 0], "G": [2010, 0], "e+": [2019, 0] },
     "Note": { "e-Power": [2016, 0], "X": [2004, 0], "Medalist": [2012, 2020] },
     "Dayz": { "X": [2013, 0], "S": [2013, 0], "Highway Star": [2013, 0] },
     "X-Trail": { "20X": [2000, 2022], "Hybrid": [2015, 2022], "Mode Premier": [2015, 2022] }
-  }
+  },
+  "Mitsubishi": { "Outlander": { "PHEV": [2013, 0] } },
+  "Mazda": { "Axela": { "Hybrid": [2013, 2019] }, "Demio": { "XD": [2014, 2019] } },
+  "Daihatsu": { "Mira": { "e:S": [2011, 2018] } },
+  "Perodua": { "Myvi": { "G": [2015, 0], "X": [2015, 0], "H": [2015, 0], "AV": [2017, 0] } }
 };
 const VC_OTHER = "__other";
 const VC_FIRST_YEAR = 1990;
