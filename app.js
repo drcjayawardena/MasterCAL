@@ -216,6 +216,8 @@ function loadApp() {
 
       if (!result) return;
 
+      applyVehicleHubAccess(result.vehiclehub);
+
       if (result.dropdowns) {
         fillSelect("productType", result.dropdowns.productTypes || []);
         fillSelect("stampDuty",
@@ -279,7 +281,7 @@ function wireShowPass() {
 function showLogin(msg) {
   gateShow(
     '<h2>Login</h2>' +
-    '<p>Sign in with your WhatsApp number and password. Previously created usernames still work. The same account also gives you access to VehicleHUB.</p>' +
+    '<p>Sign in with your WhatsApp number and password. Previously created usernames still work.</p>' +
     '<input id="gateUser" type="text" autocomplete="username" autocapitalize="none" placeholder="WhatsApp number (or previous username)" value="' + escapeHtml(getUsername()) + '">' +
     '<input id="gatePass" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Password">' +
     showPassBox() +
@@ -325,7 +327,7 @@ function showRegister() {
   gateShow(
     '<h2>Register</h2>' +
     '<p>Your WhatsApp number will be your username. Choose a password. ' +
-    'Once an administrator approves your request, you can use this account for both MasterCAL and VehicleHUB.</p>' +
+    'Once an administrator approves your request, you can start using MasterCAL. The administrator also decides whether your account includes the VehicleHUB part.</p>' +
     '<input id="gateName" type="text" autocomplete="name" placeholder="Your name">' +
     '<input id="gatePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="WhatsApp number (e.g. 0771234567)">' +
     '<input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">' +
@@ -2213,6 +2215,24 @@ const HUB_TABS = {
 let HUB_ACTIVE_TAB = "";
 let HUB_FRAME_READY = false;
 
+/* Does this user have the VehicleHUB part? The admin chooses when approving (USERS column K).
+   The server tells us with the "init" answer; until then (or with an older server) it is "yes". */
+let VH_ALLOWED = true;
+
+function applyVehicleHubAccess(allowed) {
+  VH_ALLOWED = allowed !== false;
+  document.querySelectorAll(".tab-hub").forEach(function (b) {
+    b.hidden = !VH_ALLOWED;
+    b.style.display = VH_ALLOWED ? "" : "none";
+  });
+  if (!VH_ALLOWED) {
+    HUB_ACTIVE_TAB = "";
+    const open = document.querySelector(".tab-hub.active");
+    const first = document.querySelector('.tab[data-tab="vehicle"]');
+    if (open && first) first.click();          /* leave a VehicleHUB tab that is open */
+  }
+}
+
 window.addEventListener("message", function (event) {
   const frame = document.getElementById("hubFrame");
   if (!frame || event.origin !== VEHICLEHUB_ORIGIN || event.source !== frame.contentWindow) return;
@@ -2223,6 +2243,7 @@ window.addEventListener("message", function (event) {
 });
 
 function openHub(tab) {
+  if (!VH_ALLOWED) return;
   const t = HUB_TABS[tab]; if (!t) return;
   const f = document.getElementById("hubFrame");
   if (!f) return;
@@ -2411,7 +2432,7 @@ const VC_GRADE_YEARS = {
     "Passo": { "Moda": [2010, 0] }
   },
   "Suzuki": {
-    "Wagon R": { "FX": [1993, 0], "FZ": [2012, 0], "Hybrid": [2017, 0] },
+    "Wagon R": { "FX": [1996, 0], "FZ": [2012, 0], "Hybrid": [2017, 0] },
     "Alto": { "L": [1990, 0], "S": [1990, 0], "X": [1990, 0], "800": [2012, 2019], "K10": [2000, 0] },
     "Swift": { "RS": [2004, 0], "XG": [2004, 0], "XL": [2004, 0], "Hybrid": [2017, 0] }
   },
@@ -2776,8 +2797,11 @@ function quoteText(q, num) {
   if (qNum(d.total)) t.push("", "*Initial Charges    : " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
   t.push("", "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + localPhone(tel) : "") + ".");
-  t.push("", QUOTE_MARK + " ඔබට වාහනයක් අවශ්‍යද? ඔබට අවශ්‍ය දේ අපට කියන්න, අපි ඔබ වෙනුවෙන් එය සොයා දෙන්නෙමු:", quoteRequestLink(q, num));
-  t.push("", QUOTE_MARK + " ඔබේ වාහනය විකුණන්නද? විස්තර අප සමඟ බෙදාගන්න, අපි ඔබට ගැනුම්කරුවෙකු සොයා දෙන්නෙමු:", quoteRequestLink(q, num, true));
+  /* The buy / sell request links lead to VehicleHUB: only for users who have the VehicleHUB part. */
+  if (VH_ALLOWED) {
+    t.push("", QUOTE_MARK + " ඔබට වාහනයක් අවශ්‍යද? ඔබට අවශ්‍ය දේ අපට කියන්න, අපි ඔබ වෙනුවෙන් එය සොයා දෙන්නෙමු:", quoteRequestLink(q, num));
+    t.push("", QUOTE_MARK + " ඔබේ වාහනය විකුණන්නද? විස්තර අප සමඟ බෙදාගන්න, අපි ඔබට ගැනුම්කරුවෙකු සොයා දෙන්නෙමු:", quoteRequestLink(q, num, true));
+  }
   return t.join("\n");
 }
 

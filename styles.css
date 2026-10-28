@@ -41,6 +41,23 @@ body{
 .page{ width:100%; max-width:1480px; margin:0 auto; }
 
 
+/* ---------- install banner (bottom of the screen, above the login screen too) ---------- */
+.installBar{
+  position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  z-index:100000; max-width:560px; margin:0 auto;
+  display:flex; align-items:center; gap:10px;
+  background:var(--brand-700); color:#fff;
+  border-radius:12px; padding:10px 12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.28);
+  font-size:14px; line-height:1.35;
+}
+.installBar[hidden]{ display:none; }
+.installBar span{ flex:1; }
+.installBar button{ border:0; border-radius:8px; cursor:pointer; font:inherit; }
+#installBtn{ background:#fff; color:var(--brand-700); font-weight:700; padding:8px 14px; white-space:nowrap; }
+#installClose{ background:transparent; color:#fff; font-size:22px; line-height:1; padding:2px 8px; }
+
+
 /* ---------- offline banner ---------- */
 .offlineBar{
   display:none;

@@ -8,6 +8,19 @@
 
   <title>MasterCAL Pro</title>
 
+  <!-- LINK PREVIEW: the card WhatsApp (and Facebook etc.) shows when this link is shared -->
+  <meta name="description" content="MasterCAL Pro: vehicle leasing rental calculator for vehicles, three-wheelers and bikes. Install it on your phone.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MasterCAL">
+  <meta property="og:title" content="MasterCAL Pro, Vehicle Leasing Rental Calculator">
+  <meta property="og:description" content="Work out monthly rentals, initial charges and payment schedules. Open the link and install it on your phone.">
+  <meta property="og:url" content="https://drcjayawardena.github.io/MasterCAL/">
+  <meta property="og:image" content="https://drcjayawardena.github.io/MasterCAL/icons/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="MasterCAL logo">
+  <meta name="twitter:card" content="summary">
+
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1c5e3a">
@@ -41,6 +54,13 @@
 <div id="loading" class="loading">
   <div class="spinner"></div>
   <div class="loadingText" id="loadingText">Loading…</div>
+</div>
+
+<!-- INSTALL BANNER (shown by the script at the end of this page) -->
+<div class="installBar" id="installBar" role="region" aria-label="Install MasterCAL" hidden>
+  <span id="installMsg"></span>
+  <button type="button" id="installBtn" hidden>Install app</button>
+  <button type="button" id="installClose" aria-label="Dismiss">&times;</button>
 </div>
 
 <div class="offlineBar" id="offlineBar">
@@ -293,7 +313,7 @@
 <!-- END .page -->
 
 
-<script src="app.js?v=95"></script>
+<script src="app.js?v=97"></script>
 
 <script>
   /* Register the service worker (PWA install + offline shell). */
@@ -304,6 +324,61 @@
       });
     });
   }
+</script>
+
+<script>
+  /* Install banner.
+     Android / desktop Chrome: the browser says when the app can be installed (beforeinstallprompt),
+       the "Install app" button then opens the browser's own install dialog.
+     iPhone: there is no such event, so the banner tells how to use Share > Add to Home Screen.
+     Not shown when the app is already installed; "x" hides it for 7 days. */
+  (function () {
+    var HIDE_KEY = "mc_install_hide_until", DAY = 864e5;
+    var bar = document.getElementById("installBar"), msg = document.getElementById("installMsg");
+    var btn = document.getElementById("installBtn"), close = document.getElementById("installClose");
+    var deferred = null;
+
+    function installed() {
+      return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+    }
+    function snoozed() {
+      try { return Number(localStorage.getItem(HIDE_KEY) || 0) > Date.now(); } catch (e) { return false; }
+    }
+    function show(text, withButton) {
+      if (installed() || snoozed()) return;
+      msg.textContent = text;
+      btn.hidden = !withButton;
+      bar.hidden = false;
+    }
+
+    window.addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      deferred = e;
+      show("Install MasterCAL on this device for quick access.", true);
+    });
+    window.addEventListener("appinstalled", function () { deferred = null; bar.hidden = true; });
+
+    btn.addEventListener("click", function () {
+      if (!deferred) return;
+      deferred.prompt();
+      deferred.userChoice.then(function () { deferred = null; bar.hidden = true; });
+    });
+    close.addEventListener("click", function () {
+      bar.hidden = true;
+      try { localStorage.setItem(HIDE_KEY, String(Date.now() + 7 * DAY)); } catch (e) {}
+    });
+
+    var ua = navigator.userAgent || "";
+    var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (ios) {
+      show("To install: tap Share, then Add to Home Screen. If this opened inside WhatsApp, open it in Safari first.", false);
+    } else if (/Android/.test(ua)) {
+      /* No install event after a few seconds usually means the page is inside another app's browser. */
+      setTimeout(function () {
+        if (!deferred) show("To install: open this page in Chrome, tap the menu (three dots), then Install app.", false);
+      }, 4000);
+    }
+  })();
 </script>
 
 </body>
