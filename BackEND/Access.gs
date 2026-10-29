@@ -233,7 +233,7 @@ function handleEmailApproval_(action, email, token, vh) {
       if (status === "APPROVED" && was !== "APPROVED") {
         const row = s.getRange(i + 1, 1, 1, 8).getValues()[0];
         if (withVh) sendManualToRow_(row);   /* Manual.gs — the VehicleHUB user manual */
-        sendApprovedWhatsApp_(row);   /* WhatsApp.gs */
+        sendApprovedWhatsApp_(row, withVh);  /* WhatsApp.gs */
       }
       return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status + note, status === "APPROVED");
     }
@@ -304,7 +304,7 @@ function menuApproveUser_() {
       accessCacheClear_(email);
       const row = s.getRange(i + 1, 1, 1, 8).getValues()[0];
       const sent = was !== "APPROVED" && withVh && sendManualToRow_(row);   /* Manual.gs */
-      const wa = was !== "APPROVED" && sendApprovedWhatsApp_(row);          /* WhatsApp.gs */
+      const wa = was !== "APPROVED" && sendApprovedWhatsApp_(row, withVh);  /* WhatsApp.gs */
       ui.alert("Approved ✅", keyToPhone_(email) + " approved" + note + "." +
         (sent ? "\nVehicleHUB user manual e-mailed." : "") +
         (wa ? "\nWhatsApp message sent." : ""), ui.ButtonSet.OK);
