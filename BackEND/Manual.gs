@@ -16,7 +16,7 @@ const VH_MANUAL = [
   ["1. Getting Started and Signing In", [
     "VehicleHUB records customers who want to buy a vehicle (buyers) and customers who want to sell one (sellers), and automatically matches them.",
     "1. Open the MasterCAL app and sign in with your MasterCAL **username** and **password**.",
-    "2. Tap the **Vehicle Hub** tab at the top. VehicleHUB opens without a second sign-in.",
+    "2. Tap the **Vehicle Hub** tab at the top. VehicleHUB opens without a second sign-in and shows only **Vehicles**, **Buyers** and **Matches** inside MasterCAL. Open the standalone VehicleHUB site for the full menu.",
     "If you forget your password, contact the administrator. Once your login has been reset, you can register again."
   ]],
   ["2. Dashboard and Menu", [
@@ -28,7 +28,7 @@ const VH_MANUAL = [
     "- **Deals this month**: deals closed this month",
     "- **New requests**: new customer requests received through the website",
     "If a notice appears at the top of the Dashboard, open its link and complete that task first.",
-    "**Menu tabs:** Dashboard · New Call · Requests · Buyers · Vehicles · Matches · Deals · Approvals (administrators only) · Settings"
+    "**Vehicle Hub inside MasterCAL:** Buyers · Vehicles · Matches. The standalone VehicleHUB site has the full menu: Dashboard · New Call · Requests · Buyers · Vehicles · Matches · Deals · Approvals (administrators only) · Settings."
   ]],
   ["3. Recording a New Call", [
     "Follow these steps whenever a customer calls.",

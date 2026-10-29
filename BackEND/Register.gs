@@ -1,10 +1,10 @@
 /******************************************************
  * MasterCAL Pro
- * Register.gs — sign-up with name + WhatsApp number + username + password
+ * Register.gs — sign-up with name + WhatsApp number + password
  *
  * Flow
- *   1) The user enters Name, WhatsApp number, e-mail, username and password.
- *      The username + password (Login.gs) is the one login for MasterCAL and
+ *   1) The user enters Name, WhatsApp number, e-mail and password. The
+ *      WhatsApp number is the login name for MasterCAL and
  *      VehicleHUB; the WhatsApp number keys the USERS row and the user's copy.
  *   2) register  -> the user is written to USERS as PENDING and the owner
  *      gets the approval e-mail (APPROVE / REJECT buttons).
@@ -34,7 +34,7 @@ function normPhone_(raw) {
 
 /* =========================================================
    PUBLIC ACTION — request access
-   args = [ phone, name, email, username, password ]
+   args = [ phone, name, email, legacyUsername, password ]
    Returns { ok, data: { status, phone, name, username } }
    status: PENDING (waiting for the owner)
 ========================================================= */
@@ -43,18 +43,20 @@ function register_(args) {
   var key   = phoneKey_(args[0]);
   var name  = String(args[1] || "").trim().slice(0, 80);
   var mail  = normEmail_(args[2]).slice(0, 120);
-  var uname = normUsername_(args[3]);
+  /* Store the normalized WhatsApp number as the login name. Legacy username
+     parameters from cached clients are intentionally ignored. */
+  var uname = key ? key.slice(3) : "";
   var pass  = String(args[4] || "");
 
   if (!key)  return { ok: false, error: "Enter a valid WhatsApp number." };
   if (!name) return { ok: false, error: "Enter your name." };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return { ok: false, error: "Enter a valid e-mail address." };
-  if (!validUsername_(uname)) return { ok: false, error: "Username must be 3–30 characters (a-z, 0-9, . _ -)." };
+  if (!uname) return { ok: false, error: "Enter a valid WhatsApp number to use as your username." };
   if (pass.length < 6 || pass.length > 100) return { ok: false, error: "Password must be at least 6 characters." };
 
   var status = registerUser_(key, name, mail, uname, hashPassword_(pass));
   if (status === "BLOCKED") return { ok: false, access: "BLOCKED", error: "This account is blocked." };
-  if (status === "USERNAME_TAKEN") return { ok: false, error: "That username is already taken. Please choose another." };
+  if (status === "USERNAME_TAKEN") return { ok: false, error: "This WhatsApp number is already used as another account's username. Please contact the administrator." };
   if (status === "HAS_LOGIN") return { ok: false, error: "An account already exists for this number. Please sign in, or ask the administrator to reset it." };
   return { ok: true, data: { status: status, phone: key.slice(3), name: name, username: uname } };
 }

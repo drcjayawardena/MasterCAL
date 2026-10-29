@@ -23,7 +23,6 @@ const LOGIN_MAX_FAILS = 5;   /* wrong passwords before the username is locked fo
 const LOGIN_LOCK_SECONDS = 900;
 
 function normUsername_(u) { return String(u || "").trim().toLowerCase(); }
-function validUsername_(u) { return /^[a-z0-9._-]{3,30}$/.test(u); }
 
 /* All USERS rows with the login columns: [[key, name, status, ..., username, pass], ...] (row 0 = header). */
 function usersRows_(s) {
@@ -36,6 +35,18 @@ function findUsername_(data, uname) {
     if (normUsername_(data[i][USER_COL - 1]) === uname) return i;
   }
   return -1;
+}
+
+/* WhatsApp is the login name going forward. Existing usernames remain valid
+   so current users keep access without resetting passwords or re-registering. */
+function findLoginUser_(data, loginName) {
+  const key = phoneKey_(loginName);
+  if (key) {
+    for (var i = 1; i < data.length; i++) {
+      if (normEmail_(data[i][0]) === key) return i;
+    }
+  }
+  return findUsername_(data, normUsername_(loginName));
 }
 
 /* ---------- passwords ---------- */
@@ -122,9 +133,13 @@ function tokenAccess_(token) {
 ========================================================= */
 function login_(args) {
   args = args || [];
-  const uname = normUsername_(args[0]);
+  const loginName = String(args[0] || "").trim();
   const password = String(args[1] || "");
-  if (!uname || !password) return { ok: false, error: "Please enter your username and password." };
+  if (!loginName || !password) return { ok: false, error: "Please enter your WhatsApp number and password." };
+
+  const data = usersRows_(getUsersSheet_());
+  const i = findLoginUser_(data, loginName);
+  const uname = i > 0 ? normUsername_(data[i][USER_COL - 1]) : normUsername_(loginName);
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
@@ -132,8 +147,6 @@ function login_(args) {
   const fails = cache ? Number(cache.get(failKey) || 0) : 0;
   if (fails >= LOGIN_MAX_FAILS) return { ok: false, error: "Too many unsuccessful attempts. Please try again in 15 minutes." };
 
-  const data = usersRows_(getUsersSheet_());
-  const i = findUsername_(data, uname);
   if (i < 0 || !checkPassword_(password, data[i][PASS_COL - 1])) {
     if (cache) { try { cache.put(failKey, String(fails + 1), LOGIN_LOCK_SECONDS); } catch (e) {} }
     return { ok: false, error: "Incorrect username or password." };

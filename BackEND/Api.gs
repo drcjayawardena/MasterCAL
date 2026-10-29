@@ -31,7 +31,12 @@ function doPost(e) {
       return json_({ ok: false, access: access.status, error: "Access " + access.status });
     }
 
-    /* 2) route to this user's own copy (keyed by "wa:<number>") */
+    /* 2) the master sheet changed (or this user has no copy yet): build a fresh copy first.
+          The app shows "Updating…" and calls syncCopy; every other action just says "stale". */
+    const syncGuard = copySyncGuard_(access.who.key, action);
+    if (syncGuard) return json_(syncGuard);
+
+    /* 3) route to this user's own copy (keyed by "wa:<number>") */
     setUserContext_(access.who.key);
     return json_({ ok: true, data: dispatch_(action, body.args || []) });
   } catch (err) {
@@ -58,6 +63,8 @@ function doGet(e) {
     if (access.status !== "APPROVED") {
       return json_({ ok: false, access: access.status, error: "Access " + access.status });
     }
+    const syncGuard = copySyncGuard_(access.who.key, action);
+    if (syncGuard) return json_(syncGuard);
     setUserContext_(access.who.key);
     const args = e.parameter.args ? JSON.parse(e.parameter.args) : [];
     return json_({ ok: true, data: dispatch_(action, args) });
@@ -66,11 +73,18 @@ function doGet(e) {
   }
 }
 
+/* null = go on; otherwise the JSON answer to send back. */
+function copySyncGuard_(userKey, action) {
+  const stale = copyIsStale_(userKey);
+  if (action === "syncCopy") return { ok: true, data: stale ? syncUserCopy_(userKey) : { updated: false } };
+  if (stale) return { ok: false, stale: true, error: "Updating MasterCAL…" };
+  return null;
+}
+
 function dispatch_(action, args) {
   args = args || [];
   switch (action) {
     case "init":                return initApp();
-    case "getDropdownData":     return getDropdownData();
     case "getRentalSchedule":   return getRentalSchedule();
     case "saveProductType":     return saveProductType(args[0]);
     case "calcInputs":          return calcInputs(args[0]);
@@ -79,7 +93,6 @@ function dispatch_(action, args) {
     case "updateScheduleFrom":  return updateScheduleFrom(args[0], args[1]);
     case "updateScheduleAmount":return updateScheduleAmount(args[0], args[1]);
     case "deleteScheduleRow":   return deleteScheduleRow(args[0]);
-    case "saveSchedule":        return saveSchedule(args[0]);
     case "setRmvType":          return setRmvType(args[0], args[1]);
     case "setAdditionalCharge": return setAdditionalCharge(args[0]);
     case "clearSchedule":       return clearScheduleInputs();

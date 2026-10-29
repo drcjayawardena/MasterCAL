@@ -110,18 +110,6 @@ function accessCacheClear_(email) {
   try { CacheService.getScriptCache().remove("acc_" + normEmail_(email)); } catch (err) {}
 }
 
-/* Read-only look at someone's status. Never writes a row and never e-mails the owner.
-   Returns NO_PHONE / PENDING / APPROVED / BLOCKED, or NEW (not in the sheet yet). */
-function peekAccess_(email) {
-  email = normEmail_(email);
-  if (!email) return { status: "NO_PHONE" };
-  const data = usersData_(getUsersSheet_());
-  for (let i = 1; i < data.length; i++) {
-    if (normEmail_(data[i][0]) === email) return { status: String(data[i][2] || "PENDING").trim().toUpperCase() };
-  }
-  return { status: "NEW" };
-}
-
 /* One secret per project — used to sign approve/reject links. */
 function getApprovalSecret_() {
   const props = PropertiesService.getScriptProperties();

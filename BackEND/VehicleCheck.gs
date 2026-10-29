@@ -9,8 +9,9 @@
  * ads themselves, newest first as the sites list them.
  *
  * ikman.lk: the search page carries its results as JSON (window.initialData).
- * riyasewana.com sits behind Cloudflare and may refuse Google's servers; then
- * { blocked: true } is returned and the app only shows a link to the search.
+ * Riyasewana changes its search routes and listing markup periodically. The
+ * parser below accepts the current category route and both legacy and current
+ * listing anchors. If access is blocked, the app shows a link to the search.
  * Answers are cached for 30 minutes.
  ******************************************************/
 
@@ -28,7 +29,7 @@ function checkVehicle_(make, model, year, grade) {
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc3_" + (make + "|" + model + "|" + year + "|" + grade).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc4_" + (make + "|" + model + "|" + year + "|" + grade).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
@@ -150,31 +151,67 @@ function vcAgeMinutes_(when) {
 /* ---------- riyasewana.com ---------- */
 
 function vcRiyasewana_(make, model, year) {
-  const url = "https://riyasewana.com/search/" + vcSlug_(make) + "/" + vcSlug_(model) + (year ? "/" + year : "");
+  /* Current Riyasewana routes include the vehicle category. Keep year filtering
+     local: appending a year to the route can send the site to its generic search. */
+  const url = "https://riyasewana.com/search/cars/" + vcSlug_(make) + "/" + vcSlug_(model);
   const res = vcFetch_(url);
   const html = res.getResponseCode() === 200 ? res.getContentText() : "";
   if (!html || /Attention Required|cf-browser-verification|challenge-platform/i.test(html)) {
     return { site: "riyasewana.com", searchUrl: url, blocked: true, ads: [], summary: vcSummary_([]) };
   }
-  /* each ad: <li class="item round"> ... <h2 class="more"><a href="URL" title="TITLE"> ... <div class="boxintxt b">Rs. 8,500,000</div> */
   const ads = [];
-  const items = html.split(/<li[^>]+class="[^"]*\bitem\b[^"]*"/i).slice(1);
-  items.forEach(function (it) {
+  /* Legacy cards used <li class="item">; current cards expose /buy/ links.
+     Work from each ad link and a bounded surrounding fragment so class-name
+     changes do not silently make every result disappear. */
+  const links = [];
+  const linkRe = /<a\b([^>]*\bhref\s*=\s*["']([^"']*\/buy\/[^"']*)["'][^>]*)>([\s\S]*?)<\/a\s*>/gi;
+  var m;
+  while ((m = linkRe.exec(html)) && links.length < VC_MAX_ADS * 4) {
+    links.push({ start: m.index, end: linkRe.lastIndex, attrs: m[1], href: m[2], body: m[3] });
+  }
+  /* Keep the old item-based source compatible while also handling /buy/ cards. */
+  const legacyItems = html.split(/<li[^>]+class=["'][^"']*\bitem\b[^"']*["']/i).slice(1);
+  legacyItems.forEach(function (it) {
+    const a = it.match(/<h2[^>]*>\s*<a[^>]+href=["']([^"']+)["'][^>]*(?:title=["']([^"']*)["'])?[^>]*>([\s\S]*?)<\/a>/i);
+    if (!a || /\/buy\//i.test(a[1])) return;
+    links.push({ start: -1, end: -1, href: a[1], attrs: a[0].slice(0, a[0].indexOf(">") + 1), body: a[3], fragment: it });
+  });
+  links.forEach(function (a, index) {
     if (ads.length >= VC_MAX_ADS) return;
-    const a = it.match(/<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*(?:title="([^"]*)")?[^>]*>([\s\S]*?)<\/a>/i);
-    if (!a) return;
-    const title = (a[2] || a[3] || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    const boxes = (it.match(/<div[^>]*class="[^"]*boxintxt[^"]*"[^>]*>([\s\S]*?)<\/div>/gi) || [])
-      .map(function (b) { return b.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim(); });
-    const price = boxes.filter(function (b) { return /^Rs/i.test(b); })[0] || "";
-    const km = boxes.filter(function (b) { return /km/i.test(b); })[0] || "";
-    if (!vcFits_(title, model, "")) return;
-    ads.push({ title: title, price: price, priceValue: vcPrice_(price), details: km,
-               location: boxes[0] && !/^Rs|km/i.test(boxes[0]) ? boxes[0] : "", when: "",
-               url: /^https?:/i.test(a[1]) ? a[1] : "https://riyasewana.com" + a[1] });
+    const nextLink = links.slice(index + 1).find(function (x) { return x.start >= 0; });
+    const end = a.end >= 0 ? Math.min(html.length, a.end + 2200, nextLink ? nextLink.start : html.length) : html.length;
+    const fragment = a.fragment || html.slice(a.start >= 0 ? a.start : 0, end);
+    const attrTitle = a.attrs.match(/\btitle\s*=\s*(["'])(.*?)\1/i);
+    const title = vcText_(attrTitle ? attrTitle[2] : a.body);
+    if (!title || !vcFits_(title, model, year)) return;
+    const text = vcText_(fragment);
+    const priceMatch = text.match(/Rs\.?\s*[\d,]+(?:\.\d+)?(?:\s*(?:million|mn|lakhs?))?/i);
+    const kmMatch = text.match(/[\d,.]+\s*km\b/i);
+    const yearMatch = text.match(/\b(?:19|20)\d{2}\b/);
+    const price = priceMatch ? priceMatch[0].replace(/\s+/g, " ").trim() : "";
+    const absoluteUrl = /^https?:\/\//i.test(a.href) ? a.href : "https://riyasewana.com" + (a.href.charAt(0) === "/" ? "" : "/") + a.href;
+    ads.push({ title: title, price: price, priceValue: vcPrice_(price),
+               details: kmMatch ? kmMatch[0] : (yearMatch ? yearMatch[0] : ""), location: "", when: "", url: absoluteUrl });
   });
   return { site: "riyasewana.com", searchUrl: url, ads: ads, summary: vcSummary_(ads) };
 }
 
+/* Decode the HTML entities commonly used in listing titles and card text. */
+function vcText_(html) {
+  return String(html || "").replace(/<script\b[\s\S]*?<\/script\s*>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, " ").replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ").replace(/&amp;/gi, "&").replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+    .replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); })
+    .replace(/&#x([0-9a-f]+);/gi, function (_, n) { return String.fromCharCode(parseInt(n, 16)); })
+    .replace(/\s+/g, " ").trim();
+}
+
 /* Run once from the Apps Script editor to authorize UrlFetchApp and see a sample answer. */
-function testVehicleCheck() { Logger.log(JSON.stringify(checkVehicle_("Toyota", "Aqua", "2015")).slice(0, 1500)); }
+function testVehicleCheck() {
+  const result = checkVehicle_("Toyota", "Aqua", "2015");
+  Logger.log(JSON.stringify({
+    ikman: result.ikman && result.ikman.summary,
+    riyasewana: result.riyasewana
+  }));
+}

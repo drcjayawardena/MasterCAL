@@ -30,5 +30,7 @@
 - Push to `main` touching `FrontEND/**` → `pages-deploy.yml` publishes the website.
 
 ## Status (2026-10-29)
-- Repo was restructured into `BackEND/` / `FrontEND/`. Until `CLASPRC_JSON` is added to this repo and
-  "Apps Script — pull live code" has run once, `BackEND/` may differ from the live code — do not push BackEND changes before that.
+- Repo restructured into `BackEND/` / `FrontEND/`. `CLASPRC_JSON` added and "Apps Script — pull live code" ran:
+  `BackEND/` now matches the live Apps Script editor code (9 of 11 files had been stale in the repo before).
+- The deploy workflow has not run yet; the first push that touches `BackEND/` will publish the editor code as a new
+  version of the /exec deployment.

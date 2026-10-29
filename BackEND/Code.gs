@@ -35,6 +35,85 @@ function getUserCopiesFolder_() {
   return DriveApp.createFolder(USER_COPIES_FOLDER);
 }
 
+/*====================================================
+  MASTER VERSION  ->  automatic refresh of the user copies
+
+  Script Property MASTER_VER is a stamp that changes whenever the
+  MASTER sheet is edited by a person (triggers below) or when the
+  admin chooses "Refresh user copies" in the menu. Each user's copy
+  remembers the stamp it was made from (copyver_<userId>). When the
+  stamps differ, that user's copy is stale: the API answers
+  { stale: true } and the app shows "Updating…" while syncCopy builds
+  a fresh copy (the old one is trashed afterwards). Nothing is deleted
+  until the user next opens the app.
+====================================================*/
+
+const MASTER_VER_KEY = "MASTER_VER";
+/* Master tabs that change by themselves / are not part of the calculator. */
+const MASTER_IGNORE_SHEETS = ["USERS", "Formula Dump"];
+
+function masterVer_() {
+  return PropertiesService.getScriptProperties().getProperty(MASTER_VER_KEY) || "0";
+}
+
+function bumpMasterVersion_() {
+  PropertiesService.getScriptProperties().setProperty(MASTER_VER_KEY, String(Date.now()));
+}
+
+/* No copy yet, or the copy was made from an older master. */
+function copyIsStale_(userId) {
+  const p = PropertiesService.getScriptProperties().getProperties();
+  if (!p["copy_" + userId]) return true;
+  return (p["copyver_" + userId] || "0") !== (p[MASTER_VER_KEY] || "0");
+}
+
+/* Build a fresh copy for this user, then trash the old one. */
+function syncUserCopy_(userId) {
+  const props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try {
+    if (!copyIsStale_(userId)) return { updated: false };   /* another request already did it */
+    const ver = masterVer_();    /* read BEFORE copying: an edit made meanwhile keeps this copy marked as outdated */
+    const oldId = props.getProperty("copy_" + userId);
+    const copy = DriveApp.getFileById(MASTER_ID)
+      .makeCopy("MasterCAL — user " + userId, getUserCopiesFolder_());
+    props.setProperty("copy_" + userId, copy.getId());
+    props.setProperty("copyver_" + userId, ver);
+    if (oldId) { try { DriveApp.getFileById(oldId).setTrashed(true); } catch (e) {} }
+    return { updated: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* Installable triggers (set up once from the menu). They fire only for edits made
+   by a person, never for the script's own writes, so approving users etc. does not count. */
+function masterEditTrigger(e) {
+  try {
+    const name = e && e.range ? e.range.getSheet().getName() : "";
+    if (MASTER_IGNORE_SHEETS.indexOf(name) !== -1) return;
+    bumpMasterVersion_();
+  } catch (err) { Logger.log("masterEditTrigger: " + err); }
+}
+
+function masterChangeTrigger(e) {            /* rows / columns / tabs added or removed, formatting ... */
+  try {
+    if (e && e.changeType === "EDIT") return;   /* plain edits are handled (with the tab name) above */
+    bumpMasterVersion_();
+  } catch (err) { Logger.log("masterChangeTrigger: " + err); }
+}
+
+function installAutoRefreshTriggers_() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    const h = t.getHandlerFunction();
+    if (h === "masterEditTrigger" || h === "masterChangeTrigger") ScriptApp.deleteTrigger(t);
+  });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ScriptApp.newTrigger("masterEditTrigger").forSpreadsheet(ss).onEdit().create();
+  ScriptApp.newTrigger("masterChangeTrigger").forSpreadsheet(ss).onChange().create();
+}
+
 function setUserContext_(userId) {
   CURRENT_SS = getUserSpreadsheet_(userId);
   return CURRENT_SS;
@@ -61,9 +140,11 @@ function getUserSpreadsheet_(userId) {
     if (id) {
       try { return SpreadsheetApp.openById(id); } catch (e) {}
     }
+    const ver = masterVer_();   /* before copying, see syncUserCopy_ */
     const copy = DriveApp.getFileById(MASTER_ID)
       .makeCopy("MasterCAL — user " + userId, getUserCopiesFolder_());
     props.setProperty(key, copy.getId());
+    props.setProperty("copyver_" + userId, ver);
     return SpreadsheetApp.openById(copy.getId());
   } finally {
     lock.releaseLock();
@@ -96,7 +177,6 @@ function rng(key) {
 
 const CFG = {
   PRODUCT_TYPES:      "AY3:AY",
-  STAMP_DUTY_OPTIONS: "P1:P3",
   IN_PRODUCT_TYPE:    "D1",
   IN_MAIN:            "D5:D10",
   IN_SCHEDULE_TYPE:   "F1",
@@ -210,19 +290,6 @@ function toColumnFrom_(b)       { return b.slice(2, 14).map(function (r) { retur
 function stampDutyFrom_(b)      { return b.slice(0, 3).map(function (r) { return r[15]; }).filter(String); }   /* P1:P3 */
 function rentalScheduleFrom_(b) { return b.slice(26, 112).map(function (r) { return r.slice(0, 6); }); }       /* A27:F112 */
 
-/* Standalone readers (kept: Api.gs / other code can still call them). */
-function getStampDuty_() {
-  return rng("STAMP_DUTY_OPTIONS").getDisplayValues().flat().filter(String);
-}
-
-function getDropdownData() {
-  return {
-    productTypes: rng("PRODUCT_TYPES").getDisplayValues().flat().filter(String),
-    stampDuty:    getStampDuty_(),
-    rmvTypes:     getRmvTypes_()
-  };
-}
-
 /* RMV charge type options: Charges!B where A = "RMV CHARGES". */
 function getRmvTypes_() {
   const ch = ssActive_().getSheetByName("Charges");
@@ -245,12 +312,6 @@ function setRmvType(value, cell) {
   SpreadsheetApp.flush();
   return { success: true, outputs: outputsFrom_(readBlock_()) };
 }
-
-/* Core numeric outputs + charges + capAmounts (no labels). */
-function getOutputsLite() { return outputsLiteFrom_(readBlock_()); }
-function getOutputs()     { return outputsFrom_(readBlock_()); }
-function getSchedule()    { return scheduleFrom_(readBlock_()); }
-function toColumn_()      { return toColumnFrom_(readBlock_()); }
 
 function getRentalSchedule() {
   return { success: true, rows: rng("RENTAL_SCHEDULE").getDisplayValues() };
@@ -431,22 +492,6 @@ function deleteScheduleRow(index) {
   return scheduleReply_(readBlock_(), { row: SCHED_ROW0 + idx });
 }
 
-function saveSchedule(rows) {
-  rows = rows || [];
-  assertNotExpress_();
-  const fromValues = [], amountValues = [];
-  for (let i = 0; i < 12; i++) {
-    const item = rows[i] || {};
-    fromValues.push([ item.from == null ? "" : item.from ]);
-    amountValues.push([ item.amount == null ? "" : item.amount ]);
-  }
-  const s = sh();
-  s.getRange(CFG.SCHED_FROM).setValues(fromValues);
-  s.getRange(CFG.SCHED_AMOUNT).setValues(amountValues);
-  SpreadsheetApp.flush();
-  return scheduleReply_(readBlock_());
-}
-
 function clearScheduleInputs() {
   sh().getRangeList([CFG.SCHED_FROM, CFG.SCHED_AMOUNT]).clearContent();
   SpreadsheetApp.flush();
@@ -476,6 +521,8 @@ function adminDeleteAllCopies() {
       try { DriveApp.getFileById(all[k]).setTrashed(true); } catch (e) {}
       props.deleteProperty(k);
       removed++;
+    } else if (k.indexOf("copyver_") === 0) {
+      props.deleteProperty(k);
     }
   });
   Logger.log("Removed " + removed + " copies.");
@@ -489,16 +536,17 @@ function adminCleanupOlderThan(days) {
   const props = PropertiesService.getScriptProperties();
   const all = props.getProperties();
   let removed = 0;
+  const drop = function (k) { props.deleteProperty(k); props.deleteProperty("copyver_" + k.slice(5)); };
   Object.keys(all).forEach(function (k) {
     if (k.indexOf("copy_") !== 0) return;
     try {
       const f = DriveApp.getFileById(all[k]);
       if (f.getLastUpdated().getTime() < cutoff) {
         f.setTrashed(true);
-        props.deleteProperty(k);
+        drop(k);
         removed++;
       }
-    } catch (e) { props.deleteProperty(k); removed++; }
+    } catch (e) { drop(k); removed++; }
   });
   Logger.log("Cleaned " + removed + " stale copies (older than " + days + " days).");
   return removed;
