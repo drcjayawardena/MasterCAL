@@ -2458,14 +2458,26 @@ const VC_GRADE_YEARS = {
 const VC_OTHER = "__other";
 const VC_FIRST_YEAR = 1990;
 
-/* Year list for the chosen make + model + grade: newest first. */
+/* Years of a whole make: from its oldest model's first year to its newest
+   model's last year (0 = still made). Unlisted make -> every year. */
+function vcMakeRange(make) {
+  const models = VC_YEARS[make];
+  if (!models) return [VC_FIRST_YEAR, 0];
+  const ranges = Object.keys(models).map(function (m) { return models[m]; });
+  const first = Math.min.apply(null, ranges.map(function (r) { return r[0]; }));
+  const last = ranges.some(function (r) { return !r[1]; }) ? 0 : Math.max.apply(null, ranges.map(function (r) { return r[1]; }));
+  return [first, last];
+}
+
+/* Year list, newest first. The range comes from the first of these we know:
+   the selected grade, then the model, then the make. */
 function vcYearsFor(make, model, grade) {
   const now = new Date().getFullYear();
-  const modelRange = (VC_YEARS[make] || {})[model] || [VC_FIRST_YEAR, 0];
-  const gradeRange = (((VC_GRADE_YEARS[make] || {})[model] || {})[grade]) || modelRange;
-  const first = Math.max(modelRange[0], gradeRange[0], VC_FIRST_YEAR);
-  const modelLast = modelRange[1] || now, gradeLast = gradeRange[1] || now;
-  const last = Math.min(modelLast, gradeLast);
+  const range = (((VC_GRADE_YEARS[make] || {})[model] || {})[grade]) ||
+                (VC_YEARS[make] || {})[model] ||
+                vcMakeRange(make);
+  const first = Math.max(range[0], VC_FIRST_YEAR);
+  const last = range[1] || now;
   const out = [];
   for (let y = last; y >= first; y--) out.push(vcPair(String(y)));
   return out;
@@ -2511,10 +2523,11 @@ function setupVehicleCheck() {
   };
   fillGrades();
 
-  /* Year depends on model and, when available, the selected grade's production years. */
+  /* Year depends on the selected grade's production years; with no (known) grade
+     on the model's, and with no model on the make's. */
   const fillYears = function () {
-    if (!modelSel.value) {
-      vcFill(yearSel, [], ["", "Select a model first"]);
+    if (!makeSel.value) {
+      vcFill(yearSel, [], ["", "Select a make first"]);
       yearSel.disabled = true;
       return;
     }
