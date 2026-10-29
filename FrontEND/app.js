@@ -70,7 +70,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "whoami");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "whoami");   /* show the calculating spinner for calc actions */
   if (VEHICLE_WRITE_ACTIONS[action]) calcLastKey = "";   /* server state changes -> next calcInputs must really run */
   if (isCalc) calcStart();
 
@@ -2470,12 +2470,21 @@ function vcMakeRange(make) {
 }
 
 /* Year list, newest first. The range comes from the first of these we know:
-   the selected grade, then the model, then the make. */
-function vcYearsFor(make, model, grade) {
+   the selected grade, then the model, then the make. ik = the years ikman.lk has
+   ads for ({ model, make }: { min, max } or null); they replace our own model / make
+   ranges, and a grade's range is kept inside the ikman model range. */
+function vcYearsFor(make, model, grade, ik) {
   const now = new Date().getFullYear();
-  const range = (((VC_GRADE_YEARS[make] || {})[model] || {})[grade]) ||
-                (VC_YEARS[make] || {})[model] ||
-                vcMakeRange(make);
+  ik = ik || {};
+  const toRange = function (r) { return r ? [r.min, r.max >= now ? 0 : r.max] : null; };
+  const base = toRange(ik.model) || (VC_YEARS[make] || {})[model] ||
+               (model ? null : toRange(ik.make)) || vcMakeRange(make);
+  let range = base;
+  const g = ((VC_GRADE_YEARS[make] || {})[model] || {})[grade];
+  if (g) {
+    const first = Math.max(g[0], base[0]), last = Math.min(g[1] || now, base[1] || now);
+    if (first <= last) range = [first, g[1] || base[1] ? last : 0];
+  }
   const first = Math.max(range[0], VC_FIRST_YEAR);
   const last = range[1] || now;
   const out = [];
@@ -2483,13 +2492,32 @@ function vcYearsFor(make, model, grade) {
   return out;
 }
 
+/* items: [value, text] or [value, text, ikmanKey] */
 function vcFill(sel, items, first) {
   sel.innerHTML = "";
   [first].concat(items).forEach(function (it) {
     const o = document.createElement("option");
     o.value = it[0]; o.textContent = it[1];
+    if (it[2]) o.dataset.key = it[2];
     sel.appendChild(o);
   });
+}
+
+/* ikman.lk key of the selected option ("" for our own list or "Other…") */
+function vcKeyOf(sel) {
+  const o = sel.options[sel.selectedIndex];
+  return (o && o.dataset.key) || "";
+}
+
+/* ikman.lk list of brands / models / years (server-cached); null when ikman can't be read. */
+function vcIkman(type, brandKey, modelKey) {
+  return api("vcIkman", [type, brandKey || "", modelKey || ""]).catch(function (e) {
+    if (e.access) showGate(e.access);
+    return null;
+  });
+}
+function vcIkItems(list) {
+  return list.map(function (x) { return [x.label, x.label + " (" + x.count + ")", x.key]; });
 }
 
 function vcPair(v) { return [v, v]; }
@@ -2523,6 +2551,11 @@ function setupVehicleCheck() {
   };
   fillGrades();
 
+  /* Years ikman.lk has ads for: of the chosen make, and of the chosen model. */
+  const ik = { make: null, model: null };
+  /* Each dropdown change bumps this; an ikman answer for an older choice is ignored. */
+  let seq = 0;
+
   /* Year depends on the selected grade's production years; with no (known) grade
      on the model's, and with no model on the make's. */
   const fillYears = function () {
@@ -2532,43 +2565,89 @@ function setupVehicleCheck() {
       return;
     }
     const keep = yearSel.value;
-    vcFill(yearSel, vcYearsFor(makeSel.value, modelSel.value, gradeSel.value), ["", "Any year"]);
+    vcFill(yearSel, vcYearsFor(makeSel.value, modelSel.value, gradeSel.value, ik), ["", "Any year"]);
     yearSel.disabled = false;
     if (keep && yearSel.querySelector('option[value="' + keep + '"]')) yearSel.value = keep;
   };
   fillYears();
 
+  const loading = function (sel) { vcFill(sel, [], ["", "Loading…"]); sel.disabled = true; };
+
   typeSel.addEventListener("change", function () {
-    const type = typeSel.value;
-    const makes = Object.keys(VC_MODELS).filter(function (make) {
-      return VC_MODELS[make].some(function (model) { return vcTypeFor(make, model) === type; });
-    });
-    vcFill(makeSel, makes.map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", type ? "Select make" : "Select a vehicle type first"]);
-    makeSel.disabled = !type;
+    const type = typeSel.value, my = ++seq;
+    ik.make = ik.model = null;
     vcFill(modelSel, [], ["", "Select a make first"]);
     modelSel.disabled = true;
+    vcOtherToggle(makeSel, makeOther);
+    vcOtherToggle(modelSel, modelOther);
     fillGrades();
+    if (!type) {
+      vcFill(makeSel, [], ["", "Select a vehicle type first"]);
+      makeSel.disabled = true;
+      fillYears();
+      return;
+    }
+    loading(makeSel);
     fillYears();
+    vcIkman(type).then(function (r) {
+      if (my !== seq) return;
+      let items;
+      if (r && r.brands.length) items = vcIkItems(r.brands);
+      else items = Object.keys(VC_MODELS).filter(function (make) {   /* ikman not readable: our own list */
+        return VC_MODELS[make].some(function (model) { return vcTypeFor(make, model) === type; });
+      }).map(vcPair);
+      vcFill(makeSel, items.concat([[VC_OTHER, "Other…"]]), ["", "Select make"]);
+      makeSel.disabled = false;
+    });
   });
 
   makeSel.addEventListener("change", function () {
-    const m = makeSel.value;
+    const m = makeSel.value, key = vcKeyOf(makeSel), my = ++seq;
+    ik.make = ik.model = null;
     vcOtherToggle(makeSel, makeOther);
+    const ownModels = function () {
+      return (VC_MODELS[m] || []).filter(function (model) { return vcTypeFor(m, model) === typeSel.value; }).map(vcPair);
+    };
+    const done = function (items) {
+      vcFill(modelSel, items.concat([[VC_OTHER, "Other…"]]), ["", "Select model"]);
+      modelSel.disabled = false;
+      if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
+      vcOtherToggle(modelSel, modelOther);
+      fillGrades();
+      fillYears();
+    };
     if (!m) {
       vcFill(modelSel, [], ["", "Select a make first"]);
       modelSel.disabled = true;
-    } else {
-      const models = (VC_MODELS[m] || []).filter(function (model) { return vcTypeFor(m, model) === typeSel.value; });
-      vcFill(modelSel, models.map(vcPair).concat([[VC_OTHER, "Other…"]]), ["", "Select model"]);
-      modelSel.disabled = false;
-      if (m === VC_OTHER) modelSel.value = VC_OTHER;   /* unlisted make -> type the model too */
+      vcOtherToggle(modelSel, modelOther);
+      fillGrades();
+      fillYears();
+      return;
     }
+    if (!key) { done(ownModels()); if (m === VC_OTHER) makeOther.focus(); return; }
+    loading(modelSel);
+    fillGrades();
+    fillYears();
+    vcIkman(typeSel.value, key).then(function (r) {
+      if (my !== seq) return;
+      ik.make = r && r.years;
+      done(r && r.models.length ? vcIkItems(r.models) : ownModels());
+    });
+  });
+
+  modelSel.addEventListener("change", function () {
+    const key = vcKeyOf(modelSel), my = ++seq;
+    ik.model = null;
     vcOtherToggle(modelSel, modelOther);
     fillGrades();
     fillYears();
-    if (m === VC_OTHER) makeOther.focus();
+    if (!key) return;
+    vcIkman(typeSel.value, vcKeyOf(makeSel), key).then(function (r) {
+      if (my !== seq) return;
+      ik.model = r && r.years;
+      fillYears();
+    });
   });
-  modelSel.addEventListener("change", function () { vcOtherToggle(modelSel, modelOther); fillGrades(); fillYears(); });
   gradeSel.addEventListener("change", fillYears);
   document.getElementById("vcForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
@@ -2595,7 +2674,8 @@ function runVehicleCheck() {
   btn.textContent = "Checking…";
   out.innerHTML = '<p class="vcHint">Checking ikman.lk and riyasewana.com…</p>';
 
-  api("checkVehicle", [make, model, year, grade])
+  api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
+                       vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
       out.innerHTML = vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
     })

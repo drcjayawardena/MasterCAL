@@ -16,25 +16,95 @@
  ******************************************************/
 
 const VC_CACHE_SECONDS = 1800;
+const VC_LIST_CACHE_SECONDS = 21600;   /* ikman make / model / year lists: 6 h (CacheService maximum) */
 const VC_MAX_ADS = 25;
 const VC_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
-function checkVehicle_(make, model, year, grade) {
+/* App vehicle type -> ikman.lk category (+ body filter). */
+const VC_IKMAN_CATS = {
+  "Car": { cat: "cars" }, "SUV / Jeep": { cat: "cars", body: "suv-4x4" }, "Cab / Pickup": { cat: "cars" },
+  "Van / MPV": { cat: "vans" }, "Three Wheeler": { cat: "three-wheelers" }, "Motorcycle": { cat: "motorbikes-scooters" }
+};
+
+function vcKey_(k) {
+  k = String(k || "").trim().toLowerCase();
+  return /^[a-z0-9-]{1,60}$/.test(k) ? k : "";
+}
+
+/* ikman.lk path for a type + brand key + model key ("suzuki", "suzuki-wagonr-fx").
+   Returns "" for an unknown type. */
+function vcIkmanPath_(type, brandKey, modelKey) {
+  const c = VC_IKMAN_CATS[String(type || "")];
+  if (!c) return "";
+  const b = vcKey_(brandKey), m = vcKey_(modelKey);
+  let p = c.cat;
+  if (b) p += "/" + b;
+  if (b && m && m.indexOf(b + "-") === 0) p += "/" + m.slice(b.length + 1);
+  return p;
+}
+
+/* vcIkman  args = [ type, brandKey?, modelKey? ]
+   The makes (brands), the models of the chosen brand and the years ikman.lk has
+   ads for, read from its search page filters. Lets the Vehicle Checking dropdowns
+   match ikman exactly. */
+function vcIkmanInfo_(type, brandKey, modelKey) {
+  const path = vcIkmanPath_(type, brandKey, modelKey);
+  if (!path) throw new Error("Unknown vehicle type.");
+  const c = VC_IKMAN_CATS[String(type)];
+  const url = "https://ikman.lk/en/ads/sri-lanka/" + path + (c.body ? "?enum.body=" + c.body : "");
+
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  const ck = "vci1_" + url;
+  if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
+
+  const res = vcFetch_(url);
+  if (res.getResponseCode() !== 200) throw new Error("ikman.lk is not answering right now.");
+  const html = res.getContentText();
+  const i = html.indexOf("window.initialData = ");
+  if (i < 0) throw new Error("ikman.lk page format changed.");
+  var d;
+  try { d = JSON.parse(html.slice(i + 21, html.indexOf("</script>", i)).trim().replace(/;\s*$/, "")); }
+  catch (e) { throw new Error("ikman.lk page format changed."); }
+  const dyn = (d && d.serp && d.serp.filtersMeta && d.serp.filtersMeta.dynamic) || [];
+  const find = function (k) { return dyn.filter(function (f) { return f.key === k; })[0] || null; };
+
+  const list = function (vals) {
+    return (vals || []).filter(function (v) { return v.count > 0 && !/(^|-)other-model$/.test(v.key); })
+      .map(function (v) { return { key: String(v.key), label: String(v.label), count: Number(v.count) }; });
+  };
+  const brandF = find("brand"), yearF = find("model_year");
+  const b = vcKey_(brandKey);
+  const sel = brandF && b ? (brandF.values || []).filter(function (v) { return v.key === b; })[0] : null;
+  const out = {
+    url: url,
+    brands: list(brandF && brandF.values),
+    models: sel ? list(sel.children) : [],
+    years: yearF && yearF.minimum ? { min: Number(yearF.minimum), max: Number(yearF.maximum) } : null
+  };
+  if (cache) { try { cache.put(ck, JSON.stringify(out), VC_LIST_CACHE_SECONDS); } catch (e) {} }
+  return out;
+}
+
+function checkVehicle_(make, model, year, grade, type, brandKey, modelKey) {
   make  = String(make  || "").trim().slice(0, 40);
   model = String(model || "").trim().slice(0, 40);
   year  = String(year  || "").trim();
   grade = String(grade || "").trim().slice(0, 30);
   if (!make || !model) throw new Error("Please select a make and model.");
   if (year && !/^(19|20)\d\d$/.test(year)) throw new Error("Please enter a valid year (e.g. 2015).");
+  /* ikman.lk's own path for this model when the app picked it from ikman's list */
+  const ikPath = vcKey_(modelKey) ? vcIkmanPath_(type, brandKey, modelKey) : "";
+  const ikBody = ikPath ? (VC_IKMAN_CATS[String(type)].body || "") : "";
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc4_" + (make + "|" + model + "|" + year + "|" + grade).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc5_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
     make: make, model: model, year: year, grade: grade,
-    ikman: vcGrade_(vcSafe_(function () { return vcIkman_(make, model, year); }), grade),
+    ikman: vcGrade_(vcSafe_(function () { return vcIkman_(make, model, year, ikPath, ikBody); }), grade),
     riyasewana: vcGrade_(vcSafe_(function () { return vcRiyasewana_(make, model, year); }), grade)
   };
   if (cache) { try { cache.put(ck, JSON.stringify(out), VC_CACHE_SECONDS); } catch (e) {} }
@@ -104,7 +174,7 @@ function vcIkmanData_(url) {
   return data && data.ads ? data : null;
 }
 
-function vcIkman_(make, model, year) {
+function vcIkman_(make, model, year, ikPath, ikBody) {
   const yq = year ? "&numeric.model_year.minimum=" + year + "&numeric.model_year.maximum=" + year : "";
   const q = encodeURIComponent(make + " " + model);
   const tries = [
@@ -112,6 +182,9 @@ function vcIkman_(make, model, year) {
     "https://ikman.lk/en/ads/sri-lanka/cars?query=" + q + "&sort=date&order=desc" + yq,
     "https://ikman.lk/en/ads/sri-lanka/vehicles?query=" + q + (year ? "%20" + year : "") + "&sort=date&order=desc"
   ];
+  /* ikman's own model page first (its slugs differ from ours, e.g. "wagonr-fx") */
+  if (ikPath) tries.unshift("https://ikman.lk/en/ads/sri-lanka/" + ikPath + "?sort=date&order=desc" + yq +
+                            (ikBody ? "&enum.body=" + ikBody : ""));
   var data = null, used = tries[tries.length - 1];
   for (var k = 0; k < tries.length && !data; k++) {
     const d = vcIkmanData_(tries[k]);
