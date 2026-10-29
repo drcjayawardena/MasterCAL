@@ -1,0 +1,38 @@
+# Publishes the FrontEND/ folder as the GitHub Pages website
+# (https://drcjayawardena.github.io/MasterCAL/) whenever a change to it reaches main.
+# Needs: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+name: Website — deploy (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'FrontEND/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: FrontEND
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
