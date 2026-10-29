@@ -3,9 +3,11 @@
  * Access.gs — user approval / allowlist
  *
  * A "USERS" tab in the MASTER sheet holds:
- *   User (wa:<number>) | Name | Status | Requested | Approved | Phone | Verified | Email | Username | Password
+ *   User (wa:<number>) | Name | Status | Requested | Approved | Phone | Verified | Email | Username | Password | VehicleHUB
  * (Password holds a salted hash only — see Login.gs.)
  * Status is one of: PENDING / APPROVED / BLOCKED
+ * VehicleHUB (column K) is chosen when approving: YES = the user also gets the VehicleHUB
+ * part, NO = MasterCAL only. Empty means YES, so users approved before this column keep it.
  *
  * New users register with their name + WhatsApp number (Register.gs).
  * You approve them (menu, or edit the Status cell).
@@ -61,6 +63,31 @@ function getUsersSheet_() {
     s.getRange("A1:J1").setFontWeight("bold");
   }
   return s;
+}
+
+const VH_COL = 11;   /* USERS column K: VehicleHUB YES / NO */
+
+/* Does this user (USERS key) have the VehicleHUB part? Empty / unknown -> yes. */
+function vhAllowed_(key) {
+  key = normEmail_(key);
+  const s = getUsersSheet_();
+  const last = s.getLastRow();
+  if (last < 2 || s.getLastColumn() < VH_COL) return true;
+  const keys = s.getRange(2, 1, last - 1, 1).getValues();
+  for (let i = 0; i < keys.length; i++) {
+    if (normEmail_(keys[i][0]) === key) {
+      return !/^(no|false|n|0)$/i.test(String(s.getRange(i + 2, VH_COL).getValue()).trim());
+    }
+  }
+  return true;
+}
+
+/* Write YES / NO to column K of a USERS row (1-based sheet row); adds the header once. */
+function vhSet_(s, row, allowed) {
+  if (!String(s.getRange(1, VH_COL).getValue())) {
+    s.getRange(1, VH_COL).setValue("VehicleHUB").setFontWeight("bold");
+  }
+  s.getRange(row, VH_COL).setValue(allowed ? "YES" : "NO");
 }
 
 function usersData_(s) {
@@ -138,6 +165,8 @@ function notifyOwner_(email, name, phone, how, contactEmail) {
     try { base = ScriptApp.getService().getUrl() || ""; } catch (e) { base = ""; }
     const tok = approvalToken_(email);
     const approveUrl = base + "?action=approveUser&email=" + encodeURIComponent(email) + "&token=" + tok;
+    const approveVhUrl = approveUrl + "&vh=1";   /* MasterCAL + VehicleHUB */
+    const approveMcUrl = approveUrl + "&vh=0";   /* MasterCAL only */
     const rejectUrl  = base + "?action=blockUser&email="  + encodeURIComponent(email) + "&token=" + tok;
 
     const btn = function (url, bg, label) {
@@ -157,8 +186,9 @@ function notifyOwner_(email, name, phone, how, contactEmail) {
       '<br><b>Name:</b> ' + (name ? escapeHtml_(name) : "(not given)") +
       '<br><b>Email:</b> ' + (contactEmail ? escapeHtml_(contactEmail) : "(not given)") + '</p>' +
       (base
-        ? ('<p style="margin:22px 0">' + btn(approveUrl, "#1c5e3a", "✓ APPROVE") +
-           btn(rejectUrl, "#d8261c", "✕ REJECT") + '</p>' +
+        ? ('<p style="margin:22px 0 8px">' + btn(approveVhUrl, "#1c5e3a", "✓ APPROVE + VehicleHUB") + '</p>' +
+           '<p style="margin:8px 0">' + btn(approveMcUrl, "#2f7d9b", "✓ APPROVE — MasterCAL only") + '</p>' +
+           '<p style="margin:8px 0 22px">' + btn(rejectUrl, "#d8261c", "✕ REJECT") + '</p>' +
            '<p style="color:#8797a0;font-size:12px">Click a button above — it opens a confirmation page.</p>')
         : '<p style="color:#d8261c">Deploy the web app so approve/reject links can be generated.</p>') +
       '<p style="color:#8797a0;font-size:12px">Or: master sheet → ⚙️ MasterCAL Admin → ✅ Approve a user (type the WhatsApp number).</p>' +
@@ -171,7 +201,8 @@ function notifyOwner_(email, name, phone, how, contactEmail) {
       body: "New request: " + (phone || keyToPhone_(email)) + " (" + (name || "") + ")\n" +
             (contactEmail ? "Email: " + contactEmail + "\n" : "") +
             "The number is not verified — check it before approving.\n" +
-            "Approve: " + approveUrl + "\nReject: " + rejectUrl
+            "Approve + VehicleHUB: " + approveVhUrl + "\nApprove (MasterCAL only): " + approveMcUrl +
+            "\nReject: " + rejectUrl
     });
   } catch (e) {
     /* mail quota / not authorised: the app keeps working, but say so in Executions → Logs */
@@ -180,33 +211,37 @@ function notifyOwner_(email, name, phone, how, contactEmail) {
 }
 
 /* Handle an APPROVE / REJECT link click from the email (token-checked).
+   vh: "1" = also VehicleHUB, "0" = MasterCAL only; links from older e-mails have none (-> VehicleHUB).
    Returns an HTML confirmation page. */
-function handleEmailApproval_(action, email, token) {
+function handleEmailApproval_(action, email, token, vh) {
   email = normEmail_(email);
   if (!email) return approvalPage_("Missing user.", false);
   if (String(token) !== approvalToken_(email)) {
     return approvalPage_("Invalid or expired link.", false);
   }
   const status = (action === "approveUser") ? "APPROVED" : "BLOCKED";
+  const withVh = String(vh) !== "0";
+  const note = status === "APPROVED" ? (withVh ? " (MasterCAL + VehicleHUB)" : " (MasterCAL only)") : "";
   const s = getUsersSheet_();
   const data = usersData_(s);
   for (let i = 1; i < data.length; i++) {
     if (normEmail_(data[i][0]) === email) {
       const was = String(data[i][2] || "").trim().toUpperCase();
       s.getRange(i + 1, 3).setValue(status);
-      if (status === "APPROVED") s.getRange(i + 1, 5).setValue(new Date());
+      if (status === "APPROVED") { s.getRange(i + 1, 5).setValue(new Date()); vhSet_(s, i + 1, withVh); }
       accessCacheClear_(email);       /* after the sheet change, so nothing stale can be re-cached */
       if (status === "APPROVED" && was !== "APPROVED") {
         const row = s.getRange(i + 1, 1, 1, 8).getValues()[0];
-        sendManualToRow_(row);        /* Manual.gs */
+        if (withVh) sendManualToRow_(row);   /* Manual.gs — the VehicleHUB user manual */
         sendApprovedWhatsApp_(row);   /* WhatsApp.gs */
       }
-      return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status, status === "APPROVED");
+      return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status + note, status === "APPROVED");
     }
   }
   s.appendRow([email, "", status, new Date(), status === "APPROVED" ? new Date() : ""]);
+  if (status === "APPROVED") vhSet_(s, s.getLastRow(), withVh);
   accessCacheClear_(email);
-  return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status, status === "APPROVED");
+  return approvalPage_(escapeHtml_(keyToPhone_(email)) + " → " + status + note, status === "APPROVED");
 }
 
 function approvalPage_(msg, ok) {
@@ -251,6 +286,13 @@ function menuApproveUser_() {
   const email = phoneKey_(r.getResponseText());
   if (!email) { ui.alert("Please enter a valid WhatsApp number."); return; }
 
+  const q = ui.alert("VehicleHUB",
+    "Give " + keyToPhone_(email) + " the VehicleHUB part too?\n\nYes = MasterCAL + VehicleHUB\nNo = MasterCAL only",
+    ui.ButtonSet.YES_NO_CANCEL);
+  if (q === ui.Button.CANCEL || q === ui.Button.CLOSE) return;
+  const withVh = q === ui.Button.YES;
+  const note = withVh ? " (MasterCAL + VehicleHUB)" : " (MasterCAL only)";
+
   const s = getUsersSheet_();
   const data = usersData_(s);
   for (let i = 1; i < data.length; i++) {
@@ -258,18 +300,20 @@ function menuApproveUser_() {
       const was = String(data[i][2] || "").trim().toUpperCase();
       s.getRange(i + 1, 3).setValue("APPROVED");
       s.getRange(i + 1, 5).setValue(new Date());
+      vhSet_(s, i + 1, withVh);
       accessCacheClear_(email);
       const row = s.getRange(i + 1, 1, 1, 8).getValues()[0];
-      const sent = was !== "APPROVED" && sendManualToRow_(row);       /* Manual.gs */
-      const wa = was !== "APPROVED" && sendApprovedWhatsApp_(row);    /* WhatsApp.gs */
-      ui.alert("Approved ✅", keyToPhone_(email) + " approved." +
+      const sent = was !== "APPROVED" && withVh && sendManualToRow_(row);   /* Manual.gs */
+      const wa = was !== "APPROVED" && sendApprovedWhatsApp_(row);          /* WhatsApp.gs */
+      ui.alert("Approved ✅", keyToPhone_(email) + " approved" + note + "." +
         (sent ? "\nVehicleHUB user manual e-mailed." : "") +
         (wa ? "\nWhatsApp message sent." : ""), ui.ButtonSet.OK);
       return;
     }
   }
   s.appendRow([email, "", "APPROVED", new Date(), new Date(), email.slice(3), ""]);
-  ui.alert("Approved ✅", keyToPhone_(email) + " added & approved.", ui.ButtonSet.OK);
+  vhSet_(s, s.getLastRow(), withVh);
+  ui.alert("Approved ✅", keyToPhone_(email) + " added & approved" + note + ".", ui.ButtonSet.OK);
 }
 
 function menuBlockUser_() {

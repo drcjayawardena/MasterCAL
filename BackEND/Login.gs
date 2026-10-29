@@ -164,13 +164,15 @@ function login_(args) {
 /* =========================================================
    PUBLIC ACTION — whoami     args = [ token ]
    For VehicleHUB's server: who does this MasterCAL session belong to?
-   Returns { ok, data: { username, name, phone, email } } for APPROVED users.
+   Returns { ok, data: { username, name, phone, email, vehiclehub } } for APPROVED users;
+   vehiclehub = false for MasterCAL-only users (VehicleHUB's McLogin.gs then refuses).
 ========================================================= */
 function whoami_(args) {
   const a = tokenAccess_((args || [])[0]);
   if (a.status !== "APPROVED") return { ok: false, access: a.status, error: "Access " + a.status };
   return { ok: true, data: { username: a.who.username, name: a.who.name,
-                             phone: keyToPhone_(a.who.key), email: a.who.email } };
+                             phone: keyToPhone_(a.who.key), email: a.who.email,
+                             vehiclehub: vhAllowed_(a.who.key) } };
 }
 
 /* Menu: clear a user's username + password. They register again (same WhatsApp
