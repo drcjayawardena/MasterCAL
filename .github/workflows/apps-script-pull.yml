@@ -1,0 +1,51 @@
+# Copies the live MasterCAL Apps Script code (all .gs files + appsscript.json)
+# into the BackEND/ folder of this repository.
+# Run it by hand: Actions → "Apps Script — pull live code" → Run workflow.
+# Use it once at the start, and again whenever someone edits code in the Apps Script editor.
+name: Apps Script — pull live code
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apps-script
+  cancel-in-progress: false
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install clasp
+        run: npm install -g @google/clasp@2.4.2
+
+      - name: Sign in to Google (from the CLASPRC_JSON secret)
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then echo "::error::Secret CLASPRC_JSON is missing (Settings → Secrets and variables → Actions)"; exit 1; fi
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+
+      - name: Pull the live code
+        working-directory: BackEND
+        run: clasp pull
+
+      - name: Commit if anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BackEND
+          if git diff --cached --quiet; then
+            echo "Already up to date — nothing to commit."
+          else
+            git commit -m "Sync Apps Script code from the live project"
+            git push
+          fi

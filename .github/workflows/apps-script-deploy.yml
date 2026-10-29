@@ -1,0 +1,71 @@
+# Deploys the BackEND/ folder to the live Apps Script web app whenever a change
+# to that folder reaches the main branch (e.g. a merged pull request).
+# The existing deployment is updated, so the /exec URL in FrontEND/app.js (API_URL) stays the same.
+name: Apps Script — deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'BackEND/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script
+  cancel-in-progress: false
+
+env:
+  # The web app deployment the website (and VehicleHUB's McLogin.gs) talks to — the part between /s/ and /exec
+  DEPLOYMENT_ID: AKfycbx8m_v6iMUy8tTSGzxSfxi79ZyTfJgpy89WjVkqRMO3dvnm734znkdTvjpW92DhO-xN
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Safety: "clasp push" replaces EVERY file in the Apps Script project.
+      # If the folder is incomplete it would delete the live code, so stop instead.
+      - name: Check that the code is complete
+        working-directory: BackEND
+        run: |
+          missing=0
+          for f in appsscript.json Access.gs Api.gs Bike.gs Code.gs Login.gs Manual.gs Menu.gs Perf.gs Register.gs VehicleCheck.gs WhatsApp.gs; do
+            if [ ! -s "$f" ]; then echo "::error::Missing $f"; missing=1; fi
+          done
+          if [ "$missing" = 1 ]; then
+            echo "::error::Run 'Apps Script — pull live code' first. Nothing was deployed."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install clasp
+        run: npm install -g @google/clasp@2.4.2
+
+      - name: Sign in to Google (from the CLASPRC_JSON secret)
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then echo "::error::Secret CLASPRC_JSON is missing"; exit 1; fi
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+
+      - name: Upload the code to Apps Script
+        working-directory: BackEND
+        run: clasp push --force
+
+      - name: Publish a new version of the web app (same URL)
+        working-directory: BackEND
+        run: clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "GitHub ${GITHUB_SHA::7} — $(git log -1 --pretty=%s | cut -c1-80)"
+
+      - name: Check the live server
+        run: |
+          sleep 5
+          out=$(curl -sL "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec")
+          echo "$out"
+          echo "$out" | grep -q 'API is running' || { echo "::error::The web app did not answer"; exit 1; }
