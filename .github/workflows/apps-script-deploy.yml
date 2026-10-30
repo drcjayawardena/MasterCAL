@@ -33,7 +33,7 @@ jobs:
         working-directory: BackEND
         run: |
           missing=0
-          for f in appsscript.json Access.gs Api.gs Bike.gs Code.gs Login.gs Manual.gs Menu.gs Perf.gs Register.gs VehicleCheck.gs WhatsApp.gs; do
+          for f in appsscript.json Access.gs Api.gs Bike.gs Code.gs Login.gs Manual.gs Menu.gs Register.gs VehicleCheck.gs WhatsApp.gs; do
             if [ ! -s "$f" ]; then echo "::error::Missing $f"; missing=1; fi
           done
           if [ "$missing" = 1 ]; then

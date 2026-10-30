@@ -17,10 +17,6 @@ function onOpen() {
     .addItem("🔔 Turn on auto-refresh (one-time setup)", "menuAutoRefresh_")
     .addItem("ℹ️ Count user copies", "menuCountCopies_")
     .addItem("🗑 Delete ALL user copies now", "menuDeleteAllCopies_")
-    .addSeparator()
-    .addItem("🔎 Old e-mail users", "menuNonCfUsers_")
-    .addItem("🔍 Check BIKE sheet", "menuCheckBikeSheet_")
-    .addItem("⏱ Measure calculation time", "menuTimeCalc_")
     .addToUi();
 }
 

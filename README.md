@@ -6,7 +6,7 @@ The backend is Google Apps Script, the website is GitHub Pages. MasterCAL login 
 ## 📁 Folders
 | Folder | What it is | Deploys to |
 |---|---|---|
-| `BackEND/` | Google Apps Script code — `Api.gs` (doGet/doPost), `Code.gs`, `Access.gs`, `Login.gs`, `Register.gs`, `Bike.gs`, `VehicleCheck.gs`, `WhatsApp.gs`, `Manual.gs`, `Menu.gs`, `Perf.gs`, `appsscript.json`, `.clasp.json` | Apps Script web app (workflow **Apps Script — deploy**) |
+| `BackEND/` | Google Apps Script code — `Api.gs` (doGet/doPost), `Code.gs`, `Access.gs`, `Login.gs`, `Register.gs`, `Bike.gs`, `VehicleCheck.gs`, `WhatsApp.gs`, `Manual.gs`, `Menu.gs`, `appsscript.json`, `.clasp.json` | Apps Script web app (workflow **Apps Script — deploy**) |
 | `FrontEND/` | Website — `index.html`, `app.js` (API_URL = /exec), `styles.css`, `sw.js`, `manifest.json`, `manual.html`, `icons/` | GitHub Pages (workflow **Website — deploy**) |
 | `.github/workflows/` | Automatic deploy / pull workflows | — |
 | `CLAUDE.md` | Project notes for Claude Code | — |

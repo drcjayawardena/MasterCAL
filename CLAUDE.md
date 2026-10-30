@@ -15,7 +15,6 @@
 - **Website**: `FrontEND/` (PWA), published by `.github/workflows/pages-deploy.yml` (Pages source = GitHub Actions) —
   https://drcjayawardena.github.io/MasterCAL/ . `FrontEND/app.js` `API_URL` holds the `/exec` URL.
   `sw.js` is cache-first: bump `CACHE_VERSION` whenever a FrontEND file changes.
-  The root-level PNGs in `FrontEND/` duplicate `FrontEND/icons/`; the app uses `icons/`.
 - **VehicleHUB** (separate repo `drcjayawardena/VehicleHUB`, local `Documents\Project\VehicleHUB`) logs in through this API.
 
 ## Deploy pipeline (clasp 2.4.2 via GitHub Actions)

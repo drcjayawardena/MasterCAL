@@ -376,21 +376,3 @@ function menuPendingCount_() {
     p + " user(s) waiting.\nSet their Status to APPROVED in the USERS sheet, " +
     "or use Approve a user in the menu.", ui.ButtonSet.OK);
 }
-
-/* Menu: old e-mail rows in USERS (from before WhatsApp sign-in). They can no longer sign in;
-   nothing is changed here. (Kept under the old function name so the existing menu still works.) */
-function menuNonCfUsers_() {
-  const ui = SpreadsheetApp.getUi();
-  const data = usersData_(getUsersSheet_());
-  const out = [];
-  for (let i = 1; i < data.length; i++) {
-    const k = normEmail_(data[i][0]);
-    if (k && k.indexOf("wa:") !== 0) out.push(k + "  —  " + String(data[i][2] || "PENDING").trim().toUpperCase());
-  }
-  ui.alert("Old e-mail users",
-    out.length
-      ? out.length + " old e-mail row(s):\n\n" + out.slice(0, 25).join("\n") + (out.length > 25 ? "\n…" : "") +
-        "\n\nThese people must register again with their WhatsApp number."
-      : "Every user in the USERS sheet signs in with WhatsApp.",
-    ui.ButtonSet.OK);
-}

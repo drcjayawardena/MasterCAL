@@ -107,10 +107,3 @@ function sendManualToRow_(row) {
     return false;
   }
 }
-
-/* Run from the editor to see the e-mail in your own inbox. */
-function testManualEmail() {
-  const to = adminEmail_();
-  sendManualToRow_(["", "Test", "", "", "", "", "", to]);
-  Logger.log("Manual sent to " + to);
-}

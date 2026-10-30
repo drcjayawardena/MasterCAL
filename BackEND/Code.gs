@@ -500,16 +500,8 @@ function clearScheduleInputs() {
 
 
 /*====================================================
-  ADMIN / MAINTENANCE  (run manually from the editor)
+  ADMIN / MAINTENANCE  (used by the sheet menu)
 ====================================================*/
-
-/* How many user copies exist. */
-function adminCountCopies() {
-  const p = PropertiesService.getScriptProperties().getProperties();
-  const n = Object.keys(p).filter(k => k.indexOf("copy_") === 0).length;
-  Logger.log("User copies: " + n);
-  return n;
-}
 
 /* Delete ALL user copies (trash) and clear the registry. Use with care. */
 function adminDeleteAllCopies() {
@@ -528,30 +520,6 @@ function adminDeleteAllCopies() {
   Logger.log("Removed " + removed + " copies.");
   return removed;
 }
-
-/* Delete copies not opened in the last N days (needs Drive lastUpdated). */
-function adminCleanupOlderThan(days) {
-  days = days || 30;
-  const cutoff = Date.now() - days * 86400000;
-  const props = PropertiesService.getScriptProperties();
-  const all = props.getProperties();
-  let removed = 0;
-  const drop = function (k) { props.deleteProperty(k); props.deleteProperty("copyver_" + k.slice(5)); };
-  Object.keys(all).forEach(function (k) {
-    if (k.indexOf("copy_") !== 0) return;
-    try {
-      const f = DriveApp.getFileById(all[k]);
-      if (f.getLastUpdated().getTime() < cutoff) {
-        f.setTrashed(true);
-        drop(k);
-        removed++;
-      }
-    } catch (e) { drop(k); removed++; }
-  });
-  Logger.log("Cleaned " + removed + " stale copies (older than " + days + " days).");
-  return removed;
-}
-
 
 /*====================================================
   THREE-WHEEL (3W) CALCULATOR

@@ -17,8 +17,6 @@
     WA_APPROVED_MC_TEMPLATE  mastercal_approved   (MasterCAL-only users)
     WA_LANG       en                      (optional, template language code)
   With no WA_TOKEN set nothing is sent, so approval keeps working as before.
-
-  Test: put your number in testApprovedWhatsApp() and click ▶ Run.
 ====================================================*/
 
 const WA_API_ = "https://graph.facebook.com/v21.0/";
@@ -59,14 +57,4 @@ function sendApprovedWhatsApp_(row, withVh) {
     try { Logger.log("sendApprovedWhatsApp_ FAILED: " + (e && e.message ? e.message : e)); } catch (e2) {}
     return false;
   }
-}
-
-/* Run from the editor: sends the approval message to the number below. Check the log. */
-function testApprovedWhatsApp() {
-  Logger.log("Sent: " + sendApprovedWhatsApp_(["wa:94771234567", "Test"]));
-}
-
-/* Run from the editor: sends the MasterCAL-only approval message to the number below. */
-function testApprovedMcWhatsApp() {
-  Logger.log("Sent: " + sendApprovedWhatsApp_(["wa:94771234567", "Test"], false));
 }

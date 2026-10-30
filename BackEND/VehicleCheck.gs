@@ -279,12 +279,3 @@ function vcText_(html) {
     .replace(/&#x([0-9a-f]+);/gi, function (_, n) { return String.fromCharCode(parseInt(n, 16)); })
     .replace(/\s+/g, " ").trim();
 }
-
-/* Run once from the Apps Script editor to authorize UrlFetchApp and see a sample answer. */
-function testVehicleCheck() {
-  const result = checkVehicle_("Toyota", "Aqua", "2015");
-  Logger.log(JSON.stringify({
-    ikman: result.ikman && result.ikman.summary,
-    riyasewana: result.riyasewana
-  }));
-}
