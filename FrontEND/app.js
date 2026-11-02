@@ -407,7 +407,7 @@ function showGate(status) {
 
 function setupBulletPaymentButton() {
 
-  /* The button now lives at the bottom of the Charges card (in index.html). */
+  /* The button lives beneath Facility Details; its schedule expands within that card. */
   const button = document.getElementById("addBulletPaymentButton");
   if (!button) return;
 

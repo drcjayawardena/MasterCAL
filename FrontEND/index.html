@@ -138,81 +138,59 @@
         <input id="period" type="number" inputmode="numeric">
       </div>
 
-      <!-- MONTHLY RENTAL sits under the facility inputs -->
-      <div class="summary">
-        <div class="tw-bigrow">
-          <div class="tw-biglabel" id="monthlyRentalTitle">Monthly Rental</div>
-          <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
-        </div>
-        <table class="summaryTable">
-          <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
-          <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
-          <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
-        </table>
-      </div>
-
-    </div>
-
-
-    <!-- MIDDLE COLUMN: ADD BULLET PAYMENT on top, the bullet schedule under it,
-         Rental with Residual at the bottom -->
-    <div class="bulletColumn">
-
-    <div class="bulletButtonCard">
+      <!-- BULLET PAYMENT controls stay in the Facility Details card -->
       <button type="button" id="addBulletPaymentButton" class="addBulletPaymentButton">
         ADD BULLET PAYMENT
       </button>
-    </div>
-
-    <!-- BULLET PAYMENT SCHEDULE -->
-    <div class="scheduleCard" id="scheduleCard">
-
-      <div class="scheduleHeader">
-        <div class="cardTitle scheduleTitle">Bullet Payment Schedule</div>
-        <div class="scheduleControls">
-          <select id="scheduleType">
-            <option value="MANUAL SCHEDULE">MANUAL SCHEDULE</option>
-            <option value="SLABBED SCHEDULE">SLABBED SCHEDULE</option>
-          </select>
+      <div class="scheduleCard" id="scheduleCard">
+        <div class="scheduleHeader">
+          <div class="cardTitle scheduleTitle">Bullet Payment Schedule</div>
+          <div class="scheduleControls">
+            <select id="scheduleType">
+              <option value="MANUAL SCHEDULE">MANUAL SCHEDULE</option>
+              <option value="SLABBED SCHEDULE">SLABBED SCHEDULE</option>
+            </select>
+          </div>
+        </div>
+        <div class="scheduleTableContainer">
+          <table id="scheduleTable">
+            <thead><tr><th>FROM</th><th>TO</th><th>AMOUNT</th></tr></thead>
+            <tbody id="scheduleBody"></tbody>
+          </table>
         </div>
       </div>
-
-      <div class="scheduleTableContainer">
-        <table id="scheduleTable">
-          <thead>
-            <tr>
-              <th>FROM</th>
-              <th>TO</th>
-              <th>AMOUNT</th>
-            </tr>
-          </thead>
-          <tbody id="scheduleBody"></tbody>
-        </table>
-      </div>
-
     </div>
-
-
-    <!-- RENTAL WITH RESIDUAL -->
-    <div class="summaryColumn residualCard">
-
-      <div class="bulk">
-        <div class="cardTitle">Rental with Residual</div>
-        <div class="tw-bigrow">
-          <div class="tw-biglabel">Residual Rental</div>
-          <div class="bigValue blue"><span id="lastMonthRental">0.00</span></div>
+    <!-- PAYMENT DETAIL + RESIDUAL -->
+    <div class="paymentColumn">
+      <div class="summaryColumn paymentCard">
+        <div class="cardTitle">Payment Detail</div>
+        <div class="summary">
+          <div class="tw-bigrow">
+            <div class="tw-biglabel" id="monthlyRentalTitle">Monthly Rental</div>
+            <div class="bigValue red"><span id="monthlyRental">0.00</span></div>
+          </div>
+          <table class="summaryTable">
+            <tr><td>Rate /100,000</td><td id="rate100"></td></tr>
+            <tr><td>Total Interest</td><td id="totalInterest"></td></tr>
+            <tr><td>Total Paid</td><td id="totalPaid"></td></tr>
+          </table>
         </div>
-        <table class="summaryTable">
-          <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
-          <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
-          <tr><td>Total Paid</td><td id="lastMonthTotalPaid"></td></tr>
-        </table>
       </div>
-
+      <div class="summaryColumn residualCard">
+        <div class="bulk">
+          <div class="cardTitle">Rental with Residual</div>
+          <div class="tw-bigrow">
+            <div class="tw-biglabel">Residual Rental</div>
+            <div class="bigValue blue"><span id="lastMonthRental">0.00</span></div>
+          </div>
+          <table class="summaryTable">
+            <tr><td>Residual Value</td><td id="bulkAmount"></td></tr>
+            <tr><td>Total Interest</td><td id="lastMonthInterest"></td></tr>
+            <tr><td>Total Paid</td><td id="lastMonthTotalPaid"></td></tr>
+          </table>
+        </div>
+      </div>
     </div>
-
-    </div>
-    <!-- END .bulletColumn -->
 
   </div>
   <!-- END .main -->
