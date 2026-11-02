@@ -2811,19 +2811,16 @@ function qMoney(v) { return qNum(v).toLocaleString("en-US", { minimumFractionDig
 
 
 
-/* The quotation, in the layout the owner gave:
-     Facility Amount, Capitalized Insurance, Capitalized StampDuty, Period,
-     *Monthly Rental*, *Upfront Charges* (total only), then the officer's number.
-   BIC is never shown. */
+/* WhatsApp quotation details:
+     Facility Amount, Period, *Monthly Rental*, *Initial Charges* (total only),
+     bullet payments when present, then the officer's number.
+   Capitalized charge breakdowns and BIC are not shown. */
 function quoteLines(kind) {
   const L = [];
   let rental, total, bullets = [];
   if (kind === "vehicle") {
     const fa = qVal(document.getElementById("facilityAmount"));
     if (qNum(fa)) L.push(["Facility Amount", qMoney(fa)]);
-    const cap = lastCapAmounts || [];
-    if (nonZeroAmt(cap[1])) L.push(["Capitalized Insurance", qMoney(cap[1])]);
-    if (nonZeroAmt(cap[2])) L.push(["Capitalized StampDuty", qMoney(cap[2])]);
     const per = qVal(document.getElementById("period"));
     if (per) L.push(["Period (months)", per]);
     rental = qVal(document.getElementById("monthlyRental"));
