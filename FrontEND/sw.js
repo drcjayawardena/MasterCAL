@@ -1,5 +1,5 @@
 /******************************************************
- * MasterCAL Pro — Service Worker  (v31)
+ * MasterCAL Pro — Service Worker  (v32)
  *
  * Strategy:
  *   - App shell (html/css/js/icons/manifest):
@@ -12,7 +12,7 @@
  * pick up the new version.
  ******************************************************/
 
-const CACHE_VERSION = "mastercal-v99";
+const CACHE_VERSION = "mastercal-v100";
 
 const SHELL = [
   "./",
