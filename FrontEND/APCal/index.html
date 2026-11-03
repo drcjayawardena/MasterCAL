@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <title>APCal | 4W Lease Calculator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="app-header">
+      <div><p class="eyebrow">FOUR WHEEL LEASING</p><h1>APCal</h1><p class="subtitle">Vehicle Leasing Rental Calculator</p></div>
+      <div class="brand-mark" aria-hidden="true">AP<span>CAL</span></div>
+    </header>
+    <nav class="tab-strip" aria-label="Calculator">
+      <button class="tab active" type="button">4W Lease</button>
+      <span class="tab-note">Four wheel calculator</span>
+    </nav>
+    <form id="calculator" autocomplete="off">
+      <section class="dashboard">
+        <article class="panel facility-panel">
+          <div class="panel-title"><h2>Facility Details</h2><span class="title-rule"></span></div>
+          <div class="field-list">
+            <label class="field"><span>Product type</span><select id="product"><option>REG CAR</option><option>DUAL PURPOSE</option><option>SMALL CAR</option><option>JAPANESE TRUCK / LORRY</option><option>INDIAN TRUCK / LORRY</option><option>INDIAN MINI TRUCK</option><option>AUTO LOANS</option></select></label>
+            <label class="field advanced-field"><span>CF valuation (LKR)</span><input id="valuation" type="number" min="0" step="1000" value="4300000"></label>
+            <label class="field advanced-field"><span>Maximum exposure (%)</span><input id="exposure" type="number" min="0" max="100" step="0.01" value="70"></label>
+            <label class="field"><span>Facility amount (LKR)</span><input id="facility" type="number" min="0" step="1000" value="4000000"></label>
+            <label class="field"><span>BIC (%)</span><input id="bicRate" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field"><span>Insurance (LKR)</span><input id="insurance" type="number" min="0" step="100" value="0"></label>
+            <label class="field"><span>Stamp duty</span><select id="stampMode"><option value="paid">INITIAL PAID</option><option value="capitalized">CAPITALIZED</option></select></label>
+            <label class="field advanced-field"><span>Stamp duty rate (%)</span><input id="stampRate" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field"><span>Period (months)</span><input id="period" type="number" min="1" max="72" step="1" value="72"></label>
+            <label class="field"><span>IRR (%)</span><input id="irr" type="number" min="0" max="100" step="0.01" value="16"></label>
+            <label class="field advanced-field"><span>Schedule type</span><select id="scheduleType"><option value="normal">NORMAL SCHEDULE</option><option value="bulk">BULK SCHEDULE</option></select></label>
+            <label class="field advanced-field"><span>Last payment bulk (%)</span><input id="bulkPercent" type="number" min="0" max="100" step="0.01" value="40"></label>
+            <label class="field advanced-field"><span>Last payment amount (LKR)</span><input id="bulkAmount" type="number" min="0" step="1000" value="1600000"></label>
+          </div>
+          <div class="exposure-note" id="exposureNote" aria-live="polite"></div>
+        </article>
+
+        <div class="middle-column">
+          <article class="panel payment-panel">
+            <div class="panel-title"><h2>Payment Detail</h2><span class="title-rule"></span></div>
+            <div class="metric-row"><div class="metric-label">Monthly rental</div><div class="metric-value" id="monthlyRental">0.00</div></div>
+            <div class="stat-list">
+              <div class="stat"><span>Rate per LKR 100,000</span><strong id="ratePer100k">0.00</strong></div>
+              <div class="stat"><span>Total interest</span><strong id="totalInterest">0.00</strong></div>
+              <div class="stat"><span>Total paid</span><strong id="totalPaid">0.00</strong></div>
+              <div class="stat"><span>Amount financed</span><strong id="amountFinanced">0.00</strong></div>
+            </div>
+          </article>
+          <article class="panel residual-panel">
+            <div class="panel-title"><h2>Rental with Residual</h2><span class="title-rule"></span></div>
+            <div class="metric-row"><div class="metric-label">Residual rental</div><div class="metric-value" id="residualRental">0.00</div></div>
+            <div class="stat-list">
+              <div class="stat"><span>Residual value</span><strong id="residualValue">0.00</strong></div>
+              <div class="stat"><span>Total interest</span><strong id="residualInterest">0.00</strong></div>
+              <div class="stat"><span>Total paid</span><strong id="residualPaid">0.00</strong></div>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel charges-panel">
+          <div class="panel-title"><h2>Charges Calculation</h2><span class="title-rule"></span></div>
+          <div class="metric-row"><div class="metric-label">Total charges</div><div class="metric-value" id="chargeTotal">0.00</div></div>
+          <div class="stat-list charges-list">
+            <label class="stat"><span>CRIB charges</span><input id="cribCharges" type="number" min="0" step="100" value="0"></label>
+            <label class="stat"><span>CRIB score</span><input id="cribScore" type="number" min="0" step="100" value="0"></label>
+            <label class="stat"><span>Valuation charges</span><input id="valuationCharges" type="number" min="0" step="100" value="0"></label>
+            <label class="stat"><span>Service charges</span><input id="serviceCharges" type="number" min="0" step="100" value="0"></label>
+            <label class="stat"><span>BIC collected as service charges</span><strong id="bicCollected">0.00</strong></label>
+            <label class="stat"><span>VAT on service charges (%)</span><input id="vatRate" type="number" min="0" max="100" step="0.01" value="0"></label>
+            <label class="stat"><span>VAT amount</span><strong id="vatAmount">0.00</strong></label>
+            <label class="stat"><span>Other RMV charges</span><input id="otherRmv" type="number" min="0" step="100" value="0"></label>
+            <label class="stat"><span>RMV charge type</span><select id="rmvType"><option value="24000">NORMAL RMV CHARGES</option><option value="9750">RO TO RO RMV CHARGES</option><option value="14500">AUTO LOAN</option><option value="2500">UNREGISTERED</option><option value="4500">MORGAGE</option><option value="0">SUB LOAN / REFINANCE</option></select></label>
+            <label class="stat"><span>RMV charges</span><strong id="rmvAmount">24,000.00</strong></label>
+            <label class="stat"><span>Stamp duty collected</span><strong id="stampCharge">0.00</strong></label>
+          </div>
+        </article>
+      </section>
+      <div class="actions"><button id="scheduleButton" class="primary-button" type="button" aria-expanded="false">SHOW RENTAL SCHEDULE</button></div>
+    </form>
+    <section id="scheduleSection" class="panel schedule-panel" hidden>
+      <div class="schedule-heading"><div><p class="eyebrow">4W LEASE</p><h2>Rental Schedule</h2></div><button id="printButton" class="outline-button" type="button">Print schedule</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Opening balance</th><th>Rental</th><th>Interest</th><th>Capital paid</th><th>Bulk payment</th><th>Closing balance</th><th>Total due</th></tr></thead><tbody id="scheduleRows"></tbody></table></div>
+    </section>
+    <footer>APCal · 4W leasing calculator · Currency: LKR</footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
+
+
+
