@@ -69,8 +69,15 @@
     row.innerHTML=`<label><span>Month</span><input class="bullet-month" type="number" min="1" max="72" step="1" value="${month}"></label><label><span>Amount (LKR)</span><input class="bullet-amount" type="number" min="0" step="1000" value="${amount}" placeholder="Amount"></label><button class="bullet-remove" type="button" aria-label="Remove bullet payment">×</button>`;
     $('bulletRows').appendChild(row);
     row.querySelectorAll('input').forEach(input=>{input.addEventListener('input',calculate);input.addEventListener('change',calculate);});
-    row.querySelector('.bullet-remove').addEventListener('click',()=>{row.remove();calculate();});
+    row.querySelector('.bullet-remove').addEventListener('click',()=>{row.remove();updateBulletButton();calculate();});
+    updateBulletButton();
     calculate();
+    row.scrollIntoView({behavior:'smooth',block:'nearest'});
+    row.querySelector('.bullet-amount').focus({preventScroll:true});
+  }
+  function updateBulletButton(){
+    const count=$('bulletRows').querySelectorAll('.bullet-row').length;
+    $('addBullet').textContent=count?'ADD ANOTHER BULLET PAYMENT':'ADD BULLET PAYMENT';
   }
   fields.forEach(id=>$(id).addEventListener('input',calculate)); fields.forEach(id=>$(id).addEventListener('change',calculate));
   $('addBullet').addEventListener('click',()=>addBulletRow());
@@ -78,3 +85,5 @@
   $('printButton').addEventListener('click',()=>window.print());
   calculate();
 })();
+
+

@@ -8,3 +8,6 @@ Calculations use the 4W tab's PMT formulas, monthly rate (IRR / 12), LKR 150 reg
 
 The form includes an Add Bullet Payment control. Each bullet has a month and LKR amount; adding or editing a row recalculates the fixed rental and inserts that payment into the printable rental schedule. The desktop normal/bulk schedule behavior remains available.
 
+
+The JS/CSS assets use a versioned URL so browsers refresh them after a Pages deployment. Adding a bullet scrolls to and focuses its amount field; the button label changes to Add Another Bullet Payment while rows exist.
+
