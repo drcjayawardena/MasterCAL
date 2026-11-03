@@ -36,6 +36,10 @@
             <label class="field advanced-field"><span>Last payment bulk (%)</span><input id="bulkPercent" type="number" min="0" max="100" step="0.01" value="40"></label>
             <label class="field advanced-field"><span>Last payment amount (LKR)</span><input id="bulkAmount" type="number" min="0" step="1000" value="1600000"></label>
           </div>
+          <div class="bullet-editor">
+            <button id="addBullet" class="bullet-add" type="button">ADD BULLET PAYMENT</button>
+            <div id="bulletRows" class="bullet-rows" aria-live="polite"></div>
+          </div>
           <div class="exposure-note" id="exposureNote" aria-live="polite"></div>
         </article>
 
@@ -83,13 +87,15 @@
     </form>
     <section id="scheduleSection" class="panel schedule-panel" hidden>
       <div class="schedule-heading"><div><p class="eyebrow">4W LEASE</p><h2>Rental Schedule</h2></div><button id="printButton" class="outline-button" type="button">Print schedule</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Opening balance</th><th>Rental</th><th>Interest</th><th>Capital paid</th><th>Bulk payment</th><th>Closing balance</th><th>Total due</th></tr></thead><tbody id="scheduleRows"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Opening balance</th><th>Rental</th><th>Interest</th><th>Capital paid</th><th>Bullet payment</th><th>Closing balance</th><th>Total due</th></tr></thead><tbody id="scheduleRows"></tbody></table></div>
     </section>
     <footer>APCal · 4W leasing calculator · Currency: LKR</footer>
   </main>
   <script src="app.js"></script>
 </body>
 </html>
+
+
 
 
 
