@@ -55,7 +55,8 @@ function vcIkmanInfo_(type, brandKey, modelKey) {
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vci1_" + url;
+  /* Version the key to discard cached lists created by older ikman parsers. */
+  const ck = "vci2_" + url;
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const res = vcFetch_(url);
@@ -82,7 +83,9 @@ function vcIkmanInfo_(type, brandKey, modelKey) {
     models: sel ? list(sel.children) : [],
     years: yearF && yearF.minimum ? { min: Number(yearF.minimum), max: Number(yearF.maximum) } : null
   };
-  if (cache) { try { cache.put(ck, JSON.stringify(out), VC_LIST_CACHE_SECONDS); } catch (e) {} }
+  /* Do not keep an empty brand list: the frontend would silently use its local
+     fallback (which has no ad counts) for the full cache lifetime. */
+  if (cache && out.brands.length) { try { cache.put(ck, JSON.stringify(out), VC_LIST_CACHE_SECONDS); } catch (e) {} }
   return out;
 }
 
