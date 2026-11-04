@@ -60,7 +60,7 @@ function vcIkmanInfo_(type, brandKey, modelKey) {
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const res = vcFetch_(url);
-  if (res.getResponseCode() !== 200) throw new Error("ikman.lk is not answering right now.");
+  if (res.getResponseCode() !== 200) throw new Error("ikman.lk is not answering right now (HTTP " + res.getResponseCode() + ").");
   const html = res.getContentText();
   const i = html.indexOf("window.initialData = ");
   if (i < 0) throw new Error("ikman.lk page format changed.");
