@@ -227,9 +227,11 @@ function vcAgeMinutes_(when) {
 /* ---------- riyasewana.com ---------- */
 
 function vcRiyasewana_(make, model, year) {
-  /* Current Riyasewana routes include the vehicle category. Keep year filtering
-     local: appending a year to the route can send the site to its generic search. */
-  const url = "https://riyasewana.com/search/cars/" + vcSlug_(make) + "/" + vcSlug_(model);
+  /* Riyasewana supports a year range as the final route segment (for example,
+     /search/cars/toyota/aqua/2015-2015). Search there directly when a year was
+     selected; otherwise use the model route. */
+  const url = "https://riyasewana.com/search/cars/" + vcSlug_(make) + "/" + vcSlug_(model) +
+              (year ? "/" + year + "-" + year : "");
   const res = vcFetch_(url);
   const html = res.getResponseCode() === 200 ? res.getContentText() : "";
   if (!html || /Attention Required|cf-browser-verification|challenge-platform/i.test(html)) {
@@ -259,11 +261,14 @@ function vcRiyasewana_(make, model, year) {
     const fragment = a.fragment || html.slice(a.start >= 0 ? a.start : 0, end);
     const attrTitle = a.attrs.match(/\btitle\s*=\s*(["'])(.*?)\1/i);
     const title = vcText_(attrTitle ? attrTitle[2] : a.body);
-    if (!title || !vcFits_(title, model, year)) return;
+    /* Riyasewana puts the manufacture year in the ad card, not reliably in its
+       title. Match the model from the title and the year from the card below. */
+    if (!title || !vcFits_(title, model, "")) return;
     const text = vcText_(fragment);
     const priceMatch = text.match(/Rs\.?\s*[\d,]+(?:\.\d+)?(?:\s*(?:million|mn|lakhs?))?/i);
     const kmMatch = text.match(/[\d,.]+\s*km\b/i);
     const yearMatch = text.match(/\b(?:19|20)\d{2}\b/);
+    if (year && yearMatch && yearMatch[0] !== year) return;
     const price = priceMatch ? priceMatch[0].replace(/\s+/g, " ").trim() : "";
     const absoluteUrl = /^https?:\/\//i.test(a.href) ? a.href : "https://riyasewana.com" + (a.href.charAt(0) === "/" ? "" : "/") + a.href;
     ads.push({ title: title, price: price, priceValue: vcPrice_(price),
