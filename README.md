@@ -1,13 +1,13 @@
 # MasterCAL Pro
 
 Vehicle leasing rental calculator (PWA). The calculation runs in a Google Sheet; each approved user gets their own copy.
-The backend is Google Apps Script, the website is GitHub Pages. MasterCAL login is also used by VehicleHUB (`whoami`).
+The backend is Google Apps Script, and the website is GitHub Pages. User accounts and sessions are for MasterCAL.
 
 ## 📁 Folders
 | Folder | What it is | Deploys to |
 |---|---|---|
-| `BackEND/` | Google Apps Script code — `Api.gs` (doGet/doPost), `Code.gs`, `Access.gs`, `Login.gs`, `Register.gs`, `Bike.gs`, `VehicleCheck.gs`, `WhatsApp.gs`, `Manual.gs`, `Menu.gs`, `appsscript.json`, `.clasp.json` | Apps Script web app (workflow **Apps Script — deploy**) |
-| `FrontEND/` | Website — `index.html`, `app.js` (API_URL = /exec), `styles.css`, `sw.js`, `manifest.json`, `manual.html`, `icons/` | GitHub Pages (workflow **Website — deploy**) |
+| `BackEND/` | Google Apps Script code — `Api.gs` (doGet/doPost), `Code.gs`, `Access.gs`, `Login.gs`, `Register.gs`, `Bike.gs`, `VehicleCheck.gs`, `Menu.gs`, `appsscript.json`, `.clasp.json` | Apps Script web app (workflow **Apps Script — deploy**) |
+| `FrontEND/` | Website — `index.html`, `app.js` (API_URL = /exec), `styles.css`, `sw.js`, `manifest.json`, `icons/` | GitHub Pages (workflow **Website — deploy**) |
 | `.github/workflows/` | Automatic deploy / pull workflows | — |
 | `CLAUDE.md` | Project notes for Claude Code | — |
 
@@ -27,7 +27,6 @@ The backend is Google Apps Script, the website is GitHub Pages. MasterCAL login 
 | What | Link |
 |---|---|
 | MasterCAL app | https://drcjayawardena.github.io/MasterCAL/ |
-| User manual | https://drcjayawardena.github.io/MasterCAL/manual.html |
 
 ## 📊 Google Sheet (Master)
 | What | Link |
@@ -56,9 +55,6 @@ Health check: open the /exec link — it shows `MasterCAL Pro API is running.`
 | Secrets (`CLASPRC_JSON`) | https://github.com/drcjayawardena/MasterCAL/settings/secrets/actions |
 | Pages settings (Source: GitHub Actions) | https://github.com/drcjayawardena/MasterCAL/settings/pages |
 
-## 🔗 Related
-- VehicleHUB: https://drcjayawardena.github.io/VehicleHUB/ — repo https://github.com/drcjayawardena/VehicleHUB
-  (VehicleHUB's `McLogin.gs` calls this /exec with action `whoami` — don't change the deployment ID.)
-
 ## Notes
 - The repository is public but holds **no data and no passwords** — only code.
+- See [`VEHICLEHUB_REMOVAL_LOG.md`](VEHICLEHUB_REMOVAL_LOG.md) for the integration-removal record.

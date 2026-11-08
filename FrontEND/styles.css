@@ -613,16 +613,6 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .tw-card .summaryTable.tw-pay td{ height:22px; padding:3px 12px; font-size:12.5px; }
 
 
-/* ---------- VehicleHub tabs (Request / Matches) ---------- */
-.tab-hub{ border-color:#c9d6f0; color:#1d3f8f; }
-.tab-hub.active{ background:#1d3f8f; border-color:#1d3f8f; color:#fff; }
-.tab-hub:hover:not(.active){ background:#eef3fd; }
-.hubPanel{ background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden;
-  box-shadow:0 6px 18px rgba(20,40,60,.05); }
-.hubPanel[hidden]{ display:none !important; }
-.hubFrame{ display:block; width:100%; height:calc(100vh - 155px); min-height:520px; border:0; background:#f3f5f9; }
-@media (max-width:560px){ .hubFrame{ height:calc(100vh - 135px); } }
-
 
 /* ---------- Vehicle Checking tab ---------- */
 .vcPanel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px;

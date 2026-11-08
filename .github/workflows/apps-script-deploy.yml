@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # The web app deployment the website (and VehicleHUB's McLogin.gs) talks to — the part between /s/ and /exec
+  # The MasterCAL web app deployment — the part between /s/ and /exec
   DEPLOYMENT_ID: AKfycbx8m_v6iMUy8tTSGzxSfxi79ZyTfJgpy89WjVkqRMO3dvnm734znkdTvjpW92DhO-xN
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
         working-directory: BackEND
         run: |
           missing=0
-          for f in appsscript.json Access.gs Api.gs Bike.gs Code.gs Login.gs Manual.gs Menu.gs Register.gs VehicleCheck.gs WhatsApp.gs; do
+          for f in appsscript.json Access.gs Api.gs Bike.gs Code.gs Login.gs Menu.gs Register.gs VehicleCheck.gs; do
             if [ ! -s "$f" ]; then echo "::error::Missing $f"; missing=1; fi
           done
           if [ "$missing" = 1 ]; then

@@ -4,8 +4,8 @@
  *
  * Flow
  *   1) The user enters Name, WhatsApp number, e-mail and password. The
- *      WhatsApp number is the login name for MasterCAL and
- *      VehicleHUB; the WhatsApp number keys the USERS row and the user's copy.
+ *      WhatsApp number is the login name for MasterCAL and keys the USERS row
+ *      and the user's copy.
  *   2) register  -> the user is written to USERS as PENDING and the owner
  *      gets the approval e-mail (APPROVE / REJECT buttons).
  *   3) The owner approves -> the user can log in.

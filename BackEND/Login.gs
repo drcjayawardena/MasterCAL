@@ -2,14 +2,11 @@
  * MasterCAL Pro
  * Login.gs — username + password sign-in and session tokens
  *
- * Every user has a username + password (USERS columns I and J). One login
- * is used for MasterCAL AND VehicleHUB:
+ * Every user has a username + password (USERS columns I and J). Login
+ * authenticates MasterCAL users only:
  *   - login   -> checks the password and returns a signed session token
- *                (the PWA keeps it in localStorage "mastercal_token", which
- *                VehicleHUB can read because both sites share one origin)
- *   - whoami  -> VehicleHUB's server sends that token here and gets back who
- *                the user is (username, name, WhatsApp number, e-mail)
- *   - every other request carries the token instead of the WhatsApp number.
+ *                (the PWA keeps it in MasterCAL's own localStorage key)
+ *   - authenticated MasterCAL requests carry the token.
  *
  * The password is stored only as a salted hash. A token says which USERS row
  * it belongs to and expires after SESSION_DAYS; changing / resetting the
@@ -159,20 +156,6 @@ function login_(args) {
   if (status === "BLOCKED") return { ok: false, access: "BLOCKED", error: "This account is blocked." };
   if (status === "APPROVED") out.token = makeToken_(key, uname, String(data[i][PASS_COL - 1]));
   return { ok: true, data: out };
-}
-
-/* =========================================================
-   PUBLIC ACTION — whoami     args = [ token ]
-   For VehicleHUB's server: who does this MasterCAL session belong to?
-   Returns { ok, data: { username, name, phone, email, vehiclehub } } for APPROVED users;
-   vehiclehub = false for MasterCAL-only users (VehicleHUB's McLogin.gs then refuses).
-========================================================= */
-function whoami_(args) {
-  const a = tokenAccess_((args || [])[0]);
-  if (a.status !== "APPROVED") return { ok: false, access: a.status, error: "Access " + a.status };
-  return { ok: true, data: { username: a.who.username, name: a.who.name,
-                             phone: keyToPhone_(a.who.key), email: a.who.email,
-                             vehiclehub: vhAllowed_(a.who.key) } };
 }
 
 /* Menu: clear a user's username + password. They register again (same WhatsApp

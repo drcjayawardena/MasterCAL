@@ -27,11 +27,11 @@ var _mem = {};
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return (k in _mem) ? _mem[k] : null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { _mem[k] = v; } }
 
-/* Login session. One username + password for MasterCAL and VehicleHUB:
-   the server returns a signed token (backend/Login.gs) that is sent with
-   every request. It lives in localStorage "mastercal_token", which the
-   VehicleHUB pages on this same origin read to log the user in too. */
-const TOKEN_KEY = "mastercal_token";
+/* MasterCAL-only session token. The previous key was shared with VehicleHUB;
+   remove that legacy token and keep new sessions under this app's own key. */
+const TOKEN_KEY = "mastercal_session_token";
+try { localStorage.removeItem("mastercal_token"); } catch (e) {}
+try { localStorage.removeItem("vehiclehub_username"); } catch (e) {}
 function getToken() { return lsGet(TOKEN_KEY) || ""; }
 function setToken(t) { if (t) lsSet(TOKEN_KEY, t); else { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} delete _mem[TOKEN_KEY]; } }
 function getUsername() { return lsGet("mastercal_username") || ""; }
@@ -70,7 +70,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "whoami");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman");   /* show the calculating spinner for calc actions */
   if (VEHICLE_WRITE_ACTIONS[action]) calcLastKey = "";   /* server state changes -> next calcInputs must really run */
   if (isCalc) calcStart();
 
@@ -216,8 +216,6 @@ function loadApp() {
 
       if (!result) return;
 
-      applyVehicleHubAccess(result.vehiclehub);
-
       if (result.dropdowns) {
         fillSelect("productType", result.dropdowns.productTypes || []);
         fillSelect("stampDuty",
@@ -277,7 +275,7 @@ function wireShowPass() {
   });
 }
 
-/* -------- Login: username + password (the same login opens VehicleHUB) -------- */
+/* -------- Login: username + password -------- */
 function showLogin(msg) {
   gateShow(
     '<h2>Login</h2>' +
@@ -327,7 +325,7 @@ function showRegister() {
   gateShow(
     '<h2>Register</h2>' +
     '<p>Your WhatsApp number will be your username. Choose a password. ' +
-    'Once an administrator approves your request, you can start using MasterCAL. The administrator also decides whether your account includes the VehicleHUB part.</p>' +
+    'Once an administrator approves your request, you can start using MasterCAL.</p>' +
     '<input id="gateName" type="text" autocomplete="name" placeholder="Your name">' +
     '<input id="gatePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="WhatsApp number (e.g. 0771234567)">' +
     '<input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">' +
@@ -1475,7 +1473,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   vcheck: "vcheckPanel", hubVehicles: "hubPanel", hubBuyers: "hubPanel", hubMatches: "hubPanel" };
+                   vcheck: "vcheckPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -1492,7 +1490,6 @@ function setupTabs() {
          Calculation inputs are cleared (re-clicking the open tab does nothing). */
       if (which === "threewheel" && !wasActive) load3W(true);
       if (which === "bike" && !wasActive) loadBike(true);
-      if (HUB_TABS[which]) openHub(which);
       if (which === "vcheck") setupVehicleCheck();
     });
   });
@@ -2245,67 +2242,6 @@ function setBikeValue(cell, value) {
 
 
 /* =========================================================
-   VEHICLEHUB SECTIONS
-   One same-origin iframe is reused for Vehicles, Buyers and Matches.
-   The embedded VehicleHUB hides its standalone sidebar and switches views
-   through a validated postMessage, preserving its existing SSO session.
-========================================================= */
-
-const VEHICLEHUB_URL = "https://drcjayawardena.github.io/VehicleHUB/";
-const VEHICLEHUB_ORIGIN = new URL(VEHICLEHUB_URL).origin;
-const HUB_TABS = {
-  hubVehicles: { view: "vehicles" },
-  hubBuyers: { view: "buyers" },
-  hubMatches: { view: "matches" }
-};
-let HUB_ACTIVE_TAB = "";
-let HUB_FRAME_READY = false;
-
-/* Does this user have the VehicleHUB part? The admin chooses when approving (USERS column K).
-   The server tells us with the "init" answer; until then (or with an older server) it is "yes". */
-let VH_ALLOWED = true;
-
-function applyVehicleHubAccess(allowed) {
-  VH_ALLOWED = allowed !== false;
-  document.querySelectorAll(".tab-hub").forEach(function (b) {
-    b.hidden = !VH_ALLOWED;
-    b.style.display = VH_ALLOWED ? "" : "none";
-  });
-  if (!VH_ALLOWED) {
-    HUB_ACTIVE_TAB = "";
-    const open = document.querySelector(".tab-hub.active");
-    const first = document.querySelector('.tab[data-tab="vehicle"]');
-    if (open && first) first.click();          /* leave a VehicleHUB tab that is open */
-  }
-}
-
-window.addEventListener("message", function (event) {
-  const frame = document.getElementById("hubFrame");
-  if (!frame || event.origin !== VEHICLEHUB_ORIGIN || event.source !== frame.contentWindow) return;
-  if (event.data && event.data.type === "vehiclehub:ready") {
-    HUB_FRAME_READY = true;
-    if (HUB_ACTIVE_TAB) openHub(HUB_ACTIVE_TAB);
-  }
-});
-
-function openHub(tab) {
-  if (!VH_ALLOWED) return;
-  const t = HUB_TABS[tab]; if (!t) return;
-  const f = document.getElementById("hubFrame");
-  if (!f) return;
-  HUB_ACTIVE_TAB = tab;
-  f.dataset.view = t.view;
-  if (!f.getAttribute("src")) {
-    f.src = VEHICLEHUB_URL + "?embed=mastercal&view=" + encodeURIComponent(t.view);
-    return;
-  }
-  if (HUB_FRAME_READY) {
-    f.contentWindow.postMessage({ type: "mastercal:show-view", view: t.view }, VEHICLEHUB_ORIGIN);
-  }
-}
-
-
-/* =========================================================
    VEHICLE CHECKING TAB
    Make + model + year -> the server (backend/VehicleCheck.gs) reads the
    matching ads on ikman.lk and riyasewana.com and returns a price summary
@@ -2780,18 +2716,6 @@ function isPhone() {
          (/iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1 && window.matchMedia("(pointer: coarse)").matches);
 }
 
-/* Officer's mobile for the quotation: saved at login; older sessions ask the server once. */
-function loadOfficerInfo() {
-  if (lsGet("mastercal_phone")) return;
-  const tok = getToken();
-  if (!tok) return;
-  api("whoami", [tok]).then(function (d) {
-    if (!d) return;
-    lsSet("mastercal_name", d.name || "");
-    lsSet("mastercal_phone", d.phone || "");
-  }).catch(function () {});
-}
-
 /* +94771234567 -> 077 123 4567 */
 function localPhone(p) {
   let d = String(p || "").replace(/[^\d]/g, "");
@@ -2801,7 +2725,6 @@ function localPhone(p) {
 
 function setupWhatsAppQuotes() {
   if (!isPhone()) return;
-  loadOfficerInfo();
   WA_QUOTES.forEach(function (q) {
     const anchor = document.getElementById(q.after);
     if (!anchor || document.getElementById("waq_" + q.kind)) return;
@@ -2901,17 +2824,6 @@ function quoteBullets() {
   return out;
 }
 
-/* Link for the customer to ask for a vehicle, or (sell) to sell theirs (VehicleHUB public request page, no login).
-   ref = this officer, so the request comes straight to them. */
-function quoteRequestLink(q, num, sell) {
-  const ref = lsGet("vehiclehub_username") || getUsername();
-  const v = { vehicle: "car", tw: "tw", bk: "bike" }[q.kind] || "";
-  let u = VEHICLEHUB_URL + "request.html?q=1" + (sell ? "&type=seller" : "") + (v ? "&v=" + v : "");
-  if (ref) u += "&ref=" + encodeURIComponent(ref);
-  if (num) u += "&p=" + num;
-  return u;
-}
-
 /* A plain mark: emoji arrive as "?" when the message opens in WhatsApp on a computer. */
 const QUOTE_MARK = "•";
 
@@ -2933,11 +2845,6 @@ function quoteText(q, num) {
   if (qNum(d.total)) t.push("", "*Initial Charges    : " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
   t.push("", "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + localPhone(tel) : "") + ".");
-  /* The buy / sell request links lead to VehicleHUB: only for users who have the VehicleHUB part. */
-  if (VH_ALLOWED) {
-    t.push("", QUOTE_MARK + " ඔබට වාහනයක් අවශ්‍යද? ඔබට අවශ්‍ය දේ අපට කියන්න, අපි ඔබ වෙනුවෙන් එය සොයා දෙන්නෙමු:", quoteRequestLink(q, num));
-    t.push("", QUOTE_MARK + " ඔබේ වාහනය විකුණන්නද? විස්තර අප සමඟ බෙදාගන්න, අපි ඔබට ගැනුම්කරුවෙකු සොයා දෙන්නෙමු:", quoteRequestLink(q, num, true));
-  }
   return t.join("\n");
 }
 

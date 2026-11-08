@@ -23,7 +23,6 @@ function doPost(e) {
           because a brand-new user is not APPROVED yet. */
     if (action === "register")            return json_(register_(body.args || []));
     if (action === "login")               return json_(login_(body.args || []));
-    if (action === "whoami")              return json_(whoami_(body.args || []));   /* VehicleHUB's server */
 
     /* 1) login + approval gate */
     const access = tokenAccess_(body.token);
@@ -39,8 +38,6 @@ function doPost(e) {
     /* 3) route to this user's own copy (keyed by "wa:<number>") */
     setUserContext_(access.who.key);
     const data = dispatch_(action, body.args || []);
-    /* the app hides the VehicleHUB tabs for MasterCAL-only users (USERS column K) */
-    if (action === "init" && data && typeof data === "object") data.vehiclehub = vhAllowed_(access.who.key);
     return json_({ ok: true, data: data });
   } catch (err) {
     return json_({ ok: false, error: errMsg_(err) });
@@ -53,7 +50,7 @@ function doGet(e) {
   /* Email APPROVE / REJECT links (token-secured) — handled before the
      app gate, and return an HTML confirmation page (not JSON). */
   if (action === "approveUser" || action === "blockUser") {
-    return handleEmailApproval_(action, e.parameter.email, e.parameter.token, e.parameter.vh);
+    return handleEmailApproval_(action, e.parameter.email, e.parameter.token);
   }
 
   if (!action) {
