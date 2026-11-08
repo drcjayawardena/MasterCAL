@@ -201,7 +201,7 @@ const CFG = {
      field switches Q6:Q8 · Express switch N1
 ====================================================*/
 
-const BLOCK_A1 = "A1:Q18";
+const BLOCK_A1 = "A1:Q28";
 
 /* withRentalSchedule: widen the read to A1:P112 so the rental
    schedule (A27:F112) comes back in the same single call. */
@@ -261,6 +261,7 @@ function outputsLiteFrom_(b) {
     lastMonthTotalPaid: b[17][4], /* E18 */
     bulkAmount:         b[15][3], /* D16 */
     rate100:            b[13][12],/* M14 */
+    capitalRecoverFirstRental: b[27][5], /* F28 */
     /* Capitalized amounts shown on the BIC / INSURANCE / STAMP DUTY labels */
     capAmounts:         [ b[5][4], b[6][4], b[7][4] ],   /* E6, E7, E8 */
     express: isExpress_(b[0][13]),                       /* N1 */

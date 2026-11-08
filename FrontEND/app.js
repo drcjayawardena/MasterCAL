@@ -437,6 +437,8 @@ function showScheduleCard() {
   if (!card || !main) return;
 
   card.style.display = "";
+  var info = document.getElementById("capitalRecoverInfo");
+  if (info) info.style.display = "grid";
   main.classList.remove("schedule-hidden");
   if (button) button.textContent = "HIDE BULLET PAYMENT";
 
@@ -453,6 +455,8 @@ function hideScheduleCard() {
   if (!card || !main) return;
 
   card.style.display = "none";
+  var info = document.getElementById("capitalRecoverInfo");
+  if (info) info.style.display = "none";
   main.classList.add("schedule-hidden");
   if (button) button.textContent = "ADD BULLET PAYMENT";
 }
@@ -665,6 +669,12 @@ function showOutputs(result) {
   text("lastMonthInterest",  result.lastMonthInterest);
   text("lastMonthTotalPaid", result.lastMonthTotalPaid);
   text("rate100",            result.rate100);
+  text("capitalRecoverFirstRental", result.capitalRecoverFirstRental);
+  var capitalRecoverValue = document.getElementById("capitalRecoverFirstRental");
+  if (capitalRecoverValue) {
+    var recoverPercent = parseFloat(String(result.capitalRecoverFirstRental == null ? "" : result.capitalRecoverFirstRental).replace(/,/g, ""));
+    capitalRecoverValue.classList.toggle("below-threshold", isFinite(recoverPercent) && recoverPercent < 25);
+  }
 
   if (result.labels) applyLabels(result.labels);
   if (result.capAmounts) applyCapAmounts(result.capAmounts);

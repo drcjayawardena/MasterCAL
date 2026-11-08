@@ -253,6 +253,9 @@ input.is-disabled, select.is-disabled{
 
 /* ADD BULLET PAYMENT sits beneath the Facility Details inputs. */
 .facility > .addBulletPaymentButton{ margin-top:8px; flex:0 0 auto; }
+.capitalRecoverInfo{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin-top:auto; padding:9px 10px; border-radius:9px; background:#f4f6f8; color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; }
+.capitalRecoverInfo strong{ color:var(--ink); text-align:right; font-size:13px; font-variant-numeric:tabular-nums; }
+.capitalRecoverInfo strong.below-threshold{ color:#d71920; }
 
 
 /* ---------- bullet payment schedule ---------- */
