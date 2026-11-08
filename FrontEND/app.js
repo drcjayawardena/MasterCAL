@@ -1936,55 +1936,63 @@ function buildBike() {
   if (!grid) return;
   grid.innerHTML = "";
 
-  /* Same two-card layout as the three-wheel tab. */
+  /* Four separate cards, matching the 3W calculator layout:
+     Valuation & Exposure | Payment Detail
+     Rental Calculation   | Initial Charges */
   grid.classList.add("tw-grid2");
 
-  const c1 = document.createElement("div");
-  c1.className = "tw-card";
-  c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
-  ["B2", "B3", "B4"].forEach(function (cell) { c1.appendChild(bkField(cell)); });
-  c1.insertAdjacentHTML("beforeend",
+  const valuation = document.createElement("div");
+  valuation.className = "tw-card";
+  valuation.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
+  ["B2", "B3", "B4"].forEach(function (cell) { valuation.appendChild(bkField(cell)); });
+  valuation.insertAdjacentHTML("beforeend",
     '<table class="summaryTable">' +
     bkOutRow("Maximum Exposure", "bk_maxExposure") +
     bkOutRow("CF Valuation", "bk_cfValuation") +
     bkOutRow("Max Facility Value", "bk_maxFacility") +
-    '</table>' +
-    '<div class="cardTitle tw-subtitle">Initial Charges</div>' +
-    bkBigRow("TOTAL CHARGES", "bk_chargesTotal") +
-    '<table class="summaryTable">' +
-    bkOutRow("Crib Charges", "bk_cribCharge") +
-    bkOutRow("Valuation Charges", "bk_valCharge") +
-    bkOutRow("Service Charges", "bk_svcCharge") +
-    bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
     '</table>');
-  /* CRIB input B20 is not shown, like the 3W layout. */
-  const c1inputs = document.createElement("div");
-  c1inputs.className = "tw-card-inputs";
-  c1inputs.appendChild(bkField("B21"));
-  c1.appendChild(c1inputs);
-  grid.appendChild(c1);
+  grid.appendChild(valuation);
 
-  const c2 = document.createElement("div");
-  c2.className = "tw-card";
-  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
-  ["B7", "B8", "B9", "B10", "B11", "B12"].forEach(function (cell) { c2.appendChild(bkField(cell)); });
-  c2.insertAdjacentHTML("beforeend",
-    '<div class="tw-paywrap">' +
-    '<div class="cardTitle tw-subtitle">Payment Detail</div>' +
+  const payment = document.createElement("div");
+  payment.className = "tw-card";
+  payment.innerHTML = '<div class="cardTitle">Payment Detail</div>' +
     bkBigRow("MONTHLY RENTAL", "bk_monthlyRental") +
     '<table class="summaryTable">' +
     bkOutRow("Exposure", "bk_exposurePct") +
     bkOutRow("Total Paid", "bk_totPaid") +
     bkOutRow("Total Interest", "bk_totInterest") +
     bkOutRow("Rate / 100,000", "bk_rate100") +
-    '</table></div>');
-  grid.appendChild(c2);
+    '</table>';
+  grid.appendChild(payment);
+
+  const rental = document.createElement("div");
+  rental.className = "tw-card";
+  rental.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
+  ["B7", "B8", "B9", "B10", "B11", "B12"].forEach(function (cell) { rental.appendChild(bkField(cell)); });
+  grid.appendChild(rental);
+
+  const charges = document.createElement("div");
+  charges.className = "tw-card";
+  charges.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
+    bkBigRow("TOTAL CHARGES", "bk_chargesTotal") +
+    '<table class="summaryTable">' +
+    bkOutRow("Crib Charges", "bk_cribCharge") +
+    bkOutRow("Valuation Charges", "bk_valCharge") +
+    bkOutRow("Service Charges", "bk_svcCharge") +
+    bkOutRow('<span id="bk_vatLabel">VAT</span>', "bk_vat") +
+    '</table>';
+  /* Initial RMV charges are controlled by B21; CRIB B20 remains hidden. */
+  const chargesInput = document.createElement("div");
+  chargesInput.className = "tw-card-inputs";
+  chargesInput.appendChild(bkField("B21"));
+  charges.appendChild(chargesInput);
+  grid.appendChild(charges);
 }
 
 /* Two-card tabs: push the right card's MONTHLY RENTAL block down so its tile
    lines up with TOTAL CHARGES on the left (side-by-side layout only). */
 function alignPayTiles() {
-  ["twGrid", "bkGrid"].forEach(function (id) {
+  ["bkGrid"].forEach(function (id) {
     const grid = document.getElementById(id);
     if (!grid || !grid.offsetParent) return;
     const cards = grid.querySelectorAll(".tw-card");
