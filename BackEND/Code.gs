@@ -587,31 +587,24 @@ function colOptions3W_(s, col) {
 /* F13 = "YES" -> RMV CHARGES (B23) is switched off. */
 function rmv3WOff_(v) { return String(v == null ? "" : v).trim().toUpperCase() === "YES"; }
 
-function enforce3WRmv_(s) {
-  if (rmv3WOff_(s.getRange("F13").getDisplayValue()) &&
-      String(s.getRange("B23").getDisplayValue()).trim() !== "") {
-    s.getRange("B23").clearContent();
-    SpreadsheetApp.flush();
-  }
-}
+function snap3W_(s) { return s.getRange("A1:F34").getDisplayValues(); }
 
-function get3W() {
-  const s = sh3W_();
+function get3WData_(s, snap, includeOptions) {
   const inputs = {};
   IN_CELLS_3W.forEach(function (c) {
-    const rg = s.getRange(c);
+    const row = parseInt(c.slice(1), 10);
     /* VEHICLE NO (B3) options come from the 3W sheet's own D column
        (its cell validation points at the wrong sheet). */
-    const opts = (c === "B3") ? colOptions3W_(s, "D") : dropdownOptions3W_(rg);
-    inputs[c] = { value: rg.getDisplayValue(), options: opts };
+    const info = { value: snap[row - 1][1] };
+    if (includeOptions) info.options = (c === "B3") ? colOptions3W_(s, "D") : dropdownOptions3W_(s.getRange(c));
+    inputs[c] = info;
   });
-  const c = s.getRange("C1:C34").getDisplayValues();
-  const g = function (row) { return (c[row - 1] && c[row - 1][0] != null) ? c[row - 1][0] : ""; };
+  const g = function (row) { return snap[row - 1][2] == null ? "" : snap[row - 1][2]; };
   return {
     inputs: inputs,
-    labelFacility: s.getRange("A10").getDisplayValue(),
-    totalCapPct:   s.getRange("B6").getDisplayValue(),
-    rmvDisabled:   rmv3WOff_(s.getRange("F13").getDisplayValue()),
+    labelFacility: snap[9][0],
+    totalCapPct:   snap[5][1],
+    rmvDisabled:   rmv3WOff_(snap[12][5]),
     out: {
       cfValuation:   g(3),
       maxFacility:   g(5),
@@ -637,17 +630,34 @@ function get3W() {
   };
 }
 
+function get3W() {
+  const s = sh3W_();
+  return get3WData_(s, snap3W_(s), true);
+}
+
 function set3W(cell, value) {
   if (IN_CELLS_3W.indexOf(cell) === -1) throw new Error("Invalid 3W cell: " + cell);
   const s = sh3W_();
-  if (cell === "B23" && rmv3WOff_(s.getRange("F13").getDisplayValue())) {
-    s.getRange("B23").clearContent();            /* RMV charges not allowed when F13 = YES */
+  var snap = snap3W_(s);
+  const row = parseInt(cell.slice(1), 10);
+  const before = String(snap[row - 1][1] == null ? "" : snap[row - 1][1]);
+  var changed = false;
+  if (cell === "B23" && rmv3WOff_(snap[12][5])) {
+    if (before.trim() !== "") { s.getRange("B23").clearContent(); changed = true; }
   } else {
-    s.getRange(cell).setValue(value == null ? "" : value);
+    const clean = value == null ? "" : String(value);
+    if (before !== clean) { s.getRange(cell).setValue(value == null ? "" : value); changed = true; }
   }
-  SpreadsheetApp.flush();
-  enforce3WRmv_(s);
-  return get3W();
+  if (changed) {
+    SpreadsheetApp.flush();
+    snap = snap3W_(s);
+    if (rmv3WOff_(snap[12][5]) && String(snap[22][1]).trim() !== "") {
+      s.getRange("B23").clearContent();
+      SpreadsheetApp.flush();
+      snap = snap3W_(s);
+    }
+  }
+  return get3WData_(s, snap, false);
 }
 
 /* Opening the 3W tab starts a fresh calculation: clear the Rental Calculation inputs. */
@@ -655,6 +665,11 @@ function reset3W() {
   const s = sh3W_();
   s.getRangeList(["B10","B11","B12","B13","B14","B15"]).clearContent();
   SpreadsheetApp.flush();
-  enforce3WRmv_(s);
-  return get3W();
+  var snap = snap3W_(s);
+  if (rmv3WOff_(snap[12][5]) && String(snap[22][1]).trim() !== "") {
+    s.getRange("B23").clearContent();
+    SpreadsheetApp.flush();
+    snap = snap3W_(s);
+  }
+  return get3WData_(s, snap, true);
 }

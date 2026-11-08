@@ -1632,6 +1632,17 @@ function render3W(data) {
     if (!el) return;
     if (el.tagName === "SELECT") {
       const cur = String(info.value == null ? "" : info.value);
+      if (info.options === undefined && el.options.length) {
+        let has = false;
+        for (let i = 0; i < el.options.length; i++) if (el.options[i].value === cur) { has = true; break; }
+        if (cur !== "" && !has) {
+          const keep = document.createElement("option");
+          keep.value = cur; keep.textContent = cur;
+          el.appendChild(keep);
+        }
+        el.value = cur;
+        return;
+      }
       const opts = info.options || [];
       el.innerHTML = "";
       /* keep the current value selectable even if it's not in the list */
@@ -1812,6 +1823,17 @@ function tw_setBusy(on) {
 }
 
 function set3WValue(cell, value) {
+  const cur = tw_lastData && tw_lastData.inputs && tw_lastData.inputs[cell];
+  if (cur) {
+    const next = String(value == null ? "" : value).trim();
+    const old = String(cur.value == null ? "" : cur.value).trim();
+    if (TW_DROPDOWN_CELLS.indexOf(cell) !== -1) {
+      if (next === old) return;
+    } else if ((next === "" && old === "") ||
+        (next !== "" && old !== "" && /^[\d.,\s%]+$/.test(next) && twNum(next) === twNum(old))) {
+      return;
+    }
+  }
   tw_setBusy(true);
   api("set3W", [cell, value])
     .then(function (data) { render3W(data); })
