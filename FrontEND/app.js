@@ -1567,22 +1567,44 @@ function build3W(data) {
   if (!grid) return;
   grid.innerHTML = "";
 
-  /* Two cards, as in the owner's layout:
-     left  = Valuation & Exposure, then Initial Charges;
-     right = Rental Calculation inputs, then Payment Detail. */
+  /* Four separate cards, matching the Three-Wheel layout reference:
+     Valuation & Exposure | Payment Detail
+     Rental Calculation   | Initial Charges */
   grid.classList.add("tw-grid2");
 
-  const c1 = document.createElement("div");
-  c1.className = "tw-card";
-  c1.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
-  ["B2", "B3"].forEach(function (cell) { c1.appendChild(twField(cell, data)); });
-  c1.insertAdjacentHTML("beforeend",
+  const valuation = document.createElement("div");
+  valuation.className = "tw-card";
+  valuation.innerHTML = '<div class="cardTitle">Valuation &amp; Exposure</div>';
+  ["B2", "B3"].forEach(function (cell) { valuation.appendChild(twField(cell, data)); });
+  valuation.insertAdjacentHTML("beforeend",
     '<table class="summaryTable">' +
     twOutRow("Maximum Exposure", "tw_maxExposure") +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
-    '</table>' +
-    '<div class="cardTitle tw-subtitle">Initial Charges</div>' +
+    '</table>');
+  grid.appendChild(valuation);
+
+  const payment = document.createElement("div");
+  payment.className = "tw-card";
+  payment.innerHTML = '<div class="cardTitle">Payment Detail</div>' +
+    twBigRow("MONTHLY RENTAL", "tw_monthlyRental") +
+    '<table class="summaryTable">' +
+    twOutRow("Exposure", "tw_exposurePct") +
+    twOutRow("Total Paid", "tw_totPaid") +
+    twOutRow("Total Interest", "tw_totInterest") +
+    twOutRow("Rate / 100,000", "tw_rate100") +
+    '</table>';
+  grid.appendChild(payment);
+
+  const rental = document.createElement("div");
+  rental.className = "tw-card";
+  rental.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
+  ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { rental.appendChild(twField(cell, data)); });
+  grid.appendChild(rental);
+
+  const charges = document.createElement("div");
+  charges.className = "tw-card";
+  charges.innerHTML = '<div class="cardTitle">Initial Charges</div>' +
     twBigRow("TOTAL CHARGES", "tw_chargesTotal") +
     '<table class="summaryTable">' +
     twOutRow("Crib Charges", "tw_cribCharge") +
@@ -1590,30 +1612,14 @@ function build3W(data) {
     twOutRow("Valuation Charges", "tw_valCharge") +
     twOutRow("Service Charges", "tw_svcCharge") +
     twOutRow("VAT 18.00%", "tw_vat") +
-    '</table>');
-  /* Only the RMV CHARGES (B23) input sits below the charges (CRIB B22 stays hidden). */
-  const c1inputs = document.createElement("div");
-  c1inputs.className = "tw-card-inputs";
-  c1inputs.appendChild(twField("B23", data));
-  c1.appendChild(c1inputs);
-  grid.appendChild(c1);
-
-  const c2 = document.createElement("div");
-  c2.className = "tw-card";
-  c2.innerHTML = '<div class="cardTitle">Rental Calculation</div>';
-  ["B10", "B11", "B12", "B13", "B14", "B15"].forEach(function (cell) { c2.appendChild(twField(cell, data)); });
-  /* No Payment Detail heading here (six inputs leave no room); alignPayTiles
-     lines MONTHLY RENTAL up with TOTAL CHARGES on the left. */
-  c2.insertAdjacentHTML("beforeend",
-    '<div class="tw-paywrap">' +
-    twBigRow("MONTHLY RENTAL", "tw_monthlyRental") +
-    '<table class="summaryTable">' +
-    twOutRow("Exposure", "tw_exposurePct") +
-    twOutRow("Total Paid", "tw_totPaid") +
-    twOutRow("Total Interest", "tw_totInterest") +
-    twOutRow("Rate / 100,000", "tw_rate100") +
-    '</table></div>');
-  grid.appendChild(c2);
+    '</table>';
+  /* B23 controls initial RMV charges; the separate B13 field is the
+     capitalized RMV choice used in the rental calculation. */
+  const chargesInput = document.createElement("div");
+  chargesInput.className = "tw-card-inputs";
+  chargesInput.appendChild(twField("B23", data));
+  charges.appendChild(chargesInput);
+  grid.appendChild(charges);
 }
 
 var tw_lastData = null;   /* keep the latest 3W payload for the schedule */
