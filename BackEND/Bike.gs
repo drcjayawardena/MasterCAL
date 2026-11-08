@@ -66,10 +66,9 @@ function bikeSheet_() {
   return s;
 }
 
-/* One read of A1:D24 (labels, inputs, results, D21): 2 sheet calls. */
+/* One read of A1:D24 (labels, inputs, results, D21). */
 function bikeSnap_(s) {
-  const rng = s.getRange(1, 1, 24, 4);
-  return { D: rng.getDisplayValues(), V: rng.getValues() };
+  return { D: s.getRange(1, 1, 24, 4).getDisplayValues() };
 }
 
 function bikeCheckLayout_(s) {
@@ -204,9 +203,9 @@ function bikeValidate_(s, cell, value, snap) {
 /* optCells: which dropdown lists to send (null = all). A list that is not sent keeps its
    previous content in the app. */
 function bikeRead_(s, snap, optCells, t0) {
-  const D = snap.D, V = snap.V;
+  const D = snap.D;
   const d = function (row, col) { return String(D[row - 1][col - 1] == null ? "" : D[row - 1][col - 1]); };
-  const n = function (row, col) { return bikeNum_(V[row - 1][col - 1]); };
+  const n = function (row, col) { return bikeNum_(d(row, col)); };
   const ver = masterVer_();
 
   const inputs = {};
@@ -300,13 +299,19 @@ function setBike(cell, value) {
     const clean = bikeValidate_(s, cell, value, snap);
     const before = String(snap.D[row - 1][1]);
 
-    if (snap.V[row - 1][1] === clean || String(clean) === before) {
+    const same = clean === "" ? before.trim() === ""
+      : BIKE_SELECT_CELLS.indexOf(cell) !== -1 ? before === String(clean)
+      : before.trim() !== "" && bikeNum_(before) === bikeNum_(clean);
+    if (same || String(clean) === before) {
       changed = false;                               /* already in the cell: nothing to write or recalculate */
     } else {
       s.getRange(cell).setValue(clean);
       /* dependent dropdowns: a new MAKE invalidates MODEL + YEAR; a new MODEL invalidates YEAR */
-      if (cell === "B2") s.getRange("B3:B4").clearContent();
-      else if (cell === "B3") s.getRange("B4").clearContent();
+      if (cell === "B2" && (String(snap.D[2][1]).trim() || String(snap.D[3][1]).trim())) {
+        s.getRange("B3:B4").clearContent();
+      } else if (cell === "B3" && String(snap.D[3][1]).trim()) {
+        s.getRange("B4").clearContent();
+      }
     }
   }
 
