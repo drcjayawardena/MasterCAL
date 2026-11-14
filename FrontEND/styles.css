@@ -677,3 +677,6 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   #twGrid .tw-card,
   #bkGrid .tw-card{ min-height:0; }
 }
+.waQuoteAuto{ background:#128c7e; }
+.waQuoteAuto:hover{ background:#0e7a6e; }
+.waQuoteAuto:disabled{ opacity:.6; cursor:default; }

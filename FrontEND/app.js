@@ -70,7 +70,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "sendQuote");   /* show the calculating spinner for calc actions */
   const apiStartedAt = isCalc ? performance.now() : 0;
   if (VEHICLE_WRITE_ACTIONS[action]) {
     calcLastKey = "";                        /* server state changes -> next calcInputs must really run */
@@ -2818,9 +2818,11 @@ function setupWhatsAppQuotes() {
       '<div class="waQuoteRow">' +
       '<input id="waq_' + q.kind + '" type="tel" inputmode="tel" placeholder="Customer WhatsApp (07XXXXXXXX)">' +
       (canPickContact() ? '<button type="button" class="waQuotePick" aria-label="Contacts">📇 Contacts</button>' : '') +
-      '<button type="button" class="waQuoteBtn">Send via WhatsApp</button></div>' +
+      '<button type="button" class="waQuoteBtn">Send via WhatsApp</button>' +
+      '<button type="button" class="waQuoteBtn waQuoteAuto" title="Sent from the company WhatsApp number">Send automatically</button></div>' +
       (canPickContact() ? '' : '<div class="waQuoteHint">Leave the number blank and tap Send to choose the customer from your WhatsApp contacts.</div>');
     bar.querySelector(".waQuoteBtn").addEventListener("click", function () { sendQuoteWhatsApp(q); });
+    bar.querySelector(".waQuoteAuto").addEventListener("click", function () { sendQuoteApi(q, this); });
     const pick = bar.querySelector(".waQuotePick");
     if (pick) pick.addEventListener("click", function () { pickContactInto(document.getElementById("waq_" + q.kind)); });
     anchor.parentNode.insertBefore(bar, anchor.nextSibling);
@@ -2939,4 +2941,31 @@ function sendQuoteWhatsApp(q) {
   const num = waNumber(raw);
   if (String(raw).trim() && !num) { alert("Please enter a valid WhatsApp number (e.g. 0771234567)."); return; }
   window.open("https://wa.me/" + num + "?text=" + encodeURIComponent(quoteText(q, num)), "_blank", "noopener");
+}
+
+
+/* Send the quotation through the WhatsApp Business API (the server sends it; the officer does not press Send in WhatsApp). */
+function sendQuoteApi(q, btn) {
+  const d = quoteLines(q.kind);
+  if (!d || !qNum(d.rental)) { alert("Please complete the calculation first (the monthly rental is zero)."); return; }
+  const box = document.getElementById("waq_" + q.kind);
+  const num = waNumber(box ? box.value : "");
+  if (!num) { alert("Enter the customer's WhatsApp number (e.g. 0771234567) first."); return; }
+  if (!confirm("Send the " + q.title + " quotation to +" + num + " now?")) return;
+  const get = function (label) { const r = d.main.filter(function (x) { return x[0] === label; })[0]; return r ? r[1] : ""; };
+  const payload = {
+    title: q.title,
+    facility: get("Facility Amount"),
+    period: get("Period (months)"),
+    rental: d.rental,
+    bullets: d.bullets || [],
+    total: qNum(d.total) ? d.total : "",
+    to: num
+  };
+  btn.disabled = true;
+  const old = btn.textContent; btn.textContent = "Sending…";
+  api("sendQuote", [payload])
+    .then(function () { alert("Quotation sent ✓"); })
+    .catch(function (e) { alert("Could not send the quotation.\n\n" + e.message); })
+    .then(function () { btn.disabled = false; btn.textContent = old; });
 }

@@ -38,6 +38,9 @@ function doPost(e) {
     if (syncGuard) return json_(syncGuard);
     const t2 = Date.now();
 
+    /* quotation by WhatsApp API: needs no spreadsheet copy, so it skips the (slow) copy opening */
+    if (action === "sendQuote") return json_({ ok: true, data: sendQuote_(access.who.key, body.args || []) });
+
     /* 3) route to this user's own copy (keyed by "wa:<number>") */
     setUserContext_(access.who.key);
     const t3 = Date.now();
