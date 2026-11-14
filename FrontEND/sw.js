@@ -1,5 +1,5 @@
 /******************************************************
- * MasterCAL Pro — Service Worker  (v33)
+ * MasterCAL Pro — Service Worker
  *
  * Strategy:
  *   - App shell (html/css/js/icons/manifest):
@@ -12,7 +12,7 @@
  * pick up the new version.
  ******************************************************/
 
-const CACHE_VERSION = "mastercal-v102";
+const CACHE_VERSION = "mastercal-v103";
 
 const SHELL = [
   "./",
@@ -28,12 +28,15 @@ const SHELL = [
 ];
 
 
-/* Install: pre-cache the shell (ignore any single miss so install never fails). */
+/* Install: pre-cache the shell (ignore any single miss so install never fails).
+   cache: "reload" skips the browser's own HTTP cache, so a new version never caches the OLD files. */
 self.addEventListener("install", function (event) {
   event.waitUntil(
     caches.open(CACHE_VERSION).then(function (cache) {
       return Promise.all(SHELL.map(function (url) {
-        return cache.add(url).catch(function () { /* skip a missing file */ });
+        return fetch(new Request(url, { cache: "reload" }))
+          .then(function (res) { if (res && res.ok) return cache.put(url, res); })
+          .catch(function () { /* skip a missing file */ });
       }));
     })
   );
@@ -72,7 +75,8 @@ self.addEventListener("fetch", function (event) {
 
   /* Shell: cache-first, fall back to network, then index for navigations. */
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
+    /* ignoreSearch: index.html loads "app.js?v=NN" but the shell is stored as "app.js" */
+    caches.match(event.request, { ignoreSearch: true }).then(function (cached) {
       if (cached) return cached;
       return fetch(event.request).catch(function () {
         return caches.match("./index.html");

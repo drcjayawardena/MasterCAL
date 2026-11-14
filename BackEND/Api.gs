@@ -14,6 +14,7 @@
 
 function doPost(e) {
   try {
+    const t0 = Date.now();
     const body = (e && e.postData && e.postData.contents)
       ? JSON.parse(e.postData.contents) : {};
     const action = body.action;
@@ -29,16 +30,23 @@ function doPost(e) {
     if (access.status !== "APPROVED") {
       return json_({ ok: false, access: access.status, error: "Access " + access.status });
     }
+    const t1 = Date.now();
 
     /* 2) the master sheet changed (or this user has no copy yet): build a fresh copy first.
           The app shows "Updating…" and calls syncCopy; every other action just says "stale". */
     const syncGuard = copySyncGuard_(access.who.key, action);
     if (syncGuard) return json_(syncGuard);
+    const t2 = Date.now();
 
     /* 3) route to this user's own copy (keyed by "wa:<number>") */
     setUserContext_(access.who.key);
+    const t3 = Date.now();
     const data = dispatch_(action, body.args || []);
-    return json_({ ok: true, data: data });
+    const t4 = Date.now();
+    /* ms = where the server time went (the app prints it in the browser console for calculations):
+       auth = login check, guard = copy up to date?, open = open the user's sheet, run = the calculation */
+    return json_({ ok: true, data: data,
+                   ms: { auth: t1 - t0, guard: t2 - t1, open: t3 - t2, run: t4 - t3, total: t4 - t0 } });
   } catch (err) {
     return json_({ ok: false, error: errMsg_(err) });
   }

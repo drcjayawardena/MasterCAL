@@ -50,36 +50,153 @@ function getUserCopiesFolder_() {
 
 const MASTER_VER_KEY = "MASTER_VER";
 /* Master tabs that change by themselves / are not part of the calculator. */
-const MASTER_IGNORE_SHEETS = ["USERS", "Formula Dump"];
+const MASTER_IGNORE_SHEETS = ["USERS", "APPROVED_USERS", "Formula Dump"];
 
-function masterVer_() {
+/* Tabs that hold OTHER PEOPLE'S data (phone numbers, e-mails, password hashes). They exist in the
+   master, but a user's copy must never carry them: the copy is that user's own workspace. */
+const PRIVATE_SHEETS = ["USERS", "APPROVED_USERS"];
+
+/* SPEED: every request needs to know "which copy is mine, and is it up to date?". That used to read
+   ALL Script Properties (it grows with every user). Now ONE cache read answers it (master stamp +
+   this user's copy id / stamp). The Script Properties stay the source of truth and are read only
+   when the cache is empty. */
+const COPY_CACHE_SECONDS = 300;
+var COPY_STATE_MEMO = {};   /* per request (a new request starts empty) */
+
+function scriptCache_() {
+  try { return CacheService.getScriptCache(); } catch (e) { return null; }
+}
+
+/* The master stamp straight from the Script Properties (never cached). */
+function masterVerFresh_() {
   return PropertiesService.getScriptProperties().getProperty(MASTER_VER_KEY) || "0";
 }
 
-function bumpMasterVersion_() {
-  PropertiesService.getScriptProperties().setProperty(MASTER_VER_KEY, String(Date.now()));
+function masterVer_() {
+  const cache = scriptCache_();
+  if (cache) { try { const v = cache.get("mv"); if (v) return v; } catch (e) {} }
+  const v = masterVerFresh_();
+  if (cache) { try { cache.put("mv", v, COPY_CACHE_SECONDS); } catch (e) {} }
+  return v;
 }
 
-/* No copy yet, or the copy was made from an older master. */
-function copyIsStale_(userId) {
-  const p = PropertiesService.getScriptProperties().getProperties();
-  if (!p["copy_" + userId]) return true;
-  return (p["copyver_" + userId] || "0") !== (p[MASTER_VER_KEY] || "0");
+function bumpMasterVersion_() {
+  const v = String(Date.now());
+  PropertiesService.getScriptProperties().setProperty(MASTER_VER_KEY, v);
+  const cache = scriptCache_();
+  if (cache) { try { cache.put("mv", v, COPY_CACHE_SECONDS); } catch (e) {} }
+}
+
+/* { id, ver, scrubbed } of a user's copy straight from the Script Properties. */
+function copyInfoFresh_(userId) {
+  const p = PropertiesService.getScriptProperties();
+  return { id: p.getProperty("copy_" + userId) || "",
+           ver: p.getProperty("copyver_" + userId) || "0",
+           scrubbed: p.getProperty("scrub_" + userId) === "1" };
+}
+
+function copyInfoInvalidate_(userId) {
+  delete COPY_STATE_MEMO[userId];
+  const cache = scriptCache_();
+  if (cache) { try { cache.remove("ci_" + userId); } catch (e) {} }
+}
+
+function copyInfoSet_(userId, id, ver, scrubbed) {
+  const p = PropertiesService.getScriptProperties();
+  p.setProperty("copy_" + userId, id);
+  p.setProperty("copyver_" + userId, ver);
+  if (scrubbed) p.setProperty("scrub_" + userId, "1"); else p.deleteProperty("scrub_" + userId);
+  delete COPY_STATE_MEMO[userId];
+  const cache = scriptCache_();
+  if (cache) { try { cache.put("ci_" + userId, JSON.stringify({ id: id, ver: ver, scrubbed: !!scrubbed }), COPY_CACHE_SECONDS); } catch (e) {} }
+}
+
+function copyInfoDrop_(userId) {
+  const p = PropertiesService.getScriptProperties();
+  p.deleteProperty("copy_" + userId);
+  p.deleteProperty("copyver_" + userId);
+  p.deleteProperty("scrub_" + userId);
+  copyInfoInvalidate_(userId);
+}
+
+/* { id, ver, scrubbed, master } — ONE cache read (two keys) on the normal path. */
+function copyState_(userId) {
+  if (COPY_STATE_MEMO[userId]) return COPY_STATE_MEMO[userId];
+  const cache = scriptCache_();
+  var hit = {};
+  if (cache) { try { hit = cache.getAll(["mv", "ci_" + userId]) || {}; } catch (e) { hit = {}; } }
+  var info = null;
+  if (hit["ci_" + userId]) { try { info = JSON.parse(hit["ci_" + userId]); } catch (e) { info = null; } }
+  if (!info) {
+    info = copyInfoFresh_(userId);
+    if (info.id && cache) { try { cache.put("ci_" + userId, JSON.stringify(info), COPY_CACHE_SECONDS); } catch (e) {} }
+  }
+  const st = { id: info.id, ver: info.ver, scrubbed: !!info.scrubbed, master: hit.mv || masterVer_() };
+  COPY_STATE_MEMO[userId] = st;
+  return st;
+}
+
+/* No copy yet, or the copy was made from an older master.
+   fresh = true: look at the Script Properties, not the cache (used while holding the lock). */
+function copyIsStale_(userId, fresh) {
+  if (fresh) {
+    const i = copyInfoFresh_(userId);
+    return !i.id || i.ver !== masterVerFresh_();
+  }
+  const s = copyState_(userId);
+  return !s.id || s.ver !== s.master;
+}
+
+/* Empty the tabs that hold other people's data. Cleared, not deleted: a formula that points at a
+   deleted tab would turn into #REF!. */
+function scrubPrivateTabs_(ss) {
+  PRIVATE_SHEETS.forEach(function (name) {
+    const sheet = ss.getSheetByName(name);
+    if (sheet) sheet.clear();
+  });
+  SpreadsheetApp.flush();
+}
+
+/* A new copy of the master for this user, private tabs emptied. If that cannot be done the copy is
+   trashed and the request fails: a copy that still carries user data is never handed out. */
+function makeUserCopy_(userId) {
+  const file = DriveApp.getFileById(MASTER_ID)
+    .makeCopy("MasterCAL — user " + userId, getUserCopiesFolder_());
+  try {
+    const ss = SpreadsheetApp.openById(file.getId());
+    scrubPrivateTabs_(ss);
+    return ss;
+  } catch (e) {
+    try { file.setTrashed(true); } catch (e2) {}
+    throw e;
+  }
+}
+
+/* Copies made before this existed: empty the private tabs once, the first time the copy is used.
+   A failure is only logged (the user can still work); it is tried again on the next request. */
+function scrubExistingCopy_(userId, ss) {
+  try {
+    scrubPrivateTabs_(ss);
+    PropertiesService.getScriptProperties().setProperty("scrub_" + userId, "1");
+    copyInfoInvalidate_(userId);
+  } catch (e) {
+    try { Logger.log("scrubExistingCopy_ " + userId + ": " + (e && e.message ? e.message : e)); } catch (e2) {}
+  }
 }
 
 /* Build a fresh copy for this user, then trash the old one. */
 function syncUserCopy_(userId) {
-  const props = PropertiesService.getScriptProperties();
   const lock = LockService.getScriptLock();
   lock.waitLock(60000);
   try {
-    if (!copyIsStale_(userId)) return { updated: false };   /* another request already did it */
-    const ver = masterVer_();    /* read BEFORE copying: an edit made meanwhile keeps this copy marked as outdated */
-    const oldId = props.getProperty("copy_" + userId);
-    const copy = DriveApp.getFileById(MASTER_ID)
-      .makeCopy("MasterCAL — user " + userId, getUserCopiesFolder_());
-    props.setProperty("copy_" + userId, copy.getId());
-    props.setProperty("copyver_" + userId, ver);
+    if (!copyIsStale_(userId, true)) {
+      copyInfoInvalidate_(userId);   /* another request already did it: drop any outdated cache entry */
+      return { updated: false };
+    }
+    const ver = masterVerFresh_();   /* read BEFORE copying: an edit made meanwhile keeps this copy marked as outdated */
+    const oldId = copyInfoFresh_(userId).id;
+    const copy = makeUserCopy_(userId);
+    copyInfoSet_(userId, copy.getId(), ver, true);
     if (oldId) { try { DriveApp.getFileById(oldId).setTrashed(true); } catch (e) {} }
     return { updated: true };
   } finally {
@@ -122,13 +239,15 @@ function setUserContext_(userId) {
 function getUserSpreadsheet_(userId) {
   if (!userId) throw new Error("Missing userId.");
 
-  const props = PropertiesService.getScriptProperties();
-  const key = "copy_" + userId;
-
-  let id = props.getProperty(key);
-  if (id) {
-    try { return SpreadsheetApp.openById(id); }
-    catch (e) { props.deleteProperty(key); id = null; }   /* copy was deleted */
+  const st = copyState_(userId);
+  if (st.id) {
+    var ss = null;
+    try { ss = SpreadsheetApp.openById(st.id); }
+    catch (e) { copyInfoDrop_(userId); }   /* copy was deleted */
+    if (ss) {
+      if (!st.scrubbed) scrubExistingCopy_(userId, ss);
+      return ss;
+    }
   }
 
   /* Create the copy once. Lock only around creation so two
@@ -136,16 +255,14 @@ function getUserSpreadsheet_(userId) {
   const lock = LockService.getScriptLock();
   lock.waitLock(45000);
   try {
-    id = props.getProperty(key);
-    if (id) {
-      try { return SpreadsheetApp.openById(id); } catch (e) {}
+    const cur = copyInfoFresh_(userId);
+    if (cur.id) {
+      try { return SpreadsheetApp.openById(cur.id); } catch (e) {}
     }
-    const ver = masterVer_();   /* before copying, see syncUserCopy_ */
-    const copy = DriveApp.getFileById(MASTER_ID)
-      .makeCopy("MasterCAL — user " + userId, getUserCopiesFolder_());
-    props.setProperty(key, copy.getId());
-    props.setProperty("copyver_" + userId, ver);
-    return SpreadsheetApp.openById(copy.getId());
+    const ver = masterVerFresh_();   /* before copying, see syncUserCopy_ */
+    const copy = makeUserCopy_(userId);
+    copyInfoSet_(userId, copy.getId(), ver, true);
+    return copy;
   } finally {
     lock.releaseLock();
   }
@@ -309,7 +426,7 @@ function getRmvTypes_() {
 /* Set an RMV charge type dropdown (J13 or J14) and recompute. */
 function setRmvType(value, cell) {
   const target = (cell === "J13" || cell === "J14") ? cell : "J14";
-  sh().getRange(target).setValue(value == null ? "" : value);
+  sh().getRange(target).setValue(cellValue_(value));
   SpreadsheetApp.flush();
   return { success: true, outputs: outputsFrom_(readBlock_()) };
 }
@@ -384,9 +501,22 @@ function initApp() {
   WRITES  (each on the user's OWN copy — no shared lock needed)
 ====================================================*/
 
+/* Everything the browser sends ends up in a sheet cell, and a cell that starts with = + - or @ is
+   read as a FORMULA (it could read other tabs or fetch web pages). Bike.gs already refuses those;
+   this is the same rule for the other calculators. Plain numbers (-5, +5, 1e3) are fine. */
+const CELL_NUM_RE = /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i;
+function cellValue_(v) {
+  if (v == null) return "";
+  const s = String(v);
+  if (s.length > 200) throw new Error("Value is too long.");
+  const t = s.trim();
+  if (/^[=+\-@]/.test(t) && t !== "-" && !CELL_NUM_RE.test(t)) throw new Error("Invalid value.");
+  return s;
+}
+
 function saveProductType(productType) {
   const s = sh();
-  s.getRange(CFG.IN_PRODUCT_TYPE).setValue(productType == null ? "" : productType);
+  s.getRange(CFG.IN_PRODUCT_TYPE).setValue(cellValue_(productType));
   s.getRangeList([CFG.SCHED_FROM, CFG.SCHED_AMOUNT]).clearContent();
   SpreadsheetApp.flush();
   const b = enforceDisabled_(s, readBlock_(false, s), false);
@@ -398,34 +528,42 @@ function saveProductType(productType) {
    has the rental schedule open it sets data.withSchedule = true and
    gets the rental schedule in the same response (no 2nd request). */
 function calcInputs(data) {
-  const calcStartedAt = Date.now();
   data = data || {};
   const s = sh();
-  s.getRange(CFG.IN_PRODUCT_TYPE).setValue(data.productType || "");
-  s.getRange(CFG.IN_MAIN).setValues([
-    [ data.facilityAmount || "" ],
-    [ data.bic            || "" ],
-    [ data.insurance      || "" ],
-    [ data.stampDuty      || "" ],
-    [ data.irr            || "" ],
-    [ data.period         || "" ]
-  ]);
-  s.getRange(CFG.IN_SCHEDULE_TYPE).setValue(data.scheduleType || "");
+  /* data.same = ["productType", "scheduleType"]: the app says these two are unchanged since its last
+     calculation, so they are not written again (less sheet work per keystroke). An older app version
+     sends no "same" and everything is written, as before. */
+  const same = {};
+  (Array.isArray(data.same) ? data.same : []).forEach(function (k) { same[k] = true; });
+
+  const productType  = cellValue_(data.productType);
+  const scheduleType = cellValue_(data.scheduleType);
+  const main = [
+    [ cellValue_(data.facilityAmount) ],
+    [ cellValue_(data.bic) ],
+    [ cellValue_(data.insurance) ],
+    [ cellValue_(data.stampDuty) ],
+    [ cellValue_(data.irr) ],
+    [ cellValue_(data.period) ]
+  ];
+
+  if (!same.productType) s.getRange(CFG.IN_PRODUCT_TYPE).setValue(productType);
+  s.getRange(CFG.IN_MAIN).setValues(main);
+  if (!same.scheduleType) s.getRange(CFG.IN_SCHEDULE_TYPE).setValue(scheduleType);
+  /* no flush here: the read below already sees the writes (removed on purpose, commit 729086f) */
 
   const withRs = data.withSchedule === true;
   const b = enforceDisabled_(s, readBlock_(withRs, s), withRs);
-  const sheetReadyAt = Date.now();
   /* outputsFrom_ = outputs + labels (A5:A10) + capAmounts (E6:E8): labels such as
      "ONLY CAPITALIZED 1% AS BIC" depend on what the user just typed */
   const res = { success: true, outputs: outputsFrom_(b) };
   if (withRs) res.rentalSchedule = rentalScheduleFrom_(b);
-  console.log("MasterCAL calcInputs timing: sheet update/read=" + (sheetReadyAt - calcStartedAt) + "ms, total=" + (Date.now() - calcStartedAt) + "ms, schedule=" + withRs);
   return res;
 }
 
 function saveScheduleType(scheduleType) {
   const s = sh();
-  s.getRange(CFG.IN_SCHEDULE_TYPE).setValue(scheduleType == null ? "" : scheduleType);
+  s.getRange(CFG.IN_SCHEDULE_TYPE).setValue(cellValue_(scheduleType));
   s.getRangeList([CFG.SCHED_FROM, CFG.SCHED_AMOUNT]).clearContent();
   SpreadsheetApp.flush();
   const b = readBlock_(false, s);
@@ -462,8 +600,8 @@ function scheduleReply_(b, extra) {
 function addScheduleRow(index, from, amount) {
   const idx = validIndex_(index);
   assertNotExpress_();
-  schedFromCell_(idx).setValue(from == null ? "" : from);
-  schedAmountCell_(idx).setValue(amount == null ? "" : amount);
+  schedFromCell_(idx).setValue(cellValue_(from));
+  schedAmountCell_(idx).setValue(cellValue_(amount));
   SpreadsheetApp.flush();
   const b = readBlock_();
   return scheduleReply_(b, { index: idx, from: b[2 + idx][5], amount: b[2 + idx][7] });
@@ -472,7 +610,7 @@ function addScheduleRow(index, from, amount) {
 function updateScheduleFrom(index, value) {
   const idx = validIndex_(index);
   assertNotExpress_();
-  schedFromCell_(idx).setValue(value == null ? "" : value);
+  schedFromCell_(idx).setValue(cellValue_(value));
   SpreadsheetApp.flush();
   const b = readBlock_();
   return scheduleReply_(b, { row: SCHED_ROW0 + idx, value: b[2 + idx][5] });
@@ -481,7 +619,7 @@ function updateScheduleFrom(index, value) {
 function updateScheduleAmount(index, value) {
   const idx = validIndex_(index);
   assertNotExpress_();
-  schedAmountCell_(idx).setValue(value == null ? "" : value);
+  schedAmountCell_(idx).setValue(cellValue_(value));
   SpreadsheetApp.flush();
   const b = readBlock_();
   return scheduleReply_(b, { row: SCHED_ROW0 + idx, value: b[2 + idx][7] });
@@ -514,9 +652,9 @@ function adminDeleteAllCopies() {
   Object.keys(all).forEach(function (k) {
     if (k.indexOf("copy_") === 0) {
       try { DriveApp.getFileById(all[k]).setTrashed(true); } catch (e) {}
-      props.deleteProperty(k);
+      copyInfoDrop_(k.slice(5));   /* copy_, copyver_, scrub_ and the cache entry */
       removed++;
-    } else if (k.indexOf("copyver_") === 0) {
+    } else if (k.indexOf("copyver_") === 0 || k.indexOf("scrub_") === 0) {
       props.deleteProperty(k);
     }
   });
@@ -647,8 +785,8 @@ function set3W(cell, value) {
   if (cell === "B23" && rmv3WOff_(snap[12][5])) {
     if (before.trim() !== "") { s.getRange("B23").clearContent(); changed = true; }
   } else {
-    const clean = value == null ? "" : String(value);
-    if (before !== clean) { s.getRange(cell).setValue(value == null ? "" : value); changed = true; }
+    const clean = cellValue_(value);
+    if (before !== clean) { s.getRange(cell).setValue(clean); changed = true; }
   }
   if (changed) {
     SpreadsheetApp.flush();

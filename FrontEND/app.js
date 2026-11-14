@@ -72,7 +72,10 @@ async function api(action, args) {
 
   const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman");   /* show the calculating spinner for calc actions */
   const apiStartedAt = isCalc ? performance.now() : 0;
-  if (VEHICLE_WRITE_ACTIONS[action]) calcLastKey = "";   /* server state changes -> next calcInputs must really run */
+  if (VEHICLE_WRITE_ACTIONS[action]) {
+    calcLastKey = "";                        /* server state changes -> next calcInputs must really run */
+    calcSent = null; calcEpoch++;            /* ... and must write the product / schedule type again */
+  }
   if (isCalc) calcStart();
 
   try {
@@ -103,7 +106,7 @@ async function api(action, args) {
       throw e;
     }
 
-    if (action === "calcInputs") console.info("MasterCAL calcInputs total:", Math.round(performance.now() - apiStartedAt), "ms");
+    if (action === "calcInputs") console.info("MasterCAL calcInputs total:", Math.round(performance.now() - apiStartedAt), "ms | server ms:", json.ms || "(old backend)");
     return json.data;
 
   } finally {
@@ -528,6 +531,8 @@ function collectInputData() {
 var calcInFlight = false;
 var calcDirty    = false;
 var calcLastKey  = "";
+var calcSent     = null;   /* { productType, scheduleType } the server holds after the last calculation (null = unknown) */
+var calcEpoch    = 0;      /* bumped whenever another action may have changed them */
 
 function saveInputs() {
 
@@ -542,10 +547,20 @@ function saveInputs() {
   calcLastKey = key;
   data.withSchedule = withSchedule;
 
+  /* Product type and schedule type are the same as in the last calculation: tell the server, so it
+     does not write them again (less sheet work). They are still sent, so an older server works as before. */
+  const same = [];
+  if (calcSent && calcSent.productType === data.productType) same.push("productType");
+  if (calcSent && calcSent.scheduleType === data.scheduleType) same.push("scheduleType");
+  if (same.length) data.same = same;
+  const sent = { productType: data.productType, scheduleType: data.scheduleType };
+  const epoch = calcEpoch;
+
   /* calcInputs = lighter/faster (returns only outputs). */
   api("calcInputs", [data])
     .then(function (result) {
       if (!result) return;
+      if (epoch === calcEpoch) calcSent = sent;   /* nothing else touched the sheet meanwhile */
       if (result.outputs) showOutputs(result.outputs);
       if (withSchedule && isRentalScheduleVisible()) {
         if (result.rentalSchedule) renderRentalSchedule(result.rentalSchedule, Number(value("period")) || 0);
@@ -554,6 +569,7 @@ function saveInputs() {
     })
     .catch(function (error) {
       calcLastKey = "";                       /* allow a retry with the same values */
+      calcSent = null; calcEpoch++;           /* unknown what the server holds now: write everything next time */
       console.error("SAVE INPUTS ERROR:", error);
     })
     .then(function () {
