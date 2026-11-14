@@ -476,7 +476,7 @@ function bindInputs() {
 
     element.addEventListener("input", function () {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveInputs, 400);
+      saveTimer = setTimeout(saveInputs, 150);
     });
 
     element.addEventListener("change", function () {
