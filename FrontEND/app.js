@@ -71,6 +71,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 async function api(action, args) {
 
   const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman");   /* show the calculating spinner for calc actions */
+  const apiStartedAt = isCalc ? performance.now() : 0;
   if (VEHICLE_WRITE_ACTIONS[action]) calcLastKey = "";   /* server state changes -> next calcInputs must really run */
   if (isCalc) calcStart();
 
@@ -102,6 +103,7 @@ async function api(action, args) {
       throw e;
     }
 
+    if (action === "calcInputs") console.info("MasterCAL calcInputs total:", Math.round(performance.now() - apiStartedAt), "ms");
     return json.data;
 
   } finally {

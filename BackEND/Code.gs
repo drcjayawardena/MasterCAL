@@ -398,6 +398,7 @@ function saveProductType(productType) {
    has the rental schedule open it sets data.withSchedule = true and
    gets the rental schedule in the same response (no 2nd request). */
 function calcInputs(data) {
+  const calcStartedAt = Date.now();
   data = data || {};
   const s = sh();
   s.getRange(CFG.IN_PRODUCT_TYPE).setValue(data.productType || "");
@@ -414,10 +415,12 @@ function calcInputs(data) {
 
   const withRs = data.withSchedule === true;
   const b = enforceDisabled_(s, readBlock_(withRs, s), withRs);
+  const sheetReadyAt = Date.now();
   /* outputsFrom_ = outputs + labels (A5:A10) + capAmounts (E6:E8): labels such as
      "ONLY CAPITALIZED 1% AS BIC" depend on what the user just typed */
   const res = { success: true, outputs: outputsFrom_(b) };
   if (withRs) res.rentalSchedule = rentalScheduleFrom_(b);
+  console.log("MasterCAL calcInputs timing: sheet update/read=" + (sheetReadyAt - calcStartedAt) + "ms, total=" + (Date.now() - calcStartedAt) + "ms, schedule=" + withRs);
   return res;
 }
 
