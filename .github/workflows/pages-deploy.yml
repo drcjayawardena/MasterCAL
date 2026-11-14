@@ -1,6 +1,6 @@
 # Publishes the FrontEND/ folder as the GitHub Pages website
 # (https://drcjayawardena.github.io/MasterCAL/) whenever a change to it reaches main.
-# Needs: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# GitHub Pages is enabled by configure-pages during the first deployment.
 name: Website — deploy (GitHub Pages)
 
 on:
