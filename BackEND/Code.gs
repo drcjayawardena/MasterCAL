@@ -411,7 +411,6 @@ function calcInputs(data) {
     [ data.period         || "" ]
   ]);
   s.getRange(CFG.IN_SCHEDULE_TYPE).setValue(data.scheduleType || "");
-  SpreadsheetApp.flush();
 
   const withRs = data.withSchedule === true;
   const b = enforceDisabled_(s, readBlock_(withRs, s), withRs);
