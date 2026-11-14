@@ -75,6 +75,7 @@ async function api(action, args) {
   if (VEHICLE_WRITE_ACTIONS[action]) {
     calcLastKey = "";                        /* server state changes -> next calcInputs must really run */
     calcSent = null; calcEpoch++;            /* ... and must write the product / schedule type again */
+    calcCache = {}; calcCacheN = 0;          /* ... and remembered answers may be out of date */
   }
   if (isCalc) calcStart();
 
@@ -188,6 +189,21 @@ let scheduleBusy = false;
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", init);
+
+/* WARM-UP: Google's server goes to sleep when unused, and the first request after that is slow.
+   A tiny request when the app opens, and when the person comes back to it after a few minutes,
+   wakes it up in advance. It carries no data and no login token. */
+var lastWarmAt = 0;
+function warmServer() {
+  const now = Date.now();
+  if (now - lastWarmAt < 4 * 60 * 1000) return;
+  lastWarmAt = now;
+  try { fetch(API_URL, { method: "GET", mode: "no-cors", cache: "no-store" }).catch(function () {}); } catch (e) {}
+}
+warmServer();
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible") warmServer();
+});
 
 function init() {
 
@@ -533,6 +549,10 @@ var calcDirty    = false;
 var calcLastKey  = "";
 var calcSent     = null;   /* { productType, scheduleType } the server holds after the last calculation (null = unknown) */
 var calcEpoch    = 0;      /* bumped whenever another action may have changed them */
+/* Remembered answers: the same inputs + same sheet state give the same answer, so no request is needed.
+   Emptied whenever a sheet-changing action runs or an error happens. */
+var calcCache    = {};
+var calcCacheN   = 0;
 
 function saveInputs() {
 
@@ -542,6 +562,17 @@ function saveInputs() {
 
   if (calcInFlight) { calcDirty = true; return; }
   if (key === calcLastKey) return;
+
+  const hit = calcCache[key];
+  if (hit) {                                   /* answered instantly, no request */
+    calcLastKey = key;
+    if (hit.outputs) showOutputs(hit.outputs);
+    if (withSchedule && isRentalScheduleVisible()) {
+      if (hit.rentalSchedule) renderRentalSchedule(hit.rentalSchedule, Number(value("period")) || 0);
+      else loadRentalSchedule();
+    }
+    return;
+  }
 
   calcInFlight = true;
   calcLastKey = key;
@@ -560,7 +591,13 @@ function saveInputs() {
   api("calcInputs", [data])
     .then(function (result) {
       if (!result) return;
-      if (epoch === calcEpoch) calcSent = sent;   /* nothing else touched the sheet meanwhile */
+      if (epoch === calcEpoch) {                  /* nothing else touched the sheet meanwhile */
+        calcSent = sent;
+        if (result.outputs && (!withSchedule || result.rentalSchedule)) {
+          if (calcCacheN >= 40) { calcCache = {}; calcCacheN = 0; }
+          calcCache[key] = result; calcCacheN++;
+        }
+      }
       if (result.outputs) showOutputs(result.outputs);
       if (withSchedule && isRentalScheduleVisible()) {
         if (result.rentalSchedule) renderRentalSchedule(result.rentalSchedule, Number(value("period")) || 0);
@@ -570,6 +607,7 @@ function saveInputs() {
     .catch(function (error) {
       calcLastKey = "";                       /* allow a retry with the same values */
       calcSent = null; calcEpoch++;           /* unknown what the server holds now: write everything next time */
+      calcCache = {}; calcCacheN = 0;
       console.error("SAVE INPUTS ERROR:", error);
     })
     .then(function () {
