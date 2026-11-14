@@ -1881,6 +1881,26 @@ function tw_setBusy(on) {
   if (grid) grid.classList.toggle("tw-busy", !!on);
 }
 
+/* SPEED (Three-Wheel + Bike): the same inputs always give the same answer, so a change that was
+   already calculated in this visit is shown from memory, with no request. The key is ALL input values
+   plus the one change, so it can never show an answer for different inputs. */
+function tabStateKey_(tag, lastData, cell, value) {
+  if (!lastData || !lastData.inputs) return "";
+  const parts = [];
+  Object.keys(lastData.inputs).sort().forEach(function (c) {
+    const v = lastData.inputs[c] && lastData.inputs[c].value;
+    parts.push(c + "=" + String(v == null ? "" : v).trim());
+  });
+  return tag + "|" + parts.join(";") + "|" + cell + "->" + String(value == null ? "" : value).trim();
+}
+var tabAnswers = {};
+var tabAnswersN = 0;
+function tabAnswerStore_(key, data) {
+  if (!key || !data) return;
+  if (tabAnswersN >= 60) { tabAnswers = {}; tabAnswersN = 0; }
+  tabAnswers[key] = data; tabAnswersN++;
+}
+
 function set3WValue(cell, value) {
   const cur = tw_lastData && tw_lastData.inputs && tw_lastData.inputs[cell];
   if (cur) {
@@ -1893,9 +1913,12 @@ function set3WValue(cell, value) {
       return;
     }
   }
+  const ckey = tabStateKey_("3W", tw_lastData, cell, value);
+  if (ckey && tabAnswers[ckey]) { render3W(tabAnswers[ckey]); return; }   /* already calculated: instant */
+
   tw_setBusy(true);
   api("set3W", [cell, value])
-    .then(function (data) { render3W(data); })
+    .then(function (data) { tabAnswerStore_(ckey, data); render3W(data); })
     .catch(function (e) {
       console.error("3W set error:", e);
       alert("Could not update the three-wheel value.\n\n" + e.message);
@@ -2282,10 +2305,14 @@ function setBikeValue(cell, value) {
         (v !== "" && c !== "" && /^[\d.,\s]+%?$/.test(v) && bkNum(v) === bkNum(c))) return;
   }
 
+  const ckey = tabStateKey_("BK", bk_lastData, cell, value);
+  if (ckey && tabAnswers[ckey]) { renderBike(tabAnswers[ckey]); return; }   /* already calculated: instant */
+
   bk_setBusy(true);
   api("setBike", [cell, value])
     .then(function (data) {
       if (data && data.ms != null) console.log("Bike " + cell + ": server " + data.ms + " ms");
+      tabAnswerStore_(ckey, data);
       renderBike(data);
     })
     .catch(function (e) {
