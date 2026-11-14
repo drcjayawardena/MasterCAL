@@ -2807,7 +2807,7 @@ function localPhone(p) {
 }
 
 function setupWhatsAppQuotes() {
-  if (!isPhone()) return;
+  const phone = isPhone();   /* on a computer only "Send automatically" is shown (wa.me needs the phone app) */
   WA_QUOTES.forEach(function (q) {
     const anchor = document.getElementById(q.after);
     if (!anchor || document.getElementById("waq_" + q.kind)) return;
@@ -2817,11 +2817,12 @@ function setupWhatsAppQuotes() {
       '<div class="waQuoteTitle">Send quotation via WhatsApp</div>' +
       '<div class="waQuoteRow">' +
       '<input id="waq_' + q.kind + '" type="tel" inputmode="tel" placeholder="Customer WhatsApp (07XXXXXXXX)">' +
-      (canPickContact() ? '<button type="button" class="waQuotePick" aria-label="Contacts">📇 Contacts</button>' : '') +
-      '<button type="button" class="waQuoteBtn">Send via WhatsApp</button>' +
+      (phone && canPickContact() ? '<button type="button" class="waQuotePick" aria-label="Contacts">📇 Contacts</button>' : '') +
+      (phone ? '<button type="button" class="waQuoteBtn waQuoteLink">Send via WhatsApp</button>' : '') +
       '<button type="button" class="waQuoteBtn waQuoteAuto" title="Sent from the company WhatsApp number">Send automatically</button></div>' +
-      (canPickContact() ? '' : '<div class="waQuoteHint">Leave the number blank and tap Send to choose the customer from your WhatsApp contacts.</div>');
-    bar.querySelector(".waQuoteBtn").addEventListener("click", function () { sendQuoteWhatsApp(q); });
+      (!phone || canPickContact() ? '' : '<div class="waQuoteHint">Leave the number blank and tap Send to choose the customer from your WhatsApp contacts.</div>');
+    const link = bar.querySelector(".waQuoteLink");
+    if (link) link.addEventListener("click", function () { sendQuoteWhatsApp(q); });
     bar.querySelector(".waQuoteAuto").addEventListener("click", function () { sendQuoteApi(q, this); });
     const pick = bar.querySelector(".waQuotePick");
     if (pick) pick.addEventListener("click", function () { pickContactInto(document.getElementById("waq_" + q.kind)); });
