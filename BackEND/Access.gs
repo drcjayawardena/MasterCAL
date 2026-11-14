@@ -40,7 +40,7 @@ function escapeHtml_(t) {
 
 /* >>> SET THIS <<< your email for new-request notifications.
    Leave "" to auto-use the script owner's email. */
-const ADMIN_EMAIL = "";
+const ADMIN_EMAIL = "drcjayawardena@gmail.com";
 
 function master_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 
