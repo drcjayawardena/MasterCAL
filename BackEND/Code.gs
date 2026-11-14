@@ -16,7 +16,10 @@
  ******************************************************/
 
 const SHEET_NAME = "CALCULATOR_TEMPLATE";
-const MASTER_ID  = SpreadsheetApp.getActiveSpreadsheet().getId();
+/* SPEED: this used to be a constant (const MASTER_ID = SpreadsheetApp.getActiveSpreadsheet().getId()).
+   A script-level line like that runs at the start of EVERY request, before doPost, and talks to the
+   spreadsheet service each time. It is only needed when a copy is made, so it is a function now. */
+function masterId_() { return SpreadsheetApp.getActiveSpreadsheet().getId(); }
 
 /* Per-request user spreadsheet (set by Api.gs before dispatch). */
 var CURRENT_SS = null;
@@ -160,7 +163,7 @@ function scrubPrivateTabs_(ss) {
 /* A new copy of the master for this user, private tabs emptied. If that cannot be done the copy is
    trashed and the request fails: a copy that still carries user data is never handed out. */
 function makeUserCopy_(userId) {
-  const file = DriveApp.getFileById(MASTER_ID)
+  const file = DriveApp.getFileById(masterId_())
     .makeCopy("MasterCAL — user " + userId, getUserCopiesFolder_());
   try {
     const ss = SpreadsheetApp.openById(file.getId());
