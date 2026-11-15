@@ -2760,7 +2760,7 @@ function vcShowValuation(out) {
   const v = vcValuation();
   if (!v) return;
   out.insertAdjacentHTML("afterbegin",
-    '<div class="vcVal" id="vcValBox"><div><span>Estimated Market Valuation</span><b>' + vcRs(v.value) + '</b></div>' +
+    '<div class="vcVal" id="vcValBox"><div><span>Estimated market value</span><b>' + vcRs(v.value) + '</b></div>' +
     '<small>' + (v.both ? 'Average of the ikman.lk and riyasewana.com median prices, rounded to the nearest Rs 10,000.'
                         : (vcMedian.ikman ? 'Based on the ikman.lk median only. Calculate the riyasewana prices below to include riyasewana.com.'
                                           : 'Based on the riyasewana.com median only.')) + '</small></div>');
