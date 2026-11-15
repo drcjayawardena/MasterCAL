@@ -2743,12 +2743,43 @@ function runVehicleCheck() {
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
       out.innerHTML = vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
+      vcBindPaste(out);
     })
     .catch(function (e) {
       if (e.access) { showGate(e.access); return; }
       out.innerHTML = '<p class="vcErr">' + escapeHtml(e.message || "Unable to check prices. Please try again.") + '</p>';
     })
     .then(function () { btn.disabled = false; btn.textContent = "Check"; });
+}
+
+/* Prices found in text copied from a riyasewana search page: "Rs. 8,500,000" -> 8500000.
+   Values under Rs 100,000 are ignored (they are not vehicle prices). */
+function vcPastePrices(text) {
+  const out = [], re = /Rs\.?\s*([\d]{1,3}(?:,\d{3})+|\d{5,})/gi;
+  let m;
+  while ((m = re.exec(String(text || "")))) {
+    const v = Number(m[1].replace(/,/g, ""));
+    if (v >= 100000 && v <= 2000000000) out.push(v);
+  }
+  return out;
+}
+
+function vcBindPaste(root) {
+  const btn = root.querySelector("#vcPasteBtn");
+  if (!btn) return;
+  btn.addEventListener("click", function () {
+    const box = root.querySelector("#vcPasteBox"), res = root.querySelector("#vcPasteOut");
+    const p = vcPastePrices(box.value).sort(function (a, b) { return a - b; });
+    if (!p.length) { res.innerHTML = '<p class="vcErr">No prices found. Copy the whole page (Ctrl+A, Ctrl+C) from the riyasewana search results and paste it again.</p>'; return; }
+    const n = p.length, sum = p.reduce(function (a, b) { return a + b; }, 0);
+    const med = n % 2 ? p[(n - 1) / 2] : Math.round((p[n / 2 - 1] + p[n / 2]) / 2);
+    res.innerHTML = '<div class="vcStats">' +
+      '<div><b>' + n + '</b><span>Prices found</span></div>' +
+      '<div><b>' + vcRs(Math.round(sum / n)) + '</b><span>Average price</span></div>' +
+      '<div><b>' + vcRs(med) + '</b><span>Median price</span></div>' +
+      '<div><b>' + vcRs(p[0]) + ' – ' + vcRs(p[n - 1]) + '</b><span>Lowest – highest</span></div></div>' +
+      '<p class="vcHint"><small>Counted from the pasted text only: it may include a few sponsored or unrelated ads, so check the count looks right.</small></p>';
+  });
 }
 
 function vcSiteHtml(r, name) {
@@ -2760,7 +2791,10 @@ function vcSiteHtml(r, name) {
   if (r.blocked) {
     return h + '<p class="vcHint">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
       (r.searchUrl ? '<a class="vcOpenBtn" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
-      '</section>';
+      '<div class="vcPaste"><p class="vcHint"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
+      '<textarea id="vcPasteBox" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
+      '<button type="button" id="vcPasteBtn" class="vcOpenBtn">Calculate prices</button>' +
+      '<div id="vcPasteOut"></div></div></section>';
   }
   if (r.error) return h + '<p class="vcErr">' + escapeHtml(r.error) + '</p></section>';
   if (!r.ads.length) return h + '<p class="vcHint">No matching ads were found.' + (r.why ? ' <small>(' + escapeHtml(r.why) + ')</small>' : '') + '</p></section>';
