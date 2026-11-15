@@ -190,16 +190,6 @@ let scheduleBusy = false;
 
 document.addEventListener("DOMContentLoaded", init);
 
-/* fallback: the bookmark opened this app with the ads in the address (#rs=...) when it could not reach this tab */
-(function () {
-  try {
-    const m = /^#rs=(.+)$/.exec(location.hash || "");
-    if (!m) return;
-    history.replaceState(null, "", location.pathname + location.search);
-    vcReceiveRiya(JSON.parse(decodeURIComponent(m[1])));
-  } catch (e) {}
-})();
-
 /* WARM-UP: Google's server goes to sleep when unused, and the first request after that is slow.
    A tiny request when the app opens, and when the person comes back to it after a few minutes,
    wakes it up in advance. It carries no data and no login token. */
@@ -258,15 +248,6 @@ function loadApp() {
 
       drawSchedule(result.schedule || []);
       hideRentalSchedule();
-
-      /* ads that arrived through the address (#rs=): open Vehicle Checking and show them */
-      if (vcRiyaData && Date.now() - vcRiyaData.at < 30 * 60 * 1000) {
-        const tab = document.querySelector('.tab[data-tab="vcheck"]');
-        if (tab) { tab.click(); setTimeout(function () {
-          const o = document.getElementById("vcOut");
-          if (o) { o.innerHTML = ""; vcApplyRiya(); }
-        }, 0); }
-      }
     })
     .catch(function (error) {
       hideLoading();
@@ -2620,7 +2601,6 @@ function setupVehicleCheck() {
   const makeSel = document.getElementById("vcMake"), modelSel = document.getElementById("vcModel");
   const yearSel = document.getElementById("vcYear");
   const makeOther = document.getElementById("vcMakeOther"), modelOther = document.getElementById("vcModelOther");
-  try { const au = document.getElementById("vcAutoRiya"); if (au && localStorage.getItem("mc_riya_auto") === "0") au.checked = false; } catch (e) {}
 
   vcFill(typeSel, VC_VEHICLE_TYPES.map(vcPair), ["", "Select vehicle type"]);
   vcFill(makeSel, [], ["", "Select a vehicle type first"]);
@@ -2785,22 +2765,11 @@ function runVehicleCheck() {
   btn.textContent = "Checking…";
   out.innerHTML = '<p class="vcHint">Checking ikman.lk and riyasewana.com…</p>';
 
-  /* riyasewana does not let our server read it, so open its search in a tab of the officer's own browser.
-     The bookmark button there (vcRiyaBookmarklet) reads the ads and sends them back to this tab. */
-  vcRiyaData = null;
-  const auto = document.getElementById("vcAutoRiya");
-  try { localStorage.setItem("mc_riya_auto", auto && auto.checked ? "1" : "0"); } catch (e) {}
-  if (auto && auto.checked) {
-    const slug = function (t) { return String(t).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); };
-    try { window.open("https://riyasewana.com/search/cars/" + slug(make) + "/" + slug(model) + (year ? "/" + year + "-" + year : ""), "mcRiya"); } catch (e) {}
-  }
-
   api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
       out.innerHTML = vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
       vcBindPaste(out);
-      vcApplyRiya();
     })
     .catch(function (e) {
       if (e.access) { showGate(e.access); return; }
@@ -2808,108 +2777,6 @@ function runVehicleCheck() {
     })
     .then(function () { btn.disabled = false; btn.textContent = "Check"; });
 }
-
-/* RIYASEWANA ADS FROM THE OFFICER'S OWN BROWSER
-   The bookmark below runs on a riyasewana.com results page (in the officer's browser): it reads the ads shown there
-   (and the next pages of the same search) and sends them to the MasterCAL tab that opened it. Nothing else is sent. */
-var vcRiyaData = null;
-
-function vcRiyaBookmarklet() {
-  var APP = "https://drcjayawardena.github.io";
-  if (!/(^|\.)riyasewana\.com$/.test(location.hostname)) { alert("First open a riyasewana.com results page (use the Check button in MasterCAL), then click this bookmark."); return; }
-  function abs(h, base) { try { return new URL(h, base).href; } catch (e) { return ""; } }
-  function words(doc, el) {
-    var w = doc.createTreeWalker(el, 4), t = [], n;
-    while ((n = w.nextNode())) t.push(n.nodeValue);
-    return t.join(" ").replace(/\s+/g, " ").trim();
-  }
-  function parse(doc, base) {
-    var seen = {}, ads = [], as = doc.querySelectorAll('a[href*="/buy/"]');
-    for (var i = 0; i < as.length; i++) {
-      var a = as[i], href = abs(a.getAttribute("href"), base);
-      if (!href) continue;
-      if (seen[href]) {
-        var t0 = (a.getAttribute("title") || a.textContent || "").replace(/\s+/g, " ").trim();
-        if (t0 && !seen[href].t) seen[href].t = t0.slice(0, 60);
-        continue;
-      }
-      var box = a, p = a.parentElement;
-      while (p && p !== doc.body) {
-        var set = {}, c = 0, l = p.querySelectorAll('a[href*="/buy/"]');
-        for (var j = 0; j < l.length; j++) { var h2 = abs(l[j].getAttribute("href"), base); if (!set[h2]) { set[h2] = 1; c++; } }
-        if (c > 1) break;
-        box = p; p = p.parentElement;
-      }
-      var text = words(doc, box);
-      var m = text.match(/Rs\.?\s*([\d,]{5,})/i);
-      var title = (a.getAttribute("title") || a.textContent || "").replace(/\s+/g, " ").trim();
-      var ad = { t: title.slice(0, 60), p: m ? Number(m[1].replace(/,/g, "")) : 0 };
-      seen[href] = ad;
-      ads.push(ad);
-    }
-    return ads;
-  }
-  var all = parse(document, location.href), pages = [], links = document.querySelectorAll("a[href]");
-  for (var i = 0; i < links.length; i++) {
-    var l = links[i];
-    if (/^\d+$/.test((l.textContent || "").trim()) && l.href.indexOf(location.pathname) >= 0 && l.href !== location.href && pages.indexOf(l.href) < 0) pages.push(l.href);
-  }
-  pages = pages.slice(0, 4);
-  function finish() {
-    if (!all.length) { alert("No ads were found on this page. Open the search results list and try again."); return; }
-    var msg = { mcRiya: 1, src: location.pathname, ads: all.slice(0, 150).map(function (a) { return { t: a.t, p: a.p }; }) };
-    if (window.opener) { window.opener.postMessage(msg, APP); setTimeout(function () { window.close(); }, 300); }
-    else {
-      var url = APP + "/MasterCAL/#rs=" + encodeURIComponent(JSON.stringify(msg));
-      if (!window.open(url, "_blank")) location.href = url;
-    }
-  }
-  var k = 0;
-  (function next() {
-    if (k >= pages.length) return finish();
-    fetch(pages[k++], { credentials: "same-origin" }).then(function (r) { return r.text(); }).then(function (h) {
-      all = all.concat(parse(new DOMParser().parseFromString(h, "text/html"), location.href)); next();
-    }).catch(next);
-  })();
-}
-function vcBookmarkletHref() { return "javascript:" + encodeURIComponent("(" + vcRiyaBookmarklet.toString() + ")()"); }
-
-/* accepts the ads sent by the bookmark (message or #rs=), keeps only plain numbers and short text */
-function vcReceiveRiya(d) {
-  if (!d || !Array.isArray(d.ads) || !d.ads.length) return;
-  const src = /^\/search\/[\w\-\/.]*$/.test(String(d.src || "")) ? String(d.src) : "";
-  vcRiyaData = { src: src, at: Date.now(),
-    ads: d.ads.slice(0, 150).map(function (a) { return { t: String((a && a.t) || "").slice(0, 80), p: Number(a && a.p) || 0 }; }) };
-  vcApplyRiya();
-}
-
-/* the riyasewana box: same four boxes, in the same order, as ikman.lk */
-function vcRiyaSectionHtml(d) {
-  const p = d.ads.map(function (a) { return a.p; }).filter(function (v) { return v >= 100000; }).sort(function (a, b) { return a - b; });
-  const n = p.length;
-  const med = !n ? 0 : (n % 2 ? p[(n - 1) / 2] : Math.round((p[n / 2 - 1] + p[n / 2]) / 2));
-  const link = ' <a href="https://riyasewana.com' + escapeHtml(d.src) + '" target="_blank" rel="noopener">View on riyasewana.com ↗</a>';
-  return '<section class="vcSite" id="vcRiyaBox"><div class="vcSiteHead"><h3>riyasewana.com</h3>' + link + '</div>' +
-    '<div class="vcStats">' +
-    '<div><b>' + d.ads.length + '</b><span>Ads</span></div>' +
-    '<div><b>' + vcRs(n ? p[0] : 0) + '</b><span>Lowest price</span></div>' +
-    '<div><b>' + vcRs(med) + '</b><span>Median price</span></div>' +
-    '<div><b>' + vcRs(n ? p[n - 1] : 0) + '</b><span>Highest price</span></div></div></section>';
-}
-
-function vcApplyRiya() {
-  const d = vcRiyaData, out = document.getElementById("vcOut");
-  if (!d || !out || Date.now() - d.at > 30 * 60 * 1000) return;
-  const html = vcRiyaSectionHtml(d);
-  let sec = null;
-  out.querySelectorAll("section.vcSite").forEach(function (x) { const h = x.querySelector("h3"); if (h && h.textContent === "riyasewana.com") sec = x; });
-  if (sec) sec.outerHTML = html; else out.insertAdjacentHTML("afterbegin", html);
-}
-
-window.addEventListener("message", function (ev) {
-  if (!/^https:\/\/(www\.)?riyasewana\.com$/.test(ev.origin)) return;
-  if (ev.data && ev.data.mcRiya === 1) vcReceiveRiya(ev.data);
-});
 
 /* Prices found in text copied from a riyasewana search page: "Rs. 8,500,000" -> 8500000.
    Values under Rs 100,000 are ignored (they are not vehicle prices). */
@@ -2955,10 +2822,7 @@ function vcSiteHtml(r, name) {
   let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
 
   if (r.blocked) {
-    return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server. ' +
-      'A riyasewana tab was opened for you: <b>click the "Riyasewana → MasterCAL" bookmark there</b> and the summary appears here. ' +
-      'First time only: drag this button to your bookmarks bar (Ctrl+Shift+B shows the bar): ' +
-      '<a class="vcOpenBtn vcMark" href="' + vcBookmarkletHref() + '" onclick="alert(\'Do not click it here: drag it up to the bookmarks bar.\');return false;">Riyasewana → MasterCAL</a></p>' +
+    return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
       (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
       '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
       '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
