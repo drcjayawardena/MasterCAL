@@ -2755,6 +2755,10 @@ function runVehicleCheck() {
 /* Prices found in text copied from a riyasewana search page: "Rs. 8,500,000" -> 8500000.
    Values under Rs 100,000 are ignored (they are not vehicle prices). */
 function vcPastePrices(text) {
+  /* the "Price Trend" table at the bottom of the page lists monthly averages, not ads: ignore everything from there */
+  text = String(text || "");
+  const cut = text.search(/Price Trend in Sri Lanka/i);
+  if (cut > 0) text = text.slice(0, cut);
   const out = [], re = /Rs\.?\s*([\d]{1,3}(?:,\d{3})+|\d{5,})/gi;
   let m;
   while ((m = re.exec(String(text || "")))) {
@@ -2773,12 +2777,13 @@ function vcBindPaste(root) {
     if (!p.length) { res.innerHTML = '<p class="vcErr">No prices found. Copy the whole page (Ctrl+A, Ctrl+C) from the riyasewana search results and paste it again.</p>'; return; }
     const n = p.length, sum = p.reduce(function (a, b) { return a + b; }, 0);
     const med = n % 2 ? p[(n - 1) / 2] : Math.round((p[n / 2 - 1] + p[n / 2]) / 2);
+    /* same four boxes, in the same order, as ikman.lk */
     res.innerHTML = '<div class="vcStats">' +
-      '<div><b>' + n + '</b><span>Prices found</span></div>' +
-      '<div><b>' + vcRs(Math.round(sum / n)) + '</b><span>Average price</span></div>' +
+      '<div><b>' + n + '</b><span>Ads</span></div>' +
+      '<div><b>' + vcRs(p[0]) + '</b><span>Lowest price</span></div>' +
       '<div><b>' + vcRs(med) + '</b><span>Median price</span></div>' +
-      '<div><b>' + vcRs(p[0]) + ' – ' + vcRs(p[n - 1]) + '</b><span>Lowest – highest</span></div></div>' +
-      '<p class="vcHint"><small>Counted from the pasted text only: it may include a few sponsored or unrelated ads, so check the count looks right.</small></p>';
+      '<div><b>' + vcRs(p[n - 1]) + '</b><span>Highest price</span></div></div>' +
+      '<p class="vcHint"><small>Average price: ' + vcRs(Math.round(sum / n)) + '. Counted from the pasted text only (ads that show a price), so check the number of ads looks right.</small></p>';
   });
 }
 
