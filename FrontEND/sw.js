@@ -12,7 +12,7 @@
  * pick up the new version.
  ******************************************************/
 
-const CACHE_VERSION = "mastercal-v110";
+const CACHE_VERSION = "mastercal-v112";
 
 const SHELL = [
   "./",
