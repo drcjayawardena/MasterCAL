@@ -2765,14 +2765,18 @@ function vcClipTry() {
 document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") vcClipTry(); });
 window.addEventListener("focus", vcClipTry);
 
-/* ESTIMATED MARKET VALUATION = the average of the two median prices (ikman.lk and riyasewana.com),
-   rounded to the nearest Rs 10,000. Until the riyasewana prices are calculated it uses ikman.lk alone and says so. */
-var vcMedian = { ikman: 0, riya: 0 };
+/* ESTIMATED MARKET VALUE = the "pooled median": every ad price from ikman.lk and riyasewana.com in ONE list,
+   the middle price of that list, rounded to the nearest Rs 10,000. Each ad counts once, so the site with more ads
+   weighs more and a few extreme prices do not move it. Until the riyasewana prices are calculated it uses ikman.lk
+   alone and says so. */
+var vcMedian = { ikman: [], riya: [] };      /* the ad prices of each site */
 function vcValuation() {
   const a = vcMedian.ikman, b = vcMedian.riya;
-  if (!a && !b) return null;
-  const avg = a && b ? (a + b) / 2 : (a || b);
-  return { value: Math.round(avg / 10000) * 10000, both: !!(a && b) };
+  const all = a.concat(b).filter(function (v) { return v > 0; }).sort(function (x, y) { return x - y; });
+  const n = all.length;
+  if (!n) return null;
+  const med = n % 2 ? all[(n - 1) / 2] : (all[n / 2 - 1] + all[n / 2]) / 2;
+  return { value: Math.round(med / 10000) * 10000, both: !!(a.length && b.length), n: n, ni: a.length, nr: b.length };
 }
 function vcShowValuation(out) {
   const old = out.querySelector("#vcValBox"); if (old) old.remove();
@@ -2780,9 +2784,9 @@ function vcShowValuation(out) {
   if (!v) return;
   out.insertAdjacentHTML("afterbegin",
     '<div class="vcVal" id="vcValBox"><div><span>Estimated market value</span><b>' + vcRs(v.value) + '</b></div>' +
-    '<small>' + (v.both ? 'Average of the ikman.lk and riyasewana.com median prices, rounded to the nearest Rs 10,000.'
-                        : (vcMedian.ikman ? 'Based on the ikman.lk median only. Calculate the riyasewana prices below to include riyasewana.com.'
-                                          : 'Based on the riyasewana.com median only.')) + '</small></div>');
+    '<small>' + (v.both ? 'Median of all ' + v.n + ' ad prices (ikman.lk ' + v.ni + ' + riyasewana.com ' + v.nr + '), rounded to the nearest Rs 10,000.'
+                        : (v.ni ? 'Median of the ' + v.ni + ' ikman.lk ad prices only. Calculate the riyasewana prices below to include riyasewana.com.'
+                                : 'Median of the ' + v.nr + ' riyasewana.com ad prices only.')) + '</small></div>');
 }
 
 function vcRs(n) { return n ? "Rs " + Number(n).toLocaleString("en-US") : "-"; }
@@ -2803,7 +2807,7 @@ function runVehicleCheck() {
   btn.disabled = true;
   btn.textContent = "Checking…";
   out.innerHTML = '<p class="vcHint">Checking ikman.lk and riyasewana.com…</p>';
-  vcMedian = { ikman: 0, riya: 0 };
+  vcMedian = { ikman: [], riya: [] };
   /* remember what is on the clipboard now: only a NEWER copy (from riyasewana) is picked up automatically */
   vcClipBase = null;
   try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {}); } catch (e) {}
@@ -2812,10 +2816,9 @@ function runVehicleCheck() {
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
       out.innerHTML = vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
-      vcMedian.ikman = (r.ikman && r.ikman.ads && r.ikman.ads.length && r.ikman.summary && r.ikman.summary.median) || 0;
-      /* riyasewana's own median only exists when our server could read it (normally it cannot) */
-      vcMedian.riya = (r.riyasewana && !r.riyasewana.blocked && r.riyasewana.ads && r.riyasewana.ads.length &&
-                       r.riyasewana.summary && r.riyasewana.summary.median) || 0;
+      const prices = function (x) { return (x && !x.blocked && x.ads || []).map(function (a) { return Number(a.priceValue) || 0; }).filter(Boolean); };
+      vcMedian.ikman = prices(r.ikman);
+      vcMedian.riya = prices(r.riyasewana);      /* normally empty: our server cannot read riyasewana */
       vcBindPaste(out);
       vcShowValuation(out);
     })
@@ -2854,7 +2857,7 @@ function vcBindPaste(root) {
     /* the helper (open-search button, paste box, Calculate) is hidden once the summary is shown;
        it comes back the next time Check is pressed */
     root.querySelectorAll(".vcPreCalc").forEach(function (el) { el.hidden = true; });
-    vcMedian.riya = med;
+    vcMedian.riya = p.slice();
     vcShowValuation(root);
     /* same four boxes, in the same order, as ikman.lk */
     res.innerHTML = '<div class="vcStats">' +
