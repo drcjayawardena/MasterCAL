@@ -694,3 +694,13 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .vcVal b{ font-size:22px; color:#1b5e20; }
 .vcVal small{ display:block; margin-top:4px; color:#44564a; }
 .waQuote{ grid-column:1 / -1; width:100%; box-sizing:border-box; }
+
+/* PHONE ONLY (Three-Wheel and Bike Lease): one column in this order:
+   Valuation & Exposure, Rental Calculation, Payment Detail, Initial Charges.
+   (The computer layout, 2 x 2, is not changed: this applies below 760px only.) */
+@media (max-width:759px){
+  #twGrid.tw-grid2 > .tw-card:nth-child(1), #bkGrid.tw-grid2 > .tw-card:nth-child(1){ order:1; }
+  #twGrid.tw-grid2 > .tw-card:nth-child(3), #bkGrid.tw-grid2 > .tw-card:nth-child(3){ order:2; }
+  #twGrid.tw-grid2 > .tw-card:nth-child(2), #bkGrid.tw-grid2 > .tw-card:nth-child(2){ order:3; }
+  #twGrid.tw-grid2 > .tw-card:nth-child(4), #bkGrid.tw-grid2 > .tw-card:nth-child(4){ order:4; }
+}
