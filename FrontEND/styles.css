@@ -688,3 +688,10 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   font-size:13px; background:var(--field); color:inherit; resize:vertical; }
 .vcPaste button{ border:0; cursor:pointer; }
 .vcPreCalc[hidden]{ display:none !important; }
+.vcVal{ background:#eaf5ec; border:1px solid #b9dcc0; border-radius:10px; padding:10px 14px; margin:0 0 12px; }
+.vcVal > div{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.vcVal span{ font-weight:700; font-size:14px; }
+.vcVal b{ font-size:22px; color:#1b5e20; }
+.vcVal small{ display:block; margin-top:4px; opacity:.75; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .vcVal{ background:#17301d; border-color:#2f5a38; } :root:not([data-theme="light"]) .vcVal b{ color:#7fd08c; } }
+:root[data-theme="dark"] .vcVal{ background:#17301d; border-color:#2f5a38; } :root[data-theme="dark"] .vcVal b{ color:#7fd08c; }
