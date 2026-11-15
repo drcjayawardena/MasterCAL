@@ -687,3 +687,4 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .vcPaste textarea{ width:100%; box-sizing:border-box; border:1px solid var(--field-bd); border-radius:8px; padding:8px 10px;
   font-size:13px; background:var(--field); color:inherit; resize:vertical; }
 .vcPaste button{ border:0; cursor:pointer; }
+.vcPreCalc[hidden]{ display:none !important; }

@@ -2777,6 +2777,9 @@ function vcBindPaste(root) {
     if (!p.length) { res.innerHTML = '<p class="vcErr">No prices found. Copy the whole page (Ctrl+A, Ctrl+C) from the riyasewana search results and paste it again.</p>'; return; }
     const n = p.length, sum = p.reduce(function (a, b) { return a + b; }, 0);
     const med = n % 2 ? p[(n - 1) / 2] : Math.round((p[n / 2 - 1] + p[n / 2]) / 2);
+    /* the helper (open-search button, paste box, Calculate) is hidden once the summary is shown;
+       it comes back the next time Check is pressed */
+    root.querySelectorAll(".vcPreCalc").forEach(function (el) { el.hidden = true; });
     /* same four boxes, in the same order, as ikman.lk */
     res.innerHTML = '<div class="vcStats">' +
       '<div><b>' + n + '</b><span>Ads</span></div>' +
@@ -2793,11 +2796,11 @@ function vcSiteHtml(r, name) {
   let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
 
   if (r.blocked) {
-    return h + '<p class="vcHint">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
-      (r.searchUrl ? '<a class="vcOpenBtn" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
-      '<div class="vcPaste"><p class="vcHint"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
-      '<textarea id="vcPasteBox" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
-      '<button type="button" id="vcPasteBtn" class="vcOpenBtn">Calculate prices</button>' +
+    return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
+      (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
+      '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
+      '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
+      '<button type="button" id="vcPasteBtn" class="vcOpenBtn vcPreCalc">Calculate prices</button>' +
       '<div id="vcPasteOut"></div></div></section>';
   }
   if (r.error) return h + '<p class="vcErr">' + escapeHtml(r.error) + '</p></section>';
