@@ -2782,8 +2782,7 @@ function vcBindPaste(root) {
       '<div><b>' + n + '</b><span>Ads</span></div>' +
       '<div><b>' + vcRs(p[0]) + '</b><span>Lowest price</span></div>' +
       '<div><b>' + vcRs(med) + '</b><span>Median price</span></div>' +
-      '<div><b>' + vcRs(p[n - 1]) + '</b><span>Highest price</span></div></div>' +
-      '<p class="vcHint"><small>Average price: ' + vcRs(Math.round(sum / n)) + '. Counted from the pasted text only (ads that show a price), so check the number of ads looks right.</small></p>';
+      '<div><b>' + vcRs(p[n - 1]) + '</b><span>Highest price</span></div></div>';
   });
 }
 
