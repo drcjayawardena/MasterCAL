@@ -190,6 +190,102 @@ let scheduleBusy = false;
 
 document.addEventListener("DOMContentLoaded", init);
 
+/* RIYASEWANA IMPORT: the bookmark button (see vcRiyaBookmarklet) reads the ads in the officer's OWN browser
+   and opens this app with them in the address (#rs=...). They are kept here, and the address is cleaned. */
+var vcImported = null;
+(function () {
+  try {
+    const m = /^#rs=(.+)$/.exec(location.hash || "");
+    let raw = m ? decodeURIComponent(m[1]) : sessionStorage.getItem("mc_rs");
+    if (m) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    const ads = (Array.isArray(d.ads) ? d.ads : []).slice(0, 150).map(function (a) {
+      return { t: String(a.t || "").slice(0, 80), p: Number(a.p) || 0, k: String(a.k || "").slice(0, 12),
+               y: String(a.y || "").slice(0, 4), u: String(a.u || "") };
+    });
+    if (!ads.length) return;
+    vcImported = { src: String(d.src || "").slice(0, 200), ads: ads, at: Number(d.at) || Date.now() };
+    if (m) sessionStorage.setItem("mc_rs", JSON.stringify({ src: vcImported.src, ads: ads, at: vcImported.at }));
+  } catch (e) { vcImported = null; }
+})();
+
+/* Turns the imported ads into the same shape the server gives, so vcSiteHtml can show them. Valid for 1 hour. */
+function vcImportedResult() {
+  if (!vcImported || Date.now() - vcImported.at > 3600 * 1000) return null;
+  const ads = vcImported.ads.map(function (a) {
+    return { title: a.t || "Ad", price: a.p ? "Rs. " + a.p.toLocaleString("en-US") : "Negotiable", priceValue: a.p,
+             details: [a.y, a.k ? a.k + " km" : ""].filter(Boolean).join(" · "), location: "", when: "",
+             url: /^https:\/\/(www\.)?riyasewana\.com\//.test(a.u) ? a.u : "" };
+  });
+  const p = ads.map(function (a) { return a.priceValue; }).filter(function (v) { return v > 0; }).sort(function (a, b) { return a - b; });
+  const n = p.length, sum = p.reduce(function (a, b) { return a + b; }, 0);
+  const summary = n ? { count: ads.length, priced: n, min: p[0], max: p[n - 1], avg: Math.round(sum / n),
+                        median: n % 2 ? p[(n - 1) / 2] : Math.round((p[n / 2 - 1] + p[n / 2]) / 2) }
+                    : { count: ads.length, priced: 0, min: 0, max: 0, avg: 0, median: 0 };
+  return { site: "riyasewana.com", searchUrl: "https://riyasewana.com" + vcImported.src, ads: ads, summary: summary, imported: true };
+}
+
+/* The bookmark button. It only RUNS in the officer's own browser on a riyasewana.com results page: it reads the ads
+   shown there (and the next pages of the same search), then opens MasterCAL with them. Nothing is sent anywhere else. */
+function vcRiyaBookmarklet() {
+  var APP = "https://drcjayawardena.github.io/MasterCAL/";
+  if (!/(^|\.)riyasewana\.com$/.test(location.hostname)) { alert("First open a riyasewana.com search results page, then click this bookmark."); return; }
+  function abs(h, base) { try { return new URL(h, base).href; } catch (e) { return ""; } }
+  function words(doc, el) {                       /* all text under el, with a space between pieces */
+    var w = doc.createTreeWalker(el, 4), t = [], n;
+    while ((n = w.nextNode())) t.push(n.nodeValue);
+    return t.join(" ").replace(/\s+/g, " ").trim();
+  }
+  function parse(doc, base) {
+    var seen = {}, ads = [], as = doc.querySelectorAll('a[href*="/buy/"]');
+    for (var i = 0; i < as.length; i++) {
+      var a = as[i], href = abs(a.getAttribute("href"), base);
+      if (!href) continue;
+      if (seen[href]) {                              /* the picture link and the title link share one address */
+        var t0 = (a.getAttribute("title") || a.textContent || "").replace(/\s+/g, " ").trim();
+        if (t0 && !seen[href].t) seen[href].t = t0.slice(0, 60);
+        continue;
+      }
+      var box = a, p = a.parentElement;
+      while (p && p !== doc.body) {
+        var set = {}, c = 0, l = p.querySelectorAll('a[href*="/buy/"]');
+        for (var j = 0; j < l.length; j++) { var h2 = abs(l[j].getAttribute("href"), base); if (!set[h2]) { set[h2] = 1; c++; } }
+        if (c > 1) break;
+        box = p; p = p.parentElement;
+      }
+      var text = words(doc, box);
+      var m = text.match(/Rs\.?\s*([\d,]{5,})/i), km = text.match(/([\d,]+)\s*km/i), yr = text.match(/\b(?:19|20)\d{2}\b/);
+      var title = (a.getAttribute("title") || a.textContent || "").replace(/\s+/g, " ").trim();
+      var ad = { t: title.slice(0, 60), p: m ? Number(m[1].replace(/,/g, "")) : 0, k: km ? km[1] : "", y: yr ? yr[0] : "", u: href };
+      seen[href] = ad;
+      ads.push(ad);
+    }
+    return ads;
+  }
+  var all = parse(document, location.href), pages = [], links = document.querySelectorAll("a[href]");
+  for (var i = 0; i < links.length; i++) {
+    var l = links[i];
+    if (/^\d+$/.test((l.textContent || "").trim()) && l.href.indexOf(location.pathname) >= 0 && l.href !== location.href && pages.indexOf(l.href) < 0) pages.push(l.href);
+  }
+  pages = pages.slice(0, 4);
+  function finish() {
+    var seen2 = {}, ads = all.filter(function (a) { if (seen2[a.u]) return false; seen2[a.u] = 1; return true; }).slice(0, 120);
+    if (!ads.length) { alert("No ads were found on this page. Open the search results list and try again."); return; }
+    var url = APP + "#rs=" + encodeURIComponent(JSON.stringify({ src: location.pathname, ads: ads, at: Date.now() }));
+    if (!window.open(url, "_blank")) location.href = url;
+  }
+  var k = 0;
+  (function next() {
+    if (k >= pages.length) return finish();
+    fetch(pages[k++], { credentials: "same-origin" }).then(function (r) { return r.text(); }).then(function (h) {
+      all = all.concat(parse(new DOMParser().parseFromString(h, "text/html"), location.href)); next();
+    }).catch(next);
+  })();
+}
+
+function vcBookmarkletHref() { return "javascript:" + encodeURIComponent("(" + vcRiyaBookmarklet.toString() + ")()"); }
+
 /* WARM-UP: Google's server goes to sleep when unused, and the first request after that is slow.
    A tiny request when the app opens, and when the person comes back to it after a few minutes,
    wakes it up in advance. It carries no data and no login token. */
@@ -248,6 +344,15 @@ function loadApp() {
 
       drawSchedule(result.schedule || []);
       hideRentalSchedule();
+
+      /* ads sent from riyasewana by the bookmark button: open Vehicle Checking and show them */
+      if (vcImportedResult()) {
+        const tab = document.querySelector('.tab[data-tab="vcheck"]');
+        if (tab) { tab.click(); setTimeout(function () {
+          const out = document.getElementById("vcOut");
+          if (out) out.innerHTML = vcSiteHtml(vcImportedResult(), "riyasewana.com");
+        }, 0); }
+      }
     })
     .catch(function (error) {
       hideLoading();
@@ -2742,7 +2847,8 @@ function runVehicleCheck() {
   api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
-      out.innerHTML = vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
+      const riya = (r.riyasewana && r.riyasewana.blocked && vcImportedResult()) || r.riyasewana;
+      out.innerHTML = vcSiteHtml(riya, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
       vcBindPaste(out);
     })
     .catch(function (e) {
@@ -2791,7 +2897,10 @@ function vcSiteHtml(r, name) {
   if (r.blocked) {
     return h + '<p class="vcHint">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
       (r.searchUrl ? '<a class="vcOpenBtn" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
-      '<div class="vcPaste"><p class="vcHint"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
+      '<div class="vcPaste"><p class="vcHint"><b>Automatic way (one-time setup):</b> drag this button to your browser\'s bookmarks bar: ' +
+      '<a class="vcOpenBtn vcMark" href="' + vcBookmarkletHref() + '" onclick="alert(\'Do not click it here. Drag it up to the bookmarks bar (Ctrl+Shift+B shows the bar). Then open the riyasewana results page and click the bookmark there.\');return false;">Riyasewana → MasterCAL</a>' +
+      '<br>Then, on the riyasewana results page, click that bookmark. MasterCAL opens with the ads and their average price.</p>' +
+      '<p class="vcHint"><b>Or by hand:</b> on that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
       '<textarea id="vcPasteBox" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
       '<button type="button" id="vcPasteBtn" class="vcOpenBtn">Calculate prices</button>' +
       '<div id="vcPasteOut"></div></div></section>';
@@ -2800,8 +2909,10 @@ function vcSiteHtml(r, name) {
   if (!r.ads.length) return h + '<p class="vcHint">No matching ads were found.' + (r.why ? ' <small>(' + escapeHtml(r.why) + ')</small>' : '') + '</p></section>';
 
   const s = r.summary || {};
+  if (r.imported) h += '<p class="vcHint"><small>Read from your own riyasewana page (' + s.count + ' ads, ' + s.priced + ' with a price). Average and median use only ads that show a price.</small></p>';
   h += '<div class="vcStats">' +
     '<div><b>' + s.count + '</b><span>Ads</span></div>' +
+    (s.avg ? '<div><b>' + vcRs(s.avg) + '</b><span>Average price</span></div>' : '') +
     '<div><b>' + vcRs(s.min) + '</b><span>Lowest price</span></div>' +
     '<div><b>' + vcRs(s.median) + '</b><span>Median price</span></div>' +
     '<div><b>' + vcRs(s.max) + '</b><span>Highest price</span></div></div>';

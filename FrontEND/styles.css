@@ -635,7 +635,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .vcSiteHead{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px; }
 .vcSiteHead h3{ font-size:16px; color:var(--brand); }
 .vcSiteHead a{ font-size:13px; color:#1d3f8f; text-decoration:none; white-space:nowrap; }
-.vcStats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px; }
+.vcStats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; margin-bottom:10px; }
 .vcStats div{ background:var(--result-bg); border:1px solid var(--result-bd); border-radius:10px; padding:8px 10px; }
 .vcStats b{ display:block; font-size:15px; color:var(--ink); }
 .vcStats span{ font-size:12px; color:var(--muted); }
@@ -687,3 +687,4 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .vcPaste textarea{ width:100%; box-sizing:border-box; border:1px solid var(--field-bd); border-radius:8px; padding:8px 10px;
   font-size:13px; background:var(--field); color:inherit; resize:vertical; }
 .vcPaste button{ border:0; cursor:pointer; }
+.vcMark{ margin:6px 0; cursor:grab; }
