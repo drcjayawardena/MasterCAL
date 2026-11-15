@@ -2620,7 +2620,6 @@ function setupVehicleCheck() {
   const makeSel = document.getElementById("vcMake"), modelSel = document.getElementById("vcModel");
   const yearSel = document.getElementById("vcYear");
   const makeOther = document.getElementById("vcMakeOther"), modelOther = document.getElementById("vcModelOther");
-  vcSetupBox();
   try { const au = document.getElementById("vcAutoRiya"); if (au && localStorage.getItem("mc_riya_auto") === "0") au.checked = false; } catch (e) {}
 
   vcFill(typeSel, VC_VEHICLE_TYPES.map(vcPair), ["", "Select vehicle type"]);
@@ -2878,48 +2877,10 @@ function vcBookmarkletHref() { return "javascript:" + encodeURIComponent("(" + v
 /* accepts the ads sent by the bookmark (message or #rs=), keeps only plain numbers and short text */
 function vcReceiveRiya(d) {
   if (!d || !Array.isArray(d.ads) || !d.ads.length) return;
-  try { localStorage.setItem("mc_riya_setup", "1"); } catch (e) {}      /* it works on this browser: no more setup box */
-  const sb = document.getElementById("vcSetup"); if (sb) sb.hidden = true;
   const src = /^\/search\/[\w\-\/.]*$/.test(String(d.src || "")) ? String(d.src) : "";
   vcRiyaData = { src: src, at: Date.now(),
     ads: d.ads.slice(0, 150).map(function (a) { return { t: String((a && a.t) || "").slice(0, 80), p: Number(a && a.p) || 0 }; }) };
   vcApplyRiya();
-}
-
-/* "Bookmark setup" box at the top of Vehicle Checking. Shown until the bookmark has worked once in this browser. */
-function vcSetupBox() {
-  const box = document.getElementById("vcSetup"), more = document.getElementById("vcSetupShow");
-  if (!box) return;
-  const href = vcBookmarkletHref();
-  box.innerHTML =
-    '<h4>One-time setup: Riyasewana bookmark</h4>' +
-    '<p>riyasewana.com does not let our server read its ads, so a bookmark in <b>your own browser</b> reads them and sends them here. You add it once.</p>' +
-    '<div class="vcSetupCols">' +
-    '<div><b>On a computer</b><ol>' +
-    '<li>Show the bookmarks bar: press <b>Ctrl+Shift+B</b>.</li>' +
-    '<li>Drag this green button up onto the bookmarks bar (do not click it): ' +
-    '<a class="vcOpenBtn vcMark" href="' + href + '" onclick="alert(\'Do not click it here: drag it up to the bookmarks bar.\');return false;">Riyasewana → MasterCAL</a></li>' +
-    '</ol></div>' +
-    '<div><b>On a phone</b><ol>' +
-    '<li><button type="button" id="vcCopyBm" class="vcOpenBtn">Copy the bookmark code</button></li>' +
-    '<li>Bookmark any page in your browser (Chrome: ⋮ → ☆). Then edit that bookmark: name = <b>Riyasewana</b>, and paste the copied code into the address (URL) box.</li>' +
-    '<li>To use it: open riyasewana from <b>Check</b>, tap the address bar, type <b>Riyasewana</b> and tap the bookmark in the list.</li>' +
-    '</ol><small>Phone browsers make this harder than a computer, so a computer is recommended.</small></div></div>' +
-    '<p><a href="#" id="vcSetupHide">I have done this, hide this box</a></p>';
-  let done = false;
-  try { done = localStorage.getItem("mc_riya_setup") === "1"; } catch (e) {}
-  box.hidden = done;
-  const cp = box.querySelector("#vcCopyBm");
-  cp.addEventListener("click", function () {
-    const ok = function () { cp.textContent = "Copied ✓"; };
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(href).then(ok, function () { prompt("Copy this code:", href); });
-    else prompt("Copy this code:", href);
-  });
-  box.querySelector("#vcSetupHide").addEventListener("click", function (e) {
-    e.preventDefault(); box.hidden = true;
-    try { localStorage.setItem("mc_riya_setup", "1"); } catch (x) {}
-  });
-  if (more) more.addEventListener("click", function (e) { e.preventDefault(); box.hidden = false; box.scrollIntoView({ block: "start" }); });
 }
 
 /* the riyasewana box: same four boxes, in the same order, as ikman.lk */
@@ -2996,7 +2957,8 @@ function vcSiteHtml(r, name) {
   if (r.blocked) {
     return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server. ' +
       'A riyasewana tab was opened for you: <b>click the "Riyasewana → MasterCAL" bookmark there</b> and the summary appears here. ' +
-      '<small>(Not set up yet? Use the "Bookmark setup" box above the form.)</small></p>' +
+      'First time only: drag this button to your bookmarks bar (Ctrl+Shift+B shows the bar): ' +
+      '<a class="vcOpenBtn vcMark" href="' + vcBookmarkletHref() + '" onclick="alert(\'Do not click it here: drag it up to the bookmarks bar.\');return false;">Riyasewana → MasterCAL</a></p>' +
       (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
       '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
       '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
