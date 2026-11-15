@@ -693,3 +693,4 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .vcVal span{ font-weight:700; font-size:14px; color:#1c2b20; }
 .vcVal b{ font-size:22px; color:#1b5e20; }
 .vcVal small{ display:block; margin-top:4px; color:#44564a; }
+.waQuote{ grid-column:1 / -1; width:100%; box-sizing:border-box; }
