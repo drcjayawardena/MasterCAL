@@ -270,6 +270,7 @@
 
   <!-- ============ VEHICLE CHECKING (ikman.lk / riyasewana.com ad prices, filled by app.js) ============ -->
   <div id="vcheckPanel" class="vcPanel" hidden>
+    <div id="vcSetup" class="vcSetup" hidden></div>
     <form id="vcForm" class="vcForm" autocomplete="off">
       <label><span>Vehicle Type</span><select id="vcType" required></select></label>
       <label><span>Make</span><select id="vcMake" required></select>
@@ -281,6 +282,7 @@
       <button type="submit" id="vcGo" class="vcGo">Check</button>
     </form>
     <label class="vcAuto"><input type="checkbox" id="vcAutoRiya" checked> Open riyasewana.com when I press Check (then click the <b>Riyasewana → MasterCAL</b> bookmark there)</label>
+    <a href="#" id="vcSetupShow" class="vcSetupLink">Bookmark setup help</a>
     <div id="vcOut" class="vcOut"><p class="vcHint">Select the make, model and year, then tap <b>Check</b> to see a price summary of current ads on ikman.lk and riyasewana.com.</p></div>
   </div>
 
@@ -288,7 +290,7 @@
 <!-- END .page -->
 
 
-<script src="app.js?v=113"></script>
+<script src="app.js?v=114"></script>
 
 <script>
   /* Register the service worker (PWA install + offline shell). */

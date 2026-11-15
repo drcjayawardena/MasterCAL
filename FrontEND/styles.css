@@ -691,3 +691,11 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .vcAuto{ display:block; margin:8px 2px; font-size:13px; color:inherit; }
 .vcAuto input{ margin-right:6px; }
 .vcMark{ margin:6px 0; cursor:grab; }
+.vcSetup{ background:var(--card,#fff); border:1px solid var(--field-bd,#ccd); border-left:4px solid var(--brand,#1b5e20); border-radius:10px;
+  padding:12px 14px; margin:0 0 12px; font-size:13px; }
+.vcSetup h4{ margin:0 0 6px; font-size:14px; }
+.vcSetup p{ margin:6px 0; }
+.vcSetup ol{ margin:6px 0 0; padding-left:18px; }
+.vcSetup li{ margin:4px 0; }
+.vcSetupCols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+.vcSetupLink{ font-size:12px; margin-left:8px; }
