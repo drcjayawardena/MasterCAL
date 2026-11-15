@@ -89,6 +89,62 @@ function vcIkmanInfo_(type, brandKey, modelKey) {
   return out;
 }
 
+/* Does an ad title name the grade as whole words? ("S" matches "Aqua S Grade" but not the s in "Prius") */
+function vcTitleHasGrade_(title, grade) {
+  const g = String(grade || "").toLowerCase().replace(/[^a-z0-9+]+/g, " ").trim();
+  if (!g) return true;
+  const t = " " + String(title || "").toLowerCase().replace(/[^a-z0-9+]+/g, " ") + " ";
+  return t.indexOf(" " + g + " ") >= 0;
+}
+
+/* vcGradeYears  args = [ type, brandKey, modelKey, make, model, grade, minYear, maxYear ]
+   Which model years really have ads for this grade on ikman.lk. Asks ikman once per year (all at the same
+   time) and counts the ads whose title names the grade. Used to fill the Year dropdown, so a grade + year
+   that has no ads is not offered. Answer = { years: [ { y, n } ] } (n = ads found), or { years: [] } when
+   ikman could not be read. Cached for 6 hours. */
+function vcGradeYears_(type, brandKey, modelKey, make, model, grade, minY, maxY) {
+  make = String(make || "").trim().slice(0, 40);
+  model = String(model || "").trim().slice(0, 40);
+  grade = String(grade || "").trim().slice(0, 30);
+  minY = Number(minY); maxY = Number(maxY);
+  const now = new Date().getFullYear();
+  if (!make || !model || !grade) throw new Error("Select a make, model and grade.");
+  if (!(minY >= 1980 && maxY >= minY && maxY <= now + 1 && maxY - minY <= 40)) throw new Error("Invalid year range.");
+
+  const c = VC_IKMAN_CATS[String(type)] || VC_IKMAN_CATS["Car"];
+  const ikPath = vcKey_(modelKey) ? vcIkmanPath_(type, brandKey, modelKey) : "";
+  const base = "https://ikman.lk/en/ads/sri-lanka/" + (ikPath || (c.cat + "/" + vcSlug_(make) + "/" + vcSlug_(model)));
+  const body = c.body ? "&enum.body=" + c.body : "";
+
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  const ck = "vgy1_" + (base + "|" + grade + "|" + minY + "|" + maxY).toLowerCase().replace(/\s+/g, " ");
+  if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
+
+  const years = [];
+  for (var y = maxY; y >= minY; y--) years.push(y);
+  const reqs = years.map(function (yr) {
+    return { url: base + "?sort=date&order=desc&numeric.model_year.minimum=" + yr + "&numeric.model_year.maximum=" + yr + body,
+             muteHttpExceptions: true, followRedirects: true,
+             headers: { "User-Agent": VC_UA, "Accept-Language": "en-US,en;q=0.9" } };
+  });
+  const resps = UrlFetchApp.fetchAll(reqs);
+  var read = 0;
+  const found = [];
+  resps.forEach(function (r, i) {
+    if (r.getResponseCode() !== 200) return;
+    const d = vcIkmanParse_(r.getContentText());
+    if (!d) return;
+    read++;
+    const n = d.ads.filter(function (a) { return vcFits_(a.title, model, "") && vcTitleHasGrade_(a.title, grade); }).length;
+    if (n > 0) found.push({ y: years[i], n: n });
+  });
+  /* if ikman answered for hardly any year, the answer is not trustworthy: tell the app to use its own list */
+  const out = { years: read >= Math.ceil(years.length / 2) ? found : [] };
+  if (cache && out.years.length) { try { cache.put(ck, JSON.stringify(out), VC_LIST_CACHE_SECONDS); } catch (e) {} }
+  return out;
+}
+
 function checkVehicle_(make, model, year, grade, type, brandKey, modelKey) {
   make  = String(make  || "").trim().slice(0, 40);
   model = String(model || "").trim().slice(0, 40);
@@ -180,7 +236,11 @@ function vcSummary_(ads) {
 function vcIkmanData_(url) {
   const res = vcFetch_(url);
   if (res.getResponseCode() !== 200) return null;
-  const html = res.getContentText();
+  return vcIkmanParse_(res.getContentText());
+}
+
+/* the ads JSON inside an ikman.lk search page (null when the page has none) */
+function vcIkmanParse_(html) {
   const i = html.indexOf("window.initialData = ");
   if (i < 0) return null;
   const j = html.indexOf("</script>", i);

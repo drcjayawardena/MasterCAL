@@ -70,7 +70,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "sendQuote");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "vcGradeYears" && action !== "sendQuote");   /* show the calculating spinner for calc actions */
   const apiStartedAt = isCalc ? performance.now() : 0;
   if (VEHICLE_WRITE_ACTIONS[action]) {
     calcLastKey = "";                        /* server state changes -> next calcInputs must really run */
@@ -2713,7 +2713,33 @@ function setupVehicleCheck() {
       fillYears();
     });
   });
-  gradeSel.addEventListener("change", fillYears);
+  /* With a grade chosen, offer only the years that really have ads for that grade on ikman.lk
+     (each year is counted from ikman). While waiting, or if ikman cannot be read, our own
+     production-year table (VC_GRADE_YEARS) is used. */
+  let gseq = 0;
+  const refineYears = function () {
+    const g = gradeSel.value, my = ++gseq;
+    if (!g || !makeSel.value || !modelSel.value || makeSel.value === VC_OTHER || modelSel.value === VC_OTHER) return;
+    const cand = vcYearsFor(makeSel.value, modelSel.value, g, ik).map(function (p) { return Number(p[0]); });
+    if (!cand.length) return;
+    const keep = yearSel.value;
+    vcFill(yearSel, [], ["", "Checking years…"]);
+    yearSel.disabled = true;
+    api("vcGradeYears", [typeSel.value, vcKeyOf(makeSel), vcKeyOf(modelSel), makeSel.value, modelSel.value, g,
+                         Math.min.apply(null, cand), Math.max.apply(null, cand)])
+      .then(function (r) {
+        if (my !== gseq || gradeSel.value !== g) return;
+        const ys = (r && r.years) || [];
+        if (ys.length) {
+          ys.sort(function (a, b) { return b.y - a.y; });
+          vcFill(yearSel, ys.map(function (x) { return [String(x.y), x.y + " (" + x.n + ")"]; }), ["", "Any year"]);
+          yearSel.disabled = false;
+          if (keep && yearSel.querySelector('option[value="' + keep + '"]')) yearSel.value = keep;
+        } else fillYears();
+      })
+      .catch(function () { if (my === gseq) fillYears(); });
+  };
+  gradeSel.addEventListener("change", function () { fillYears(); refineYears(); });
   document.getElementById("vcForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     runVehicleCheck();

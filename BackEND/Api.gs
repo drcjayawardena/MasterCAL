@@ -115,6 +115,7 @@ function dispatch_(action, args) {
     case "resetBike":           return resetBike();
     case "checkVehicle":        return checkVehicle_(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
     case "vcIkman":             return vcIkmanInfo_(args[0], args[1], args[2]);
+    case "vcGradeYears":        return vcGradeYears_(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
     default: throw new Error("Unknown action: " + action);
   }
 }
