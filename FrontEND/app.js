@@ -2746,6 +2746,25 @@ function setupVehicleCheck() {
   });
 }
 
+/* CLIPBOARD: after the officer copies the riyasewana page (Ctrl+A, Ctrl+C) and comes back to this tab, the copied
+   text is read here (the browser asks permission once), the prices are found and calculated: no paste, no button.
+   It only happens while the riyasewana helper is showing, and only for a new copy that holds several "Rs." prices.
+   The text stays in this browser and is not sent anywhere. */
+var vcClipBase = null;
+function vcClipTry() {
+  const box = document.getElementById("vcPasteBox"), btn = document.getElementById("vcPasteBtn");
+  if (!box || !btn || box.hidden || btn.hidden || !navigator.clipboard || !navigator.clipboard.readText) return;
+  navigator.clipboard.readText().then(function (t) {
+    t = String(t || "");
+    if (!t || t === vcClipBase || t.length < 300 || vcPastePrices(t).length < 3) return;
+    vcClipBase = t;
+    box.value = t;
+    btn.click();
+  }, function () { /* no permission: the paste box still works */ });
+}
+document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") vcClipTry(); });
+window.addEventListener("focus", vcClipTry);
+
 /* ESTIMATED MARKET VALUATION = the average of the two median prices (ikman.lk and riyasewana.com),
    rounded to the nearest Rs 10,000. Until the riyasewana prices are calculated it uses ikman.lk alone and says so. */
 var vcMedian = { ikman: 0, riya: 0 };
@@ -2785,6 +2804,9 @@ function runVehicleCheck() {
   btn.textContent = "Checking…";
   out.innerHTML = '<p class="vcHint">Checking ikman.lk and riyasewana.com…</p>';
   vcMedian = { ikman: 0, riya: 0 };
+  /* remember what is on the clipboard now: only a NEWER copy (from riyasewana) is picked up automatically */
+  vcClipBase = null;
+  try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {}); } catch (e) {}
 
   api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
@@ -2852,7 +2874,7 @@ function vcSiteHtml(r, name) {
   if (r.blocked) {
     return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
       (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
-      '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy), then paste here:</p>' +
+      '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy) and come back to this tab: the prices are calculated automatically (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:</p>' +
       '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
       '<button type="button" id="vcPasteBtn" class="vcOpenBtn vcPreCalc">Calculate prices</button>' +
       '<div id="vcPasteOut"></div></div></section>';
