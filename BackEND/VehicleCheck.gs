@@ -102,7 +102,7 @@ function checkVehicle_(make, model, year, grade, type, brandKey, modelKey) {
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc5_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc6_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
@@ -124,6 +124,19 @@ function vcSlug_(s) { return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/
 function vcFetch_(url) {
   return UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true,
     headers: { "User-Agent": VC_UA, "Accept-Language": "en-US,en;q=0.9" } });
+}
+
+/* Looks like a normal browser page load (some sites refuse requests without these headers). */
+function vcFetchBrowser_(url, referer) {
+  return UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true,
+    headers: {
+      "User-Agent": VC_UA,
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Referer": referer || "https://riyasewana.com/",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-User": "?1"
+    } });
 }
 
 /* "Rs 8,550,000" -> 8550000 (0 when there is no price) */
@@ -232,10 +245,14 @@ function vcRiyasewana_(make, model, year) {
      selected; otherwise use the model route. */
   const url = "https://riyasewana.com/search/cars/" + vcSlug_(make) + "/" + vcSlug_(model) +
               (year ? "/" + year + "-" + year : "");
-  const res = vcFetch_(url);
-  const html = res.getResponseCode() === 200 ? res.getContentText() : "";
-  if (!html || /Attention Required|cf-browser-verification|challenge-platform/i.test(html)) {
-    return { site: "riyasewana.com", searchUrl: url, blocked: true, ads: [], summary: vcSummary_([]) };
+  const res = vcFetchBrowser_(url);
+  const code = res.getResponseCode();
+  const html = code === 200 ? res.getContentText() : "";
+  const challenge = /Attention Required|cf-browser-verification|challenge-platform|Just a moment|captcha/i.test(html);
+  if (!html || challenge) {
+    /* why = a short, harmless reason the app shows, so the cause can be seen */
+    const why = challenge ? "HTTP 200 but a bot-check page (Cloudflare)" : "HTTP " + code + (code === 200 ? " (empty page)" : "");
+    return { site: "riyasewana.com", searchUrl: url, blocked: true, why: why, ads: [], summary: vcSummary_([]) };
   }
   const ads = [];
   /* Legacy cards used <li class="item">; current cards expose /buy/ links.
@@ -274,7 +291,10 @@ function vcRiyasewana_(make, model, year) {
     ads.push({ title: title, price: price, priceValue: vcPrice_(price),
                details: kmMatch ? kmMatch[0] : (yearMatch ? yearMatch[0] : ""), location: "", when: "", url: absoluteUrl });
   });
-  return { site: "riyasewana.com", searchUrl: url, ads: ads, summary: vcSummary_(ads) };
+  const out = { site: "riyasewana.com", searchUrl: url, ads: ads, summary: vcSummary_(ads) };
+  /* The page loaded but nothing was recognised: say how much came back, so the parser can be fixed */
+  if (!ads.length) out.why = "page loaded (" + html.length + " chars, " + links.length + " ad links found) but no matching ads";
+  return out;
 }
 
 /* Decode the HTML entities commonly used in listing titles and card text. */

@@ -2758,10 +2758,11 @@ function vcSiteHtml(r, name) {
   let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
 
   if (r.blocked) {
-    return h + '<p class="vcHint">' + escapeHtml(name) + ' does not share its data with our server. Use the link above to open the same search.</p></section>';
+    return h + '<p class="vcHint">' + escapeHtml(name) + ' does not share its data with our server. Use the link above to open the same search.' +
+      (r.why ? ' <small>(' + escapeHtml(r.why) + ')</small>' : '') + '</p></section>';
   }
   if (r.error) return h + '<p class="vcErr">' + escapeHtml(r.error) + '</p></section>';
-  if (!r.ads.length) return h + '<p class="vcHint">No matching ads were found.</p></section>';
+  if (!r.ads.length) return h + '<p class="vcHint">No matching ads were found.' + (r.why ? ' <small>(' + escapeHtml(r.why) + ')</small>' : '') + '</p></section>';
 
   const s = r.summary || {};
   h += '<div class="vcStats">' +
