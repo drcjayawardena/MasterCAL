@@ -688,3 +688,6 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   font-size:13px; background:var(--field); color:inherit; resize:vertical; }
 .vcPaste button{ border:0; cursor:pointer; }
 .vcPreCalc[hidden]{ display:none !important; }
+.vcAuto{ display:block; margin:8px 2px; font-size:13px; color:inherit; }
+.vcAuto input{ margin-right:6px; }
+.vcMark{ margin:6px 0; cursor:grab; }
