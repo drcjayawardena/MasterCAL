@@ -4,6 +4,7 @@
  * NOTE: this is a convenience gate, not strong security: the file itself holds the rates. */
 (function () {
   "use strict";
+  if (window.__mcRemote) return;   /* online mode uses the MasterCAL login instead */
   var DOMAIN = "@cf.lk", KEY = "mc_sa_users", SESS = "mc_sa_session";
   var mem = {};
   function lg(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] || null; } }

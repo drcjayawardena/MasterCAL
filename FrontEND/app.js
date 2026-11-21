@@ -2870,13 +2870,15 @@ function vcBindPaste(root) {
 
 function vcSiteHtml(r, name) {
   r = r || { ads: [] };
+  /* riyasewana: always the SAME named tab, so a new check re-uses (and reloads) the tab that is already open */
+  const tgt = /riyasewana/i.test(name) ? 'target="riyasewanaTab"' : 'target="_blank" rel="noopener"';
   const link = r.searchUrl
-    ? ' <a href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">View on ' + escapeHtml(name) + ' ↗</a>' : "";
+    ? ' <a href="' + escapeHtml(r.searchUrl) + '" ' + tgt + '>View on ' + escapeHtml(name) + ' ↗</a>' : "";
   let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
 
   if (r.blocked) {
     return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
-      (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
+      (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" ' + tgt + '>Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
       '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy) and come back to this tab: the prices are calculated automatically (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:</p>' +
       '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
       '<button type="button" id="vcPasteBtn" class="vcOpenBtn vcPreCalc">Calculate prices</button>' +

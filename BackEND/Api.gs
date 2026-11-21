@@ -32,6 +32,19 @@ function doPost(e) {
     }
     const t1 = Date.now();
 
+    /* 1b) Standalone app (Standalone.gs): the model and the admin tab need no per-user spreadsheet copy.
+           The valuation actions read no sheet either, so they skip the copy as well. */
+    if (action === "standaloneModel") return json_({ ok: true, data: standaloneModel_() });
+    if (action === "adminWho")        return json_({ ok: true, data: { admin: isAdmin_(access.who.key) } });
+    if (action === "adminUsers" || action === "adminSetStatus") {
+      if (!isAdmin_(access.who.key)) return json_({ ok: false, error: "Administrators only." });
+      const a = body.args || [];
+      return json_({ ok: true, data: action === "adminUsers" ? standaloneAdminUsers_() : standaloneSetStatus_(access.who.key, a[0], a[1]) });
+    }
+    if (action === "checkVehicle" || action === "vcIkman" || action === "vcGradeYears") {
+      return json_({ ok: true, data: dispatch_(action, body.args || []) });
+    }
+
     /* 2) the master sheet changed (or this user has no copy yet): build a fresh copy first.
           The app shows "Updating…" and calls syncCopy; every other action just says "stale". */
     const syncGuard = copySyncGuard_(access.who.key, action);
@@ -63,6 +76,9 @@ function doGet(e) {
   if (action === "approveUser" || action === "blockUser") {
     return handleEmailApproval_(action, e.parameter.email, e.parameter.token);
   }
+
+  /* Standalone app opened from a link: ...?app=standalone (the page holds no rates; the model needs a login) */
+  if (e && e.parameter && e.parameter.app === "standalone") return standalonePage_();
 
   if (!action) {
     return ContentService

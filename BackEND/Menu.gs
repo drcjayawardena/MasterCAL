@@ -18,7 +18,8 @@ function onOpen() {
     .addItem("ℹ️ Count user copies", "menuCountCopies_")
     .addItem("🗑 Delete ALL user copies now", "menuDeleteAllCopies_")
     .addSeparator()
-    .addItem("📦 Publish Standalone app (offline file)", "menuPublishStandalone_")
+    .addItem("📦 Publish Standalone app", "menuPublishStandalone_")
+    .addItem("👑 Make a user Admin (Standalone)", "menuMakeAdmin_")
     .addToUi();
 }
 
