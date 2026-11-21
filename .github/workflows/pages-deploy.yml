@@ -1,5 +1,6 @@
 # Publishes the FrontEND/ folder as the GitHub Pages website
 # (https://drcjayawardena.github.io/MasterCAL/) whenever a change to it reaches main.
+# It also builds the online Standalone page (code only, no rates) at /MasterCAL/standalone/.
 # GitHub Pages is enabled by configure-pages during the first deployment.
 name: Website — deploy (GitHub Pages)
 
@@ -8,6 +9,8 @@ on:
     branches: [main]
     paths:
       - 'FrontEND/**'
+      - 'Standalone/template/**'
+      - 'Standalone/tools/build_pages.js'
   workflow_dispatch:
 
 permissions:
@@ -27,6 +30,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build the online Standalone page
+        run: node Standalone/tools/build_pages.js FrontEND/standalone
 
       - uses: actions/configure-pages@v5
         with:
