@@ -109,6 +109,7 @@
       part = part.replace(/\$/g, "");
       let r1, c1, r2, c2, mm;
       if ((mm = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/i.exec(part))) { c1 = colToNum(mm[1].toUpperCase()); r1 = +mm[2]; c2 = colToNum(mm[3].toUpperCase()); r2 = +mm[4]; }
+      else if ((mm = /^([A-Z]+)(\d+):([A-Z]+)$/i.exec(part))) { c1 = colToNum(mm[1].toUpperCase()); r1 = +mm[2]; c2 = colToNum(mm[3].toUpperCase()); r2 = BOUND; }   // "D2:D"
       else if ((mm = /^([A-Z]+):([A-Z]+)$/i.exec(part))) { c1 = colToNum(mm[1].toUpperCase()); r1 = 1; c2 = colToNum(mm[2].toUpperCase()); r2 = BOUND; }
       else if ((mm = /^([A-Z]+)(\d+)$/i.exec(part))) { c1 = c2 = colToNum(mm[1].toUpperCase()); r1 = r2 = +mm[2]; }
       else return null;

@@ -43,7 +43,7 @@ function standaloneBuildModel_(sheets) {
     for (r = 0; r < nR; r++) for (c = 0; c < nC; c++) {
       var a = saA1_(r, c), x = V[r][c];
       if (!isF(r, c) && !blank(x)) v[a] = x;
-      if ((isF(r, c) || !blank(x)) && N[r][c] && N[r][c] !== "General" && N[r][c] !== "0.###############") {
+      if ((isF(r, c) || !blank(x) || r < 200) && N[r][c] && N[r][c] !== "General" && N[r][c] !== "0.###############") {
         var nf = N[r][c];
         if (fmtIx[nf] === undefined) { fmtIx[nf] = model.fmts.length; model.fmts.push(nf); }
         n[a] = fmtIx[nf];
