@@ -51,7 +51,10 @@ const prelude = `
       if (REMOTE_ACTIONS[body.action] && realFetch) {
         if (body.action !== "login" && body.action !== "register" && !body.token)
           return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ ok: false, access: "LOGIN", error: "Access LOGIN" }); } });
-        return realFetch(REMOTE, opt);
+        return realFetch(REMOTE, opt).catch(function () {
+          var o = { ok: false, error: "Cannot reach the MasterCAL server (Google). Check the internet connection, or the company firewall may be blocking script.google.com. Open this file in Edge (not inside a preview window)." };
+          return { ok: true, json: function () { return Promise.resolve(o); } };
+        });
       }
       out = { ok: true, data: L.dispatch(body.action, body.args || []) };
     } catch (e) { out = { ok: false, error: String(e && e.message ? e.message : e) }; }
