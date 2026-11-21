@@ -17,6 +17,8 @@ function onOpen() {
     .addItem("🔔 Turn on auto-refresh (one-time setup)", "menuAutoRefresh_")
     .addItem("ℹ️ Count user copies", "menuCountCopies_")
     .addItem("🗑 Delete ALL user copies now", "menuDeleteAllCopies_")
+    .addSeparator()
+    .addItem("📦 Publish Standalone app (offline file)", "menuPublishStandalone_")
     .addToUi();
 }
 

@@ -1,0 +1,4 @@
+model*.json
+dist/
+*.html
+!template/*.html
