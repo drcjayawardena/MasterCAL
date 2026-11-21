@@ -3,6 +3,21 @@
  *  - online mode: the page was opened from the link (model = {"remote":true}); after the MasterCAL login the
  *                 model is downloaded (approved users only) and everything runs locally */
 (function () {
+  /* visible error banner: a broken page would otherwise just look "dead" */
+  var BUILD = "online-2";
+  function show(msg) {
+    try {
+      var b = document.getElementById("mcErr");
+      if (!b) { b = document.createElement("div"); b.id = "mcErr";
+        b.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:100000;background:#fff3cd;color:#7a1c1c;font:12px/1.4 Arial;padding:6px 10px;border-bottom:1px solid #d9b";
+        (document.body || document.documentElement).appendChild(b); }
+      b.textContent = "Page error (" + BUILD + "): " + msg;
+    } catch (e) {}
+  }
+  window.addEventListener("error", function (e) { show((e.message || "error") + (e.lineno ? " @" + e.lineno : "")); });
+  window.addEventListener("unhandledrejection", function (e) { show(String(e.reason && e.reason.message || e.reason)); });
+})();
+(function () {
   var REMOTE = "__REMOTE_URL__";
   var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1 };
   var model = JSON.parse(document.getElementById("mc-model").textContent);

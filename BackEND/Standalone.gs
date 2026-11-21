@@ -96,7 +96,7 @@ function standaloneCollect_(ss) {
 
 function standalonePublish_() {
   var t0 = Date.now(), ss = SpreadsheetApp.getActiveSpreadsheet();
-  var res = UrlFetchApp.fetch(SA_TEMPLATE_URL, { muteHttpExceptions: true });
+  var res = UrlFetchApp.fetch(SA_TEMPLATE_URL + "?nocache=" + Date.now(), { muteHttpExceptions: true });
   var tpl = res.getContentText();
   if (res.getResponseCode() !== 200 || tpl.indexOf("__MC_MODEL__") < 0) throw new Error("Could not load the app template from GitHub (HTTP " + res.getResponseCode() + "). Try again in a minute.");
   var model = standaloneBuildModel_(standaloneCollect_(ss));
