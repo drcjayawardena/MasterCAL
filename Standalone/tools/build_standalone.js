@@ -44,13 +44,16 @@ const modelText = TEMPLATE ? "__MC_MODEL__" : safe(JSON.stringify(JSON.parse(rd(
 
 const prelude = rd(path.join(SA, "app", "prelude.js")).replace("__REMOTE_URL__", () => REMOTE);
 
+const b64 = (txt) => Buffer.from(txt, "utf8").toString("base64").replace(/(.{100})/g, "$1\n");
+const part = (txt) => '<script type="text/plain" class="mcCode">\n' + b64(txt) + "\n</script>\n";
 const out = head +
   '<script id="mc-model" type="application/json">' + modelText + "</script>\n" +
-  "<script>\n" + safe(rd(path.join(SA, "engine", "engine.js"))) + "\n</script>\n" +
-  "<script>\n" + safe(rd(path.join(SA, "app", "local_backend.js"))) + "\n</script>\n" +
-  "<script>\n" + safe(prelude) + "\n</script>\n" +
-  "<script>\n" + safe(rd(path.join(SA, "app", "auth_gate.js"))) + "\n</script>\n" +
-  "<script>\n" + safe(app) + "\n</script>\n" +
-  "<script>\n" + safe(rd(path.join(SA, "app", "online_mode.js"))) + "\n</script>\n</body>\n</html>\n";
+  part(rd(path.join(SA, "engine", "engine.js"))) +
+  part(rd(path.join(SA, "app", "local_backend.js"))) +
+  part(prelude) +
+  part(rd(path.join(SA, "app", "auth_gate.js"))) +
+  part(app) +
+  part(rd(path.join(SA, "app", "online_mode.js"))) +
+  "<script>\n" + rd(path.join(SA, "app", "loader.js")) + "\n</script>\n</body>\n</html>\n";
 fs.writeFileSync(outPath, out);
 console.log("wrote", outPath, (out.length / 1024).toFixed(0) + " KB");
