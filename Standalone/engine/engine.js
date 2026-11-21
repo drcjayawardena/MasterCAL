@@ -215,12 +215,16 @@
       let a = parsePrimary();
       for (;;) { ws(); if (src[p] === "%") { p++; a = { t: "pct", a }; } else return a; }
     }
-    const REF_PART = /^(\$?[A-Za-z]{1,3}\$?\d+(?::\$?[A-Za-z]{1,3}\$?\d+)?|\$?[A-Za-z]{1,3}:\$?[A-Za-z]{1,3}|\$?\d+:\$?\d+)/;
+    const REF_PART = /^(\$?[A-Za-z]{1,3}\$?\d+:\$?[A-Za-z]{1,3}(?![A-Za-z0-9_(.$])|\$?[A-Za-z]{1,3}\$?\d+(?::\$?[A-Za-z]{1,3}\$?\d+)?|\$?[A-Za-z]{1,3}:\$?[A-Za-z]{1,3}|\$?\d+:\$?\d+)/;
     function makeRef(sheet, part) {
       let m;
       if ((m = /^\$?([A-Za-z]{1,3})\$?(\d+):\$?([A-Za-z]{1,3})\$?(\d+)$/.exec(part))) {
         const a = colToNum(m[1].toUpperCase()), b = colToNum(m[3].toUpperCase()), r1 = +m[2], r2 = +m[4];
         return { t: "ref", sheet, r1: Math.min(r1, r2), c1: Math.min(a, b), r2: Math.max(r1, r2), c2: Math.max(a, b) };
+      }
+      if ((m = /^\$?([A-Za-z]{1,3})\$?(\d+):\$?([A-Za-z]{1,3})$/.exec(part))) { /* open-ended "B7:B" (Google's own notation) */
+        const a = colToNum(m[1].toUpperCase()), b = colToNum(m[3].toUpperCase());
+        return { t: "ref", sheet, r1: +m[2], c1: Math.min(a, b), r2: Infinity, c2: Math.max(a, b) };
       }
       if ((m = /^\$?([A-Za-z]{1,3})\$?(\d+)$/.exec(part))) { const c = colToNum(m[1].toUpperCase()); return { t: "ref", sheet, r1: +m[2], c1: c, r2: +m[2], c2: c }; }
       if ((m = /^\$?([A-Za-z]{1,3}):\$?([A-Za-z]{1,3})$/.exec(part))) {
@@ -271,8 +275,9 @@
       if (id) {
         const name = id[1];
         // function call?
-        if (src[p + name.length] === "(") {
-          p += name.length + 1; const args = [];
+        let q = p + name.length; while (src[q] === " " || src[q] === "\n" || src[q] === "\t") q++;   // "if (" is valid in Google
+        if (src[q] === "(") {
+          p = q + 1; const args = [];
           ws();
           if (src[p] === ")") { p++; return { t: "call", name: name.toUpperCase().replace(/^_XLFN\._XLWS\.|^_XLFN\./, ""), args }; }
           for (;;) {
