@@ -54,6 +54,7 @@ const out = head +
   "<script>\n" + safe(rd(path.join(SA, "engine", "engine.js"))) + "\n</script>\n" +
   "<script>\n" + safe(rd(path.join(SA, "app", "local_backend.js"))) + "\n</script>\n" +
   "<script>" + prelude + "</script>\n" +
+  "<script>\n" + safe(rd(path.join(SA, "app", "auth_gate.js"))) + "\n</script>\n" +
   "<script>\n" + safe(app) + "\n</script>\n</body>\n</html>\n";
 fs.writeFileSync(outPath, out);
 console.log("wrote", outPath, (out.length / 1024).toFixed(0) + " KB");
