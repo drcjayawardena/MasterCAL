@@ -2282,7 +2282,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 (function(){
   var model = JSON.parse(document.getElementById("mc-model").textContent);
   var L = MasterLocal.create(model, { now: new Date() });
-  window.__mc = L;
+  window.__mc = L; window.__mcPublished = model.published || "";
   var REMOTE = "https://script.google.com/macros/s/AKfycbx8m_v6iMUy8tTSGzxSfxi79ZyTfJgpy89WjVkqRMO3dvnm734znkdTvjpW92DhO-xN/exec";
   var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1 };
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
@@ -2369,7 +2369,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
     "#mcGate input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #c9d1db;border-radius:8px;font-size:15px}" +
     "#mcGate .go{width:100%;margin-top:16px;padding:11px;background:#1c5e3a;color:#fff;border:0;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer}" +
     "#mcGate .m{margin-top:12px;font-size:13px;min-height:18px;color:#c62828}#mcGate .m.ok{color:#1c5e3a}" +
-    "#mcOut{position:fixed;right:10px;bottom:8px;z-index:9999;font-size:12px;color:#556;background:#fff;border:1px solid #d5dbe3;border-radius:16px;padding:4px 10px;cursor:pointer}";
+    "#mcVer{position:fixed;left:10px;bottom:8px;z-index:9999;font-size:11px;color:#778}#mcOut{position:fixed;right:10px;bottom:8px;z-index:9999;font-size:12px;color:#556;background:#fff;border:1px solid #d5dbe3;border-radius:16px;padding:4px 10px;cursor:pointer}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var gate, mode = "login";
@@ -2430,6 +2430,10 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
     var rec = users()[sg(SESS)]; b.textContent = (rec ? rec.name : "User") + " · Logout";
     b.onclick = function () { ss(SESS, null); b.remove(); build(); };
     document.body.appendChild(b);
+    if (window.__mcPublished && !document.getElementById("mcVer")) {
+      var v = document.createElement("div"); v.id = "mcVer"; v.textContent = "Rates updated: " + String(window.__mcPublished).slice(0, 10);
+      document.body.appendChild(v);
+    }
   }
   function start() { if (users()[sg(SESS)]) open(); else build(); }
   if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
@@ -5190,7 +5194,7 @@ function setupVehicleCheck() {
    It only happens while the riyasewana helper is showing, and only for a new copy that holds several "Rs." prices.
    The text stays in this browser and is not sent anywhere. */
 var vcClipBase = null;
-function vcClipTry() {
+function vcClipTry() { return; /* standalone: no automatic clipboard read (the browser would ask every time) */
   const box = document.getElementById("vcPasteBox"), btn = document.getElementById("vcPasteBtn");
   if (!box || !btn || box.hidden || btn.hidden || !navigator.clipboard || !navigator.clipboard.readText) return;
   navigator.clipboard.readText().then(function (t) {
@@ -5249,7 +5253,7 @@ function runVehicleCheck() {
   vcMedian = { ikman: [], riya: [] };
   /* remember what is on the clipboard now: only a NEWER copy (from riyasewana) is picked up automatically */
   vcClipBase = null;
-  try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {}); } catch (e) {}
+  try { /* standalone: no clipboard read */ } catch (e) {}
 
   api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
@@ -5316,7 +5320,7 @@ function vcSiteHtml(r, name) {
   if (r.blocked) {
     return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
       (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
-      '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy) and come back to this tab: the prices are calculated automatically (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:</p>' +
+      '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy) then come back here, click in the box below, press <b>Ctrl+V</b> and press <b>Calculate prices</b>:</p>' +
       '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
       '<button type="button" id="vcPasteBtn" class="vcOpenBtn vcPreCalc">Calculate prices</button>' +
       '<div id="vcPasteOut"></div></div></section>';

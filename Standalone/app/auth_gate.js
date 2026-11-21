@@ -51,7 +51,7 @@
     "#mcGate input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #c9d1db;border-radius:8px;font-size:15px}" +
     "#mcGate .go{width:100%;margin-top:16px;padding:11px;background:#1c5e3a;color:#fff;border:0;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer}" +
     "#mcGate .m{margin-top:12px;font-size:13px;min-height:18px;color:#c62828}#mcGate .m.ok{color:#1c5e3a}" +
-    "#mcOut{position:fixed;right:10px;bottom:8px;z-index:9999;font-size:12px;color:#556;background:#fff;border:1px solid #d5dbe3;border-radius:16px;padding:4px 10px;cursor:pointer}";
+    "#mcVer{position:fixed;left:10px;bottom:8px;z-index:9999;font-size:11px;color:#778}#mcOut{position:fixed;right:10px;bottom:8px;z-index:9999;font-size:12px;color:#556;background:#fff;border:1px solid #d5dbe3;border-radius:16px;padding:4px 10px;cursor:pointer}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var gate, mode = "login";
@@ -112,6 +112,10 @@
     var rec = users()[sg(SESS)]; b.textContent = (rec ? rec.name : "User") + " · Logout";
     b.onclick = function () { ss(SESS, null); b.remove(); build(); };
     document.body.appendChild(b);
+    if (window.__mcPublished && !document.getElementById("mcVer")) {
+      var v = document.createElement("div"); v.id = "mcVer"; v.textContent = "Rates updated: " + String(window.__mcPublished).slice(0, 10);
+      document.body.appendChild(v);
+    }
   }
   function start() { if (users()[sg(SESS)]) open(); else build(); }
   if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
