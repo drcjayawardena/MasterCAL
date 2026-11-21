@@ -5,7 +5,7 @@
 const fs = require("fs"), path = require("path");
 const ROOT = path.join(__dirname, "..", ".."), FE = path.join(ROOT, "FrontEND"), SA = path.join(ROOT, "Standalone");
 const [modelPath, outPath] = process.argv.slice(2);
-if (!modelPath || !outPath) { console.error("usage: build_standalone.js model.json out.html"); process.exit(1); }
+if (!modelPath || !outPath) { console.error("usage: build_standalone.js (model.json | --template) out.html"); process.exit(1); }
 const rd = p => fs.readFileSync(p, "utf8");
 const safe = s => s.replace(/<\/(script)/gi, "<\\/$1");
 
@@ -32,7 +32,8 @@ html = patch(html, '<link rel="stylesheet" href="styles.css">', "<style>\n" + rd
   "\n#installBar{display:none!important}#mcVcCancel{position:fixed;top:14px;right:16px;z-index:100000;padding:8px 14px;border:0;border-radius:8px;background:#fff;color:#1c5e3a;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}\n</style>", "css");
 const i0 = html.indexOf('<script src="app.js'); if (i0 < 0) throw new Error("script tag not found");
 const head = html.slice(0, i0);
-const model = JSON.parse(rd(modelPath));
+const TEMPLATE = modelPath === "--template";   /* code only: the model is injected later (Sheet menu: Publish Standalone) */
+const modelText = TEMPLATE ? "__MC_MODEL__" : safe(JSON.stringify(JSON.parse(rd(modelPath))));
 
 const prelude = `
 (function(){
@@ -73,7 +74,7 @@ const prelude = `
 })();`;
 
 const out = head +
-  '<script id="mc-model" type="application/json">' + safe(JSON.stringify(model)) + "</script>\n" +
+  '<script id="mc-model" type="application/json">' + modelText + "</script>\n" +
   "<script>\n" + safe(rd(path.join(SA, "engine", "engine.js"))) + "\n</script>\n" +
   "<script>\n" + safe(rd(path.join(SA, "app", "local_backend.js"))) + "\n</script>\n" +
   "<script>" + prelude + "</script>\n" +

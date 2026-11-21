@@ -313,7 +313,8 @@
       this.unsupported = new Set(); this.parseErrors = [];
       for (const nm of this.names) {
         const s = model.sheets[nm];
-        const sh = { name: nm, f: new Map(), v: new Map(), maxR: 1, maxC: 1, anchors: [] };
+        const sh = { name: nm, f: new Map(), v: new Map(), maxR: 1, maxC: 1, anchors: [], soft: new Set() };
+        for (const a in (s.s || {})) { const p = parseAddr(a); if (p) sh.soft.add(KEY(p.r, p.c)); }
         for (const a in s.v) { const p = parseAddr(a); if (!p) continue; sh.v.set(KEY(p.r, p.c), s.v[a]); if (p.r > sh.maxR) sh.maxR = p.r; if (p.c > sh.maxC) sh.maxC = p.c; }
         for (const a in s.f) {
           const p = parseAddr(a); if (!p) continue;
@@ -328,7 +329,15 @@
       this.cache = {}; this.raw = {}; this.visiting = new Set(); this.stack = [];
       this.prev = new Map(); this.cycHit = new Set(); this.top = 0; this.iterPasses = 0;
       this.scope = [];
+      this.softDone = !Object.keys(this.sheets).some(n => this.sheets[n].soft.size);
     }
+    /* cells flagged "soft" (model.sheets[x].s) may be filled by an array formula: where one covers them, the stored value is dropped */
+    _ensureSoft() {
+      if (this.softDone) return; this.softDone = true;
+      this._top(() => { for (const nm of this.names) { const sh = this.sheets[nm]; for (const k of sh.soft) { const p = this._unkey(k); if (this.spillAt(sh, p.r, p.c) !== undefined) sh.v.delete(k); } } });
+      this.recalc();
+    }
+    _unkey(k) { return { r: Math.floor(k / 20000), c: k % 20000 }; }
     /* ---- public API */
     recalc() { this.cache = {}; this.raw = {}; this.visiting = new Set(); this.stack = []; this.cycleLog = null; this.prev = new Map(); this.cycHit = new Set(); this.top = 0; this.iterPasses = 0; }
     /* Run a read; when it touched a circular reference, repeat it with the previous pass's values of the
@@ -364,8 +373,9 @@
       if (p.r > sh.maxR) sh.maxR = p.r; if (p.c > sh.maxC) sh.maxC = p.c;
       this.recalc();
     }
-    get(sheet, addr) { const p = parseAddr(addr); return this._top(() => this.cell(this._sheet(sheet), p.r, p.c)); }
+    get(sheet, addr) { this._ensureSoft(); const p = parseAddr(addr); return this._top(() => this.cell(this._sheet(sheet), p.r, p.c)); }
     range(sheet, a1) {
+      this._ensureSoft();
       const [a, b] = a1.split(":"); const p = parseAddr(a), q = parseAddr(b || a), sh = this._sheet(sheet);
       return this._top(() => { const out = []; for (let r = p.r; r <= q.r; r++) { const row = []; for (let c = p.c; c <= q.c; c++) row.push(this.cell(sh, r, c)); out.push(row); } return out; });
     }
@@ -420,6 +430,7 @@
         if (i === 0 && j === 0) continue;
         const k = KEY(fx.r + i, fx.c + j);
         if (sh.f.has(k)) return true;
+        if (sh.soft.has(k)) continue;
         const cv = sh.v.get(k); if (cv !== undefined && cv !== null && cv !== "") return true;
       }
       return false;
