@@ -4,7 +4,7 @@
  *
  * checkVehicle  args = [ make, model, year, grade? ]
  * A grade (e.g. "S", "Hybrid Z") keeps only the ads whose title names it.
- * Looks up ads for that vehicle on ikman.lk, patpat.lk and riyasewana.com and returns
+ * Looks up ads for that vehicle on ikman.lk and riyasewana.com and returns
  * a short summary (how many ads, lowest / middle / highest price) plus the
  * ads themselves, newest first as the sites list them.
  *
@@ -158,13 +158,12 @@ function checkVehicle_(make, model, year, grade, type, brandKey, modelKey) {
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc7_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath + "|" + type).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc6_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
     make: make, model: model, year: year, grade: grade,
     ikman: vcGrade_(vcSafe_(function () { return vcIkman_(make, model, year, ikPath, ikBody); }), grade),
-    patpat: vcGrade_(vcSafe_(function () { return vcPatpat_(make, model, year, type); }), grade),
     riyasewana: vcGrade_(vcSafe_(function () { return vcRiyasewana_(make, model, year); }), grade)
   };
   if (cache) { try { cache.put(ck, JSON.stringify(out), VC_CACHE_SECONDS); } catch (e) {} }
@@ -296,63 +295,6 @@ function vcAgeMinutes_(when) {
   if (!m) return 1e9;
   const per = { min: 1, hour: 60, day: 1440, week: 10080, month: 43200, year: 525600 };
   return Number(m[1]) * per[m[2]];
-}
-
-/* ---------- patpat.lk ---------- */
-
-/* App vehicle type -> patpat.lk category in its search path. */
-const VC_PATPAT_TYPES = {
-  "Car": "car", "SUV / Jeep": "suv", "Cab / Pickup": "pickup",
-  "Van / MPV": "van", "Three Wheeler": "threewheeler", "Motorcycle": "bike"
-};
-
-/* patpat.lk lists 20 ads a page as plain HTML cards (its robots.txt allows reading). Asks the type's own
-   category (pages 1 and 2) and the all-types category at the same time, because sellers often file a model
-   under another type; the ads are merged by their link. A model patpat does not know answers 404. */
-function vcPatpat_(make, model, year, type) {
-  const base = "https://patpat.lk/en/sri-lanka/vehicle/";
-  const path = vcSlug_(make) + "/" + vcSlug_(model) + (year ? "/all/all/" + year : "");
-  const cat = VC_PATPAT_TYPES[String(type || "")] || "car";
-  const urls = [base + cat + "/" + path, base + cat + "/" + path + "?page=2", base + "all/" + path];
-  const resps = UrlFetchApp.fetchAll(urls.map(function (u) {
-    return { url: u, muteHttpExceptions: true, followRedirects: true,
-             headers: { "User-Agent": VC_UA, "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9" } };
-  }));
-  const seen = {}, ads = [], codes = [];
-  var read = 0;
-  resps.forEach(function (r) {
-    codes.push(r.getResponseCode());
-    if (r.getResponseCode() !== 200) return;
-    read++;
-    vcPatpatParse_(r.getContentText()).forEach(function (a) {
-      /* the year is already in the search path; the title only has to name the model */
-      if (seen[a.url] || ads.length >= VC_MAX_ADS || !vcFits_(a.title, model, "")) return;
-      seen[a.url] = 1;
-      ads.push(a);
-    });
-  });
-  const out = { site: "patpat.lk", searchUrl: urls[0], ads: ads, summary: vcSummary_(ads) };
-  if (!ads.length) out.why = read ? "page loaded but no matching ads" : "HTTP " + codes.join(" / ");
-  return out;
-}
-
-/* The ad cards of a patpat.lk search page: <div class="... listing-card ..." data-href="<ad url>"> holding an
-   <h2> title, then "Rs: 7,350,000" (or "Negotiable"), the date, the town and the km. Each card also shows a
-   "Best Lease Rental: Rs: ..." figure further down: only the first price of the card is the vehicle price. */
-function vcPatpatParse_(html) {
-  return String(html || "").split(/\blisting-card\b[^>]*\bdata-href="/).slice(1).map(function (p) {
-    const url = p.slice(0, p.indexOf('"'));
-    const t = p.match(/<h2[^>]*>([\s\S]*?)<\/h2>/);
-    const lease = p.search(/Lease Rental/i);
-    const pr = p.match(/>\s*(Rs:?\s*[\d,]+|Negotiable)\s*</i);
-    const own = pr && (lease < 0 || pr.index < lease);
-    const price = !own ? "" : /\d/.test(pr[1]) ? "Rs " + pr[1].replace(/^Rs:?\s*/i, "") : "Negotiable";
-    const when = p.match(/>\s*(\d{4}-\d{2}-\d{2})\s*<\/span>\s*<span[^>]*>\s*\|\s*<\/span>\s*<span[^>]*>\s*([^<]*?)\s*</);
-    const km = p.match(/>\s*([\d,]+\s*km)\s*</i);
-    return { title: t ? vcText_(t[1]) : "", price: price, priceValue: vcPrice_(price),
-             details: km ? km[1].replace(/\s+/g, " ") : "", location: when ? vcText_(when[2]) : "", when: when ? when[1] : "",
-             url: /^https:\/\/patpat\.lk\//.test(url) ? url : "" };
-  }).filter(function (a) { return a.title && a.url; });
 }
 
 /* ---------- riyasewana.com ---------- */
