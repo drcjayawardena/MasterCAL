@@ -143,25 +143,36 @@ function saPutFile_(folder, name, content, mime) {
   if (it.hasNext()) { f = it.next(); f.setContent(content); } else f = folder.createFile(name, content, mime);
   return f;
 }
+/* Every chunk is wrapped in "~" ... "~" so Sheets cannot treat a leading ' or = or space specially, and is never split inside a surrogate pair. */
 function saStoreWrite_(files) {
   var ss = master_(), sh = ss.getSheetByName(SA_STORE_SHEET) || ss.insertSheet(SA_STORE_SHEET);
-  var rows = [], CH = 45000;
+  var rows = [], CH = 40000;
   Object.keys(files).forEach(function (name) {
-    var t = files[name], n = Math.max(1, Math.ceil(t.length / CH));
-    for (var i = 0; i < n; i++) rows.push([name, i, t.substr(i * CH, CH)]);
+    var t = files[name], pos = 0, idx = 0;
+    while (pos < t.length || idx === 0) {
+      var end = Math.min(pos + CH, t.length);
+      if (end < t.length) { var c = t.charCodeAt(end - 1); if (c >= 0xD800 && c <= 0xDBFF) end--; }
+      rows.push([name, idx++, "~" + t.substring(pos, end) + "~"]); pos = end;
+      if (pos >= t.length) break;
+    }
   });
   sh.clear();
   var need = rows.length + 1; if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), need - sh.getMaxRows());
   sh.getRange(1, 1, 1, 3).setValues([["file", "part", "text (do not edit)"]]);
   sh.getRange(2, 1, rows.length, 3).setNumberFormat("@").setValues(rows);
   sh.hideSheet();
+  SpreadsheetApp.flush();
+  Object.keys(files).forEach(function (name) {
+    var back = saRead_(name);
+    if (back !== files[name]) throw new Error("Saving '" + name + "' in the Sheet failed the check (" + (back ? back.length : 0) + " of " + files[name].length + " characters came back).");
+  });
 }
 function saRead_(name) {
   var sh = master_().getSheetByName(SA_STORE_SHEET); if (!sh || sh.getLastRow() < 2) return null;
   var v = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().filter(function (r) { return r[0] === name; });
   if (!v.length) return null;
-  v.sort(function (a, b) { return a[1] - b[1]; });
-  return v.map(function (r) { return r[2]; }).join("");
+  v.sort(function (a, b) { return Number(a[1]) - Number(b[1]); });
+  return v.map(function (r) { var t = String(r[2]); return t.substring(1, t.length - 1); }).join("");
 }
 
 /* ---------- online mode: the page (public code only) and the model (approved users only) ---------- */
