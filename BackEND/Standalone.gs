@@ -8,7 +8,8 @@
  * Never touches the user-copies folder. Never reads USERS / APPROVED_USERS.
  ******************************************************/
 
-var SA_SKIP_SHEETS = { "USERS": 1, "APPROVED_USERS": 1, "Formula Dump": 1 };
+var SA_STORE_SHEET = "_SA_STORE";
+var SA_SKIP_SHEETS = { "USERS": 1, "APPROVED_USERS": 1, "Formula Dump": 1, "_SA_STORE": 1 };
 var SA_FOLDER = "MasterCAL_Standalone";
 var SA_TEMPLATE_URL = "https://raw.githubusercontent.com/drcjayawardena/MasterCAL/main/Standalone/template/MasterCAL_Standalone_template.html";
 var SA_FILE_NAME = "MasterCAL_Pro_Standalone.html";
@@ -109,8 +110,9 @@ function standalonePublish_() {
   var it = DriveApp.getFoldersByName(SA_FOLDER), folder = it.hasNext() ? it.next() : DriveApp.createFolder(SA_FOLDER);
   var file = saPutFile_(folder, SA_FILE_NAME, html, MimeType.HTML);
   /* online mode (link): the page without rates + the model that only approved users can download */
-  saPutFile_(folder, SA_APP_FILE, tpl.split("__MC_MODEL__").join('{"remote":true}'), MimeType.HTML);
-  saPutFile_(folder, SA_MODEL_FILE, JSON.stringify(model), MimeType.PLAIN_TEXT);
+  /* kept inside the master Sheet (hidden sheet): the web app may run as a different Google account than the one who clicks Publish,
+     and could not see a Drive folder of that other account */
+  saStoreWrite_({ "online_app.html": tpl.split("__MC_MODEL__").join('{"remote":true}'), "online_model.json": JSON.stringify(model) });
   return { id: file.getId(), folderUrl: folder.getUrl(), formulas: nF, dropdownRules: nDv, sheets: model.order.length,
            kb: Math.round(html.length / 1024), seconds: Math.round((Date.now() - t0) / 100) / 10, when: new Date() };
 }
@@ -141,10 +143,25 @@ function saPutFile_(folder, name, content, mime) {
   if (it.hasNext()) { f = it.next(); f.setContent(content); } else f = folder.createFile(name, content, mime);
   return f;
 }
-function saFolder_() { var it = DriveApp.getFoldersByName(SA_FOLDER); return it.hasNext() ? it.next() : null; }
+function saStoreWrite_(files) {
+  var ss = master_(), sh = ss.getSheetByName(SA_STORE_SHEET) || ss.insertSheet(SA_STORE_SHEET);
+  var rows = [], CH = 45000;
+  Object.keys(files).forEach(function (name) {
+    var t = files[name], n = Math.max(1, Math.ceil(t.length / CH));
+    for (var i = 0; i < n; i++) rows.push([name, i, t.substr(i * CH, CH)]);
+  });
+  sh.clear();
+  var need = rows.length + 1; if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), need - sh.getMaxRows());
+  sh.getRange(1, 1, 1, 3).setValues([["file", "part", "text (do not edit)"]]);
+  sh.getRange(2, 1, rows.length, 3).setNumberFormat("@").setValues(rows);
+  sh.hideSheet();
+}
 function saRead_(name) {
-  var folder = saFolder_(); if (!folder) return null;
-  var it = folder.getFilesByName(name); return it.hasNext() ? it.next().getBlob().getDataAsString("UTF-8") : null;
+  var sh = master_().getSheetByName(SA_STORE_SHEET); if (!sh || sh.getLastRow() < 2) return null;
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().filter(function (r) { return r[0] === name; });
+  if (!v.length) return null;
+  v.sort(function (a, b) { return a[1] - b[1]; });
+  return v.map(function (r) { return r[2]; }).join("");
 }
 
 /* ---------- online mode: the page (public code only) and the model (approved users only) ---------- */
