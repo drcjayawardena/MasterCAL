@@ -97,6 +97,7 @@ function standalonePublish_() {
   var tpl = res.getContentText();
   if (res.getResponseCode() !== 200 || tpl.indexOf("__MC_MODEL__") < 0) throw new Error("Could not load the app template from GitHub (HTTP " + res.getResponseCode() + "). Try again in a minute.");
   var model = standaloneBuildModel_(standaloneCollect_(ss));
+  model.published = new Date().toISOString();
   var nF = 0, nDv = 0;
   model.order.forEach(function (n) { nF += Object.keys(model.sheets[n].f).length; nDv += model.sheets[n].dv.length; });
   ["CALCULATOR_TEMPLATE", "3W", "BIKE"].forEach(function (n) { if (!model.sheets[n]) throw new Error("Sheet '" + n + "' is missing: the app cannot be published."); });

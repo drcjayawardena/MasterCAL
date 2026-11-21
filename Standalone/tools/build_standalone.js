@@ -20,6 +20,9 @@ const REMOTE = (/https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/
 app = patch(app, /https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/, "local://mastercal", "api url");
 app = patch(app, 'if (which === "vcheck") setupVehicleCheck();', 'if (which === "vcheck") { setupVehicleCheck(); if (!getToken()) showLogin("Valuations need your MasterCAL web account (approved users only)."); }', "vcheck tab");
 app = patch(app, 'lsSet("mastercal_phone", data.phone || ""); loadApp(); return;', 'lsSet("mastercal_phone", data.phone || ""); hideGate(); return;', "login success");
+app = patch(app, "function vcClipTry() {", "function vcClipTry() { return; /* standalone: no automatic clipboard read (the browser would ask every time) */", "clip try");
+app = patch(app, "if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {});", "/* standalone: no clipboard read */", "clip base");
+app = patch(app, "and come back to this tab: the prices are calculated automatically (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:", "then come back here, click in the box below, press <b>Ctrl+V</b> and press <b>Calculate prices</b>:", "clip hint");
 app = patch(app, "if (!getToken()) { showLogin(); return; }", "/* standalone: no login */", "login gate");
 app = patch(app, "  setupWhatsAppQuotes();\n", "  /* standalone: no WhatsApp */\n", "whatsapp");
 app = patch(app, /^warmServer\(\);$/m, "/* standalone: no warm-up */", "warm-up");
@@ -39,7 +42,7 @@ const prelude = `
 (function(){
   var model = JSON.parse(document.getElementById("mc-model").textContent);
   var L = MasterLocal.create(model, { now: new Date() });
-  window.__mc = L;
+  window.__mc = L; window.__mcPublished = model.published || "";
   var REMOTE = ${JSON.stringify(REMOTE)};
   var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1 };
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
