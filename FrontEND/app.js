@@ -2327,9 +2327,9 @@ function setBikeValue(cell, value) {
 /* =========================================================
    VEHICLE CHECKING TAB
    Make + model + year -> the server (backend/VehicleCheck.gs) reads the
-   matching ads on ikman.lk and riyasewana.com and returns a price summary
-   and the ads. riyasewana.com may refuse the server; then only a link to
-   the same search is shown.
+   matching ads on ikman.lk, patpat.lk and riyasewana.com and returns a price
+   summary and the ads. riyasewana.com refuses the server; then (on a computer
+   only) a link to the same search and a paste box are shown.
 ========================================================= */
 
 var vc_ready = false;
@@ -2765,28 +2765,31 @@ function vcClipTry() {
 document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") vcClipTry(); });
 window.addEventListener("focus", vcClipTry);
 
-/* ESTIMATED MARKET VALUE = the "pooled median": every ad price from ikman.lk and riyasewana.com in ONE list,
-   the middle price of that list, rounded to the nearest Rs 10,000. Each ad counts once, so the site with more ads
-   weighs more and a few extreme prices do not move it. Until the riyasewana prices are calculated it uses ikman.lk
-   alone and says so. */
-var vcMedian = { ikman: [], riya: [] };      /* the ad prices of each site */
+/* ESTIMATED MARKET VALUE = the "pooled median": every ad price from ikman.lk, patpat.lk and riyasewana.com in ONE
+   list, the middle price of that list, rounded to the nearest Rs 10,000. Each ad counts once, so the site with more
+   ads weighs more and a few extreme prices do not move it. On a computer, until the riyasewana prices are calculated,
+   it says how to include them; on a phone riyasewana is not offered (copying a whole page is not practical there). */
+var vcMedian = { ikman: [], patpat: [], riya: [] };      /* the ad prices of each site */
 function vcValuation() {
-  const a = vcMedian.ikman, b = vcMedian.riya;
-  const all = a.concat(b).filter(function (v) { return v > 0; }).sort(function (x, y) { return x - y; });
+  const parts = [["ikman.lk", vcMedian.ikman], ["patpat.lk", vcMedian.patpat], ["riyasewana.com", vcMedian.riya]]
+    .filter(function (p) { return p[1].length; });
+  const all = [].concat.apply([], parts.map(function (p) { return p[1]; })).filter(function (v) { return v > 0; })
+    .sort(function (x, y) { return x - y; });
   const n = all.length;
   if (!n) return null;
   const med = n % 2 ? all[(n - 1) / 2] : (all[n / 2 - 1] + all[n / 2]) / 2;
-  return { value: Math.round(med / 10000) * 10000, both: !!(a.length && b.length), n: n, ni: a.length, nr: b.length };
+  return { value: Math.round(med / 10000) * 10000, n: n, parts: parts };
 }
 function vcShowValuation(out) {
   const old = out.querySelector("#vcValBox"); if (old) old.remove();
   const v = vcValuation();
   if (!v) return;
+  const from = v.parts.map(function (p) { return p[0] + " " + p[1].length; }).join(" + ");
+  const riyaTip = !vcMedian.riya.length && out.querySelector("#vcPasteBtn") ? " Calculate the riyasewana prices below to include riyasewana.com." : "";
   out.insertAdjacentHTML("afterbegin",
     '<div class="vcVal" id="vcValBox"><div><span>Estimated market value</span><b>' + vcRs(v.value) + '</b></div>' +
-    '<small>' + (v.both ? 'Median of all ' + v.n + ' ad prices (ikman.lk ' + v.ni + ' + riyasewana.com ' + v.nr + '), rounded to the nearest Rs 10,000.'
-                        : (v.ni ? 'Median of the ' + v.ni + ' ikman.lk ad prices only. Calculate the riyasewana prices below to include riyasewana.com.'
-                                : 'Median of the ' + v.nr + ' riyasewana.com ad prices only.')) + '</small></div>');
+    '<small>' + (v.parts.length > 1 ? 'Median of all ' + v.n + ' ad prices (' + from + '), rounded to the nearest Rs 10,000.'
+                                    : 'Median of the ' + v.n + ' ' + v.parts[0][0] + ' ad prices only.') + riyaTip + '</small></div>');
 }
 
 function vcRs(n) { return n ? "Rs " + Number(n).toLocaleString("en-US") : "-"; }
@@ -2806,19 +2809,23 @@ function runVehicleCheck() {
 
   btn.disabled = true;
   btn.textContent = "Checking…";
-  out.innerHTML = '<p class="vcHint">Checking ikman.lk and riyasewana.com…</p>';
-  vcMedian = { ikman: [], riya: [] };
+  /* phone: ikman.lk + patpat.lk only (riyasewana needs the whole page copied, which a phone can't do easily) */
+  const phone = isPhone();
+  out.innerHTML = '<p class="vcHint">Checking ikman.lk, patpat.lk' + (phone ? '' : ' and riyasewana.com') + '…</p>';
+  vcMedian = { ikman: [], patpat: [], riya: [] };
   /* remember what is on the clipboard now: only a NEWER copy (from riyasewana) is picked up automatically */
   vcClipBase = null;
-  try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {}); } catch (e) {}
+  if (!phone) try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {}); } catch (e) {}
 
   api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
-      out.innerHTML = vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(r.ikman, "ikman.lk");
+      out.innerHTML = (phone ? '' : vcSiteHtml(r.riyasewana, "riyasewana.com")) + vcSiteHtml(r.ikman, "ikman.lk") +
+                      (r.patpat ? vcSiteHtml(r.patpat, "patpat.lk") : '');
       const prices = function (x) { return (x && !x.blocked && x.ads || []).map(function (a) { return Number(a.priceValue) || 0; }).filter(Boolean); };
       vcMedian.ikman = prices(r.ikman);
-      vcMedian.riya = prices(r.riyasewana);      /* normally empty: our server cannot read riyasewana */
+      vcMedian.patpat = prices(r.patpat);
+      vcMedian.riya = phone ? [] : prices(r.riyasewana);      /* normally empty: our server cannot read riyasewana */
       vcBindPaste(out);
       vcShowValuation(out);
     })
