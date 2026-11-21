@@ -728,7 +728,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   #twGrid.tw-grid2 > .tw-card:nth-child(4), #bkGrid.tw-grid2 > .tw-card:nth-child(4){ order:4; }
 }
 
-#installBar{display:none!important}#mcVcCancel{position:fixed;top:14px;right:16px;z-index:100000;padding:8px 14px;border:0;border-radius:8px;background:#fff;color:#1c5e3a;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.tab[hidden]{display:none!important}#installBar{display:none!important}#mcVcCancel{position:fixed;top:14px;right:16px;z-index:100000;padding:8px 14px;border:0;border-radius:8px;background:#fff;color:#1c5e3a;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 </style>
 
 </head>
@@ -779,6 +779,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
     <button type="button" class="tab" data-tab="threewheel">3W</button>
     <button type="button" class="tab" data-tab="bike">BIKE</button>
     <button type="button" class="tab" data-tab="vcheck">Valuations</button>
+    <button type="button" class="tab" data-tab="admin" hidden>Admin</button>
   </div>
 
 
@@ -963,6 +964,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 
 
   <!-- ============ VEHICLE CHECKING (ikman.lk / riyasewana.com ad prices, filled by app.js) ============ -->
+  <div id="adminPanel" class="vcPanel" hidden></div>
   <div id="vcheckPanel" class="vcPanel" hidden>
     <form id="vcForm" class="vcForm" autocomplete="off">
       <label><span>Vehicle Type</span><select id="vcType" required></select></label>
@@ -2279,42 +2281,76 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 
 </script>
 <script>
-(function(){
-  var model = JSON.parse(document.getElementById("mc-model").textContent);
-  var L = MasterLocal.create(model, { now: new Date() });
-  window.__mc = L; window.__mcPublished = model.published || "";
+/* Runs before app.js: replaces the server with the local engine.
+ *  - file mode  : the model is inside the page (rates included), no MasterCAL login except for Valuations
+ *  - online mode: the page was opened from the link (model = {"remote":true}); after the MasterCAL login the
+ *                 model is downloaded (approved users only) and everything runs locally */
+(function () {
   var REMOTE = "https://script.google.com/macros/s/AKfycbx8m_v6iMUy8tTSGzxSfxi79ZyTfJgpy89WjVkqRMO3dvnm734znkdTvjpW92DhO-xN/exec";
-  var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1 };
+  var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1 };
+  var model = JSON.parse(document.getElementById("mc-model").textContent);
+  var online = window.__mcRemote = !!model.remote;
+  var L = null;
+  window.__mcPublished = model.published || "";
+  if (!online) L = window.__mc = MasterLocal.create(model, { now: new Date() });
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
+  var NETERR = "Cannot reach the MasterCAL server (Google). Check the internet connection; the company firewall may be blocking script.google.com.";
+
+  function reply(o) { return { ok: true, json: function () { return Promise.resolve(o); } }; }
+  function later(o) { return new Promise(function (res) { setTimeout(function () { res(reply(o)); }, 0); }); }
+  function ensureModel(token) {
+    if (L) return Promise.resolve(L);
+    return realFetch(REMOTE, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, redirect: "follow",
+                               body: JSON.stringify({ action: "standaloneModel", args: [], token: token }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || j.ok !== true) { var e = new Error((j && j.error) || "Could not load the app data."); e.access = j && j.access; throw e; }
+        L = window.__mc = MasterLocal.create(j.data, { now: new Date() });
+        window.__mcPublished = j.data.published || "";
+        showVer();
+        return L;
+      });
+  }
+  function showVer() {
+    if (!window.__mcPublished || document.getElementById("mcVer")) return;
+    var v = document.createElement("div"); v.id = "mcVer"; v.textContent = "Rates updated: " + String(window.__mcPublished).slice(0, 10);
+    document.body.appendChild(v);
+  }
+
   window.fetch = function (url, opt) {
     if (String(url).indexOf("local://") < 0 && realFetch) return realFetch(url, opt);
-    var out;
-    try {
-      var body = opt && opt.body ? JSON.parse(opt.body) : null;
-      if (!body) return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
-      if (REMOTE_ACTIONS[body.action] && realFetch) {
-        if (body.action !== "login" && body.action !== "register" && !body.token)
-          return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ ok: false, access: "LOGIN", error: "Access LOGIN" }); } });
-        return realFetch(REMOTE, opt).catch(function () {
-          var o = { ok: false, error: "Cannot reach the MasterCAL server (Google). Check the internet connection, or the company firewall may be blocking script.google.com. Open this file in Edge (not inside a preview window)." };
-          return { ok: true, json: function () { return Promise.resolve(o); } };
-        });
-      }
-      out = { ok: true, data: L.dispatch(body.action, body.args || []) };
-    } catch (e) { out = { ok: false, error: String(e && e.message ? e.message : e) }; }
-    return new Promise(function (res) { setTimeout(function () { res({ ok: true, json: function () { return Promise.resolve(out); } }); }, 0); });
+    var body = opt && opt.body ? JSON.parse(opt.body) : null;
+    if (!body) return Promise.resolve(reply({}));
+    if (REMOTE_ACTIONS[body.action] && realFetch) {
+      if (body.action !== "login" && body.action !== "register" && !body.token) return later({ ok: false, access: "LOGIN", error: "Access LOGIN" });
+      return realFetch(REMOTE, opt).catch(function () { return reply({ ok: false, error: NETERR }); });
+    }
+    function run() {
+      try { return later({ ok: true, data: L.dispatch(body.action, body.args || []) }); }
+      catch (e) { return later({ ok: false, error: String(e && e.message ? e.message : e) }); }
+    }
+    if (L) return run();
+    if (!body.token) return later({ ok: false, access: "LOGIN", error: "Access LOGIN" });
+    return ensureModel(body.token).then(run, function (e) {
+      return later({ ok: false, access: e.access, error: e.access ? "Access " + e.access : (e.message || NETERR) });
+    });
   };
-  /* "Cancel" on the web-account login (Valuations tab) so the user can go back to the calculator */
-  setInterval(function () {
-    var g = document.getElementById("gate"), b = document.getElementById("mcVcCancel");
-    var on = g && g.style.display !== "none" && g.style.display !== "";
-    if (on && !b) {
-      b = document.createElement("button"); b.id = "mcVcCancel"; b.type = "button"; b.textContent = "Cancel";
-      b.onclick = function () { g.style.display = "none"; var t = document.querySelector('.tab[data-tab=vehicle]'); if (t) t.click(); };
-      document.body.appendChild(b);
-    } else if (!on && b) b.remove();
-  }, 300);
-})();</script>
+
+  if (!online) {
+    /* file mode: "Cancel" on the MasterCAL login that Valuations asks for */
+    setInterval(function () {
+      var g = document.getElementById("gate"), b = document.getElementById("mcVcCancel");
+      var on = g && g.style.display !== "none" && g.style.display !== "";
+      if (on && !b) {
+        b = document.createElement("button"); b.id = "mcVcCancel"; b.type = "button"; b.textContent = "Cancel";
+        b.onclick = function () { g.style.display = "none"; var t = document.querySelector('.tab[data-tab=vehicle]'); if (t) t.click(); };
+        document.body.appendChild(b);
+      } else if (!on && b) b.remove();
+    }, 300);
+  }
+})();
+
+</script>
 <script>
 /* MasterCAL Pro standalone: username + password registration/login (offline).
  * Users live in this browser's localStorage (this PC only). Only @cf.lk addresses may register.
@@ -2322,6 +2358,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
  * NOTE: this is a convenience gate, not strong security: the file itself holds the rates. */
 (function () {
   "use strict";
+  if (window.__mcRemote) return;   /* online mode uses the MasterCAL login instead */
   var DOMAIN = "@cf.lk", KEY = "mc_sa_users", SESS = "mc_sa_session";
   var mem = {};
   function lg(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] || null; } }
@@ -2513,7 +2550,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "vcGradeYears" && action !== "sendQuote");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "vcGradeYears" && action !== "sendQuote" && action !== "adminWho" && action !== "adminUsers" && action !== "adminSetStatus");   /* show the calculating spinner for calc actions */
   const apiStartedAt = isCalc ? performance.now() : 0;
   if (VEHICLE_WRITE_ACTIONS[action]) {
     calcLastKey = "";                        /* server state changes -> next calcInputs must really run */
@@ -2661,7 +2698,7 @@ function init() {
   /* standalone: no WhatsApp */
 
   /* Gate: log in before doing anything. */
-  /* standalone: no login */
+  if (window.__mcRemote && !getToken()) { showLogin(); return; }   /* online mode: MasterCAL login */
 
   loadApp();
 }
@@ -2771,7 +2808,7 @@ function submitLogin() {
 
   api("login", [user, pass])
     .then(function (data) {
-      if (data && data.token) { setToken(data.token); lsSet("mastercal_name", data.name || ""); lsSet("mastercal_phone", data.phone || ""); hideGate(); return; }
+      if (data && data.token) { setToken(data.token); lsSet("mastercal_name", data.name || ""); lsSet("mastercal_phone", data.phone || ""); if (window.__mcRemote) { loadApp(); if (window.__mcAfterLogin) window.__mcAfterLogin(); } else hideGate(); return; }
       showGate((data && data.status) || "PENDING");
     })
     .catch(function (e) {
@@ -3972,7 +4009,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   vcheck: "vcheckPanel" };
+                   vcheck: "vcheckPanel", admin: "adminPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -5313,13 +5350,15 @@ function vcBindPaste(root) {
 
 function vcSiteHtml(r, name) {
   r = r || { ads: [] };
+  /* riyasewana: always the SAME named tab, so a new check re-uses (and reloads) the tab that is already open */
+  const tgt = /riyasewana/i.test(name) ? 'target="riyasewanaTab"' : 'target="_blank" rel="noopener"';
   const link = r.searchUrl
-    ? ' <a href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">View on ' + escapeHtml(name) + ' ↗</a>' : "";
+    ? ' <a href="' + escapeHtml(r.searchUrl) + '" ' + tgt + '>View on ' + escapeHtml(name) + ' ↗</a>' : "";
   let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
 
   if (r.blocked) {
     return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
-      (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" target="_blank" rel="noopener">Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
+      (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" ' + tgt + '>Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
       '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy) then come back here, click in the box below, press <b>Ctrl+V</b> and press <b>Calculate prices</b>:</p>' +
       '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
       '<button type="button" id="vcPasteBtn" class="vcOpenBtn vcPreCalc">Calculate prices</button>' +
@@ -5535,6 +5574,94 @@ function sendQuoteApi(q, btn) {
     .catch(function (e) { alert("Could not send the quotation.\n\n" + e.message); })
     .then(function () { btn.disabled = false; btn.textContent = old; });
 }
+
+</script>
+<script>
+/* Online mode only (page opened from the staff link): Logout pill + the Admin tab (approve / block users).
+ * The Admin tab is shown only when the server says this login is an administrator. Every action is checked on the server again. */
+(function () {
+  "use strict";
+  if (!window.__mcRemote) return;
+
+  var css = "#mcOut{position:fixed;right:10px;bottom:8px;z-index:9999;font-size:12px;color:#556;background:#fff;border:1px solid #d5dbe3;border-radius:16px;padding:4px 10px;cursor:pointer}" +
+    "#mcVer{position:fixed;left:10px;bottom:8px;z-index:9999;font-size:11px;color:#778}" +
+    "#adminPanel .adHead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}" +
+    "#adminPanel .adHead h2{margin:0 auto 0 0;font-size:16px;letter-spacing:.04em;text-transform:uppercase}" +
+    "#adminPanel select,#adminPanel input{padding:8px;border:1px solid #c9d1db;border-radius:8px;font-size:14px}" +
+    "#adminPanel table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:10px;overflow:hidden}" +
+    "#adminPanel th{background:#1c5e3a;color:#fff;text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase}" +
+    "#adminPanel td{padding:8px 10px;border-bottom:1px solid #eef1f5;vertical-align:middle}" +
+    "#adminPanel .st{font-weight:700;font-size:12px}#adminPanel .st.PENDING{color:#b26a00}#adminPanel .st.APPROVED{color:#1c5e3a}#adminPanel .st.BLOCKED{color:#c62828}" +
+    "#adminPanel button.ab{padding:6px 12px;border:0;border-radius:6px;font-weight:700;cursor:pointer;margin-right:6px;color:#fff}" +
+    "#adminPanel button.ab.ok{background:#1c5e3a}#adminPanel button.ab.no{background:#d8261c}#adminPanel button.ref{background:#fff;border:1px solid #c9d1db;border-radius:8px;padding:8px 12px;cursor:pointer}" +
+    "#adminPanel .adMsg{margin:8px 0;font-size:13px;color:#c62828}";
+  var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
+
+  var tab = document.querySelector('.tab[data-tab=admin]'), panel = document.getElementById("adminPanel");
+  var users = [], filter = "PENDING", q = "";
+
+  function el(tag, props, kids) {
+    var e = document.createElement(tag);
+    if (props) Object.keys(props).forEach(function (k) { if (k === "text") e.textContent = props[k]; else if (k === "on") e.addEventListener(props[k][0], props[k][1]); else e[k] = props[k]; });
+    (kids || []).forEach(function (c) { e.appendChild(c); });
+    return e;
+  }
+  function fmt(d) { return d ? String(d).slice(0, 10) : ""; }
+
+  function render(msg) {
+    panel.textContent = "";
+    var sel = el("select", { on: ["change", function () { filter = this.value; render(); }] },
+      ["PENDING", "APPROVED", "BLOCKED", "ALL"].map(function (v) { var o = el("option", { value: v, text: v === "ALL" ? "All users" : v.charAt(0) + v.slice(1).toLowerCase() }); if (v === filter) o.selected = true; return o; }));
+    var search = el("input", { type: "search", placeholder: "Search name / number", value: q, on: ["input", function () { q = this.value; renderRows(); }] });
+    var pending = users.filter(function (u) { return u.status === "PENDING"; }).length;
+    panel.appendChild(el("div", { className: "adHead" }, [
+      el("h2", { text: "Users" + (pending ? " · " + pending + " waiting" : "") }), sel, search,
+      el("button", { className: "ref", text: "Refresh", on: ["click", load] })]));
+    panel.appendChild(el("div", { className: "adMsg", id: "adMsg", text: msg || "" }));
+    var tbl = el("table", {}, [el("thead", {}, [el("tr", {}, ["Name", "WhatsApp", "Status", "Requested", ""].map(function (h) { return el("th", { text: h }); }))]), el("tbody", { id: "adRows" })]);
+    panel.appendChild(el("div", { style: "overflow-x:auto" }, [tbl]));
+    renderRows();
+  }
+  function renderRows() {
+    var body = document.getElementById("adRows"); if (!body) return; body.textContent = "";
+    var needle = q.trim().toLowerCase(), n = 0;
+    users.forEach(function (u) {
+      if (filter !== "ALL" && u.status !== filter) return;
+      if (needle && (u.name + " " + u.phone).toLowerCase().indexOf(needle) < 0) return;
+      n++;
+      var acts = el("td");
+      if (u.status !== "APPROVED") acts.appendChild(el("button", { className: "ab ok", text: u.status === "BLOCKED" ? "Unblock" : "Approve", on: ["click", function () { setStatus(u, "APPROVED", this); }] }));
+      if (u.status !== "BLOCKED" && !u.admin) acts.appendChild(el("button", { className: "ab no", text: "Block", on: ["click", function () { setStatus(u, "BLOCKED", this); }] }));
+      body.appendChild(el("tr", {}, [el("td", { text: u.name + (u.admin ? "  (admin)" : "") }), el("td", { text: u.phone }),
+        el("td", {}, [el("span", { className: "st " + u.status, text: u.status })]), el("td", { text: fmt(u.requested) }), acts]));
+    });
+    if (!n) body.appendChild(el("tr", {}, [el("td", { colSpan: 5, text: "No users to show.", style: "color:#778" })]));
+  }
+  function setStatus(u, status, btn) {
+    btn.disabled = true;
+    api("adminSetStatus", [u.key, status]).then(function () { u.status = status; render(u.name + " → " + status); })
+      .catch(function (e) { btn.disabled = false; var m = document.getElementById("adMsg"); if (m) m.textContent = e.message || "Failed."; });
+  }
+  function load() {
+    api("adminUsers").then(function (r) { users = r || []; render(); }).catch(function (e) { render(e.message || "Could not load users."); });
+  }
+
+  function probe() {
+    if (!getToken()) return;
+    api("adminWho").then(function (r) {
+      var admin = !!(r && r.admin);
+      if (tab) tab.hidden = !admin;
+      if (admin) load();
+    }).catch(function () { if (tab) tab.hidden = true; });
+  }
+  function pill() {
+    if (document.getElementById("mcOut")) return;
+    var b = el("div", { id: "mcOut", text: "Logout", on: ["click", function () { setToken(""); location.reload(); }] });
+    document.body.appendChild(b);
+  }
+  window.__mcAfterLogin = function () { pill(); probe(); };
+  if (getToken()) { pill(); setTimeout(probe, 600); }
+})();
 
 </script>
 </body>
