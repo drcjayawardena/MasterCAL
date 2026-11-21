@@ -3,27 +3,6 @@
  *  - online mode: the page was opened from the link (model = {"remote":true}); after the MasterCAL login the
  *                 model is downloaded (approved users only) and everything runs locally */
 (function () {
-  /* visible error banner (lists ALL errors): a broken page would otherwise just look "dead" */
-  var BUILD = "online-3", list = [];
-  function show(msg) {
-    try {
-      if (list.length < 6) list.push(msg);
-      var b = document.getElementById("mcErr");
-      if (!b) { b = document.createElement("div"); b.id = "mcErr";
-        b.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:100000;background:#fff3cd;color:#7a1c1c;font:12px/1.4 Arial;padding:6px 10px;border-bottom:1px solid #d9b;max-height:40vh;overflow:auto";
-        (document.body || document.documentElement).appendChild(b); }
-      b.textContent = "Page errors (" + BUILD + "):\n" + list.map(function (m, i) { return (i + 1) + ") " + m; }).join("\n");
-      b.style.whiteSpace = "pre-wrap";
-    } catch (e) {}
-  }
-  window.addEventListener("error", function (e) {
-    var src = String(e.filename || "").split("/").pop().slice(0, 40);
-    show((e.message || "error") + " [line " + (e.lineno || "?") + ":" + (e.colno || "?") + (src ? " " + src : "") + "]");
-  });
-  window.addEventListener("unhandledrejection", function (e) { show(String(e.reason && e.reason.message || e.reason)); });
-  window.addEventListener("load", function () { if (typeof getToken === "undefined") show("app code did not load (getToken missing)"); });
-})();
-(function () {
   var REMOTE = "__REMOTE_URL__";
   var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1 };
   var model = JSON.parse(document.getElementById("mc-model").textContent);
