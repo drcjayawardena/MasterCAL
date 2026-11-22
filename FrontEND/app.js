@@ -95,10 +95,13 @@ async function api(action, args) {
 
     /* Google sometimes answers with its plain "API is running" text instead of the result
        (a redirect hiccup): show a clear "try again" instead of a JSON parse error. */
-    const text = await res.text();
     let json;
-    try { json = JSON.parse(text); }
-    catch (e) { throw new Error("The MasterCAL server did not answer properly. Please try again."); }
+    if (typeof res.text !== "function") json = await res.json();   /* Standalone local engine answer */
+    else {
+      const text = await res.text();
+      try { json = JSON.parse(text); }
+      catch (e) { throw new Error("The MasterCAL server did not answer properly. Please try again."); }
+    }
 
     /* The master sheet changed: this user's copy is rebuilt first, then the page reloads. */
     if (json && json.stale) {

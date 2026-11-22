@@ -17,7 +17,8 @@
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
   var NETERR = "Cannot reach the MasterCAL server (Google). Check the internet connection; the company firewall may be blocking script.google.com.";
 
-  function reply(o) { return { ok: true, json: function () { return Promise.resolve(o); } }; }
+  /* the app reads answers with res.text() (and older code with res.json()) */
+  function reply(o) { return { ok: true, json: function () { return Promise.resolve(o); }, text: function () { return Promise.resolve(JSON.stringify(o)); } }; }
   function later(o) { return new Promise(function (res) { setTimeout(function () { res(reply(o)); }, 0); }); }
   function day(t) { return new Date(t).toISOString().slice(0, 10); }
 
