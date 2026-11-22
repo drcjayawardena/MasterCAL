@@ -26,6 +26,12 @@ const VC_IKMAN_CATS = {
   "Van / MPV": { cat: "vans" }, "Three Wheeler": { cat: "three-wheelers" }, "Motorcycle": { cat: "motorbikes-scooters" }
 };
 
+/* App vehicle type -> riyasewana.com category ("Buy Three Wheels" = /search/three-wheels/...). */
+const VC_RIYA_CATS = {
+  "Car": "cars", "SUV / Jeep": "suvs", "Cab / Pickup": "pickups",
+  "Van / MPV": "vans", "Three Wheeler": "three-wheels", "Motorcycle": "motorcycles"
+};
+
 function vcKey_(k) {
   k = String(k || "").trim().toLowerCase();
   return /^[a-z0-9-]{1,60}$/.test(k) ? k : "";
@@ -158,13 +164,13 @@ function checkVehicle_(make, model, year, grade, type, brandKey, modelKey) {
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc6_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc7_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath + "|" + type).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
     make: make, model: model, year: year, grade: grade,
     ikman: vcGrade_(vcSafe_(function () { return vcIkman_(make, model, year, ikPath, ikBody); }), grade),
-    riyasewana: vcGrade_(vcSafe_(function () { return vcRiyasewana_(make, model, year); }), grade)
+    riyasewana: vcGrade_(vcSafe_(function () { return vcRiyasewana_(make, model, year, type); }), grade)
   };
   if (cache) { try { cache.put(ck, JSON.stringify(out), VC_CACHE_SECONDS); } catch (e) {} }
   return out;
@@ -299,11 +305,13 @@ function vcAgeMinutes_(when) {
 
 /* ---------- riyasewana.com ---------- */
 
-function vcRiyasewana_(make, model, year) {
+function vcRiyasewana_(make, model, year, type) {
   /* Riyasewana supports a year range as the final route segment (for example,
      /search/cars/toyota/aqua/2015-2015). Search there directly when a year was
      selected; otherwise use the model route. */
-  const url = "https://riyasewana.com/search/cars/" + vcSlug_(make) + "/" + vcSlug_(model) +
+  /* the category follows the vehicle type; an unknown type searches every category (/search/<make>/<model>) */
+  const cat = VC_RIYA_CATS[String(type || "")];
+  const url = "https://riyasewana.com/search/" + (cat ? cat + "/" : "") + vcSlug_(make) + "/" + vcSlug_(model) +
               (year ? "/" + year + "-" + year : "");
   const res = vcFetchBrowser_(url);
   const code = res.getResponseCode();
