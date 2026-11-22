@@ -94,7 +94,7 @@
   var REF = (qs.get('ref') || '').trim().toLowerCase();
   var SRC = (qs.get('src') || qs.get('utm_source') || '').trim();
   var lang = 'en';
-  var MAX_PHOTOS = 5;
+  var MAX_PHOTOS = 8;
   // Coming from the showroom: ?type=buyer&about=V0001&make=..&model=..&vtype=..&year=..&price=..
   //                  or Wanted: ?type=seller&about=B0003&make=..&model=..&vtype=..
   var ABOUT = (qs.get('about') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
@@ -105,6 +105,12 @@
   var state = { type: '', photos: [] };
 
   var TYPES = ['Car', 'SUV / Jeep', 'Van', 'Cab / Pickup', 'Motorcycle', 'Three Wheeler', 'Lorry', 'Bus'];
+  var FUELS = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
+  var GEARS = ['Auto', 'Manual', 'Tiptronic'];
+  var CONDS = ['Brand New', 'Recondition', 'Registered (Used)'];
+  var DISTRICTS = ['Colombo', 'Gampaha', 'Kalutara', 'Kandy', 'Matale', 'Nuwara Eliya', 'Galle', 'Matara', 'Hambantota', 'Jaffna',
+    'Kilinochchi', 'Mannar', 'Vavuniya', 'Mullaitivu', 'Batticaloa', 'Ampara', 'Trincomalee', 'Kurunegala', 'Puttalam',
+    'Anuradhapura', 'Polonnaruwa', 'Badulla', 'Monaragala', 'Ratnapura', 'Kegalle'];
   var MAKES = ['Toyota', 'Suzuki', 'Honda', 'Nissan', 'Mitsubishi', 'Mazda', 'Daihatsu', 'Hyundai', 'Kia', 'Micro', 'Perodua', 'Tata', 'Mahindra',
                'Bajaj', 'TVS', 'Hero', 'Yamaha', 'BMW', 'Mercedes-Benz', 'Audi', 'Isuzu', 'Ford', 'Subaru', 'Renault', 'MG', 'BYD', 'Tesla'];
 
@@ -113,7 +119,7 @@
       title: 'Want to buy or sell a vehicle?',
       lead: 'Give us a few details — one of our agents will call you. Free for buyers.',
       buy: 'I want to buy a vehicle', buyS: 'We will find the vehicle you are looking for',
-      sell: 'I want to sell my vehicle', sellS: 'We will find a buyer for your vehicle',
+      sell: 'Post a free ad — sell my vehicle', sellS: 'Your ad goes on our website after a quick check, and our agents find you a buyer',
       aboutV: 'Enquiry about vehicle', aboutB: 'Your offer for the wanted request', showroom: 'Browse vehicles for sale',
       back: 'Back', buyTitle: 'The vehicle you want', sellTitle: 'Your vehicle',
       vtype: 'Vehicle type', any: 'Any', select: '— Select —', make: 'Make', model: 'Model',
@@ -121,7 +127,9 @@
       yFrom: 'Year (from)', yTo: 'Year (to)', year: 'Year of manufacture', budMin: 'Minimum budget (Lakhs)', budMax: 'Maximum budget (Lakhs)',
       price: 'Expected price (Lakhs)', lakhsHint: 'e.g. Rs. 6,250,000 = 62.5',
       leasing: 'I need leasing / finance',
-      photos: 'Photos', photosHint: 'Up to 5. After choosing, draw a box over the number plate on each photo to hide it.',
+      photos: 'Photos', photosHint: 'Up to 8 — ads with photos sell much faster. After choosing, draw a box over the number plate on each photo to hide it.',
+      mileage: 'Mileage (km)', fuel: 'Fuel', gear: 'Transmission', cond: 'Condition', color: 'Colour', district: 'District (location)',
+      details: 'Ad details', descPh: 'e.g. First owner, full service records, new tyres, no accidents',
       addPhotos: 'Add photos',
       you: 'Your details', name: 'Your name', phone: 'Phone / WhatsApp number', email: 'Email', optional: '(optional)',
       notes: 'Anything else', notesPh: 'e.g. colour does not matter, need it soon',
@@ -178,6 +186,10 @@
       return '<option value="' + esc(x) + '">' + esc(x) + '</option>';
     }).join('');
   }
+  function sel(id, label, list) {
+    return '<label class="f"><span>' + label + '</span><select id="' + id + '"><option value="">' + t('select') + '</option>' +
+      list.map(function (x) { return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') + '</select></label>';
+  }
   function fld(id, label, attrs, hint, req) {
     return '<label class="f"><span>' + label + (req ? ' <em>*</em>' : '') + (hint ? ' <i>' + hint + '</i>' : '') + '</span><input id="' + id + '" ' + (attrs || '') + '></label>';
   }
@@ -202,10 +214,15 @@
       h += '<div class="two">' + fld('q_year_from', t('yFrom'), yr + ' placeholder="2012"') + fld('q_year_to', t('yTo'), yr + ' placeholder="' + y + '"') + '</div>' +
         '<div class="two">' + fld('q_min_budget', t('budMin'), lk + ' placeholder="40"') + fld('q_max_budget', t('budMax'), lk + ' placeholder="60"', '', true) + '</div>' +
         '<div class="muted" style="margin:-6px 0 10px">' + t('lakhsHint') + '</div>' +
+        sel('q_district', t('district') + ' <i>' + t('optional') + '</i>', DISTRICTS) +
         '<label class="check"><input type="checkbox" id="q_leasing"><span>' + t('leasing') + '</span></label>';
     } else {
       h += '<div class="two">' + fld('q_year', t('year'), yr + ' placeholder="2016"') + fld('q_price', t('price'), lk + ' placeholder="62.5"', '', true) + '</div>' +
         '<div class="muted" style="margin:-6px 0 10px">' + t('lakhsHint') + '</div>' +
+        '<div class="two">' + fld('q_mileage', t('mileage'), 'type="number" inputmode="numeric" min="0" step="1" placeholder="85000"') +
+          sel('q_condition', t('cond'), CONDS) + '</div>' +
+        '<div class="two">' + sel('q_fuel', t('fuel'), FUELS) + sel('q_transmission', t('gear'), GEARS) + '</div>' +
+        '<div class="two">' + fld('q_color', t('color'), 'maxlength="40" placeholder="White"') + sel('q_district', t('district'), DISTRICTS) + '</div>' +
         '<div class="sec">' + t('photos') + ' <span class="muted">' + t('optional') + '</span></div>' +
         '<div class="muted">' + t('photosHint') + '</div>' +
         '<div class="photos" id="ph"></div>' +
@@ -216,7 +233,7 @@
       fld('q_name', t('name'), 'autocomplete="name" maxlength="80"', '', true) +
       fld('q_phone', t('phone'), 'type="tel" inputmode="tel" autocomplete="tel" placeholder="07XXXXXXXX"', '', true) +
       fld('q_email', t('email'), 'type="email" inputmode="email" autocomplete="email" placeholder="name@gmail.com"', t('optional')) +
-      '<label class="f"><span>' + t('notes') + ' <i>' + t('optional') + '</i></span><textarea id="q_notes" maxlength="500" placeholder="' + t('notesPh') + '"></textarea></label>' +
+      '<label class="f"><span>' + (buyer ? t('notes') : t('details')) + ' <i>' + t('optional') + '</i></span><textarea id="q_notes" maxlength="500" placeholder="' + (buyer ? t('notesPh') : t('descPh')) + '"></textarea></label>' +
       '<div class="hp" aria-hidden="true"><label>Website <input id="q_website" tabindex="-1" autocomplete="off"></label></div>' +
       '<label class="check"><input type="checkbox" id="q_consent"><span>' + t('consent') + '</span></label>' +
       '<div class="err" id="f_err"></div>' +
@@ -232,7 +249,8 @@
     }
   }
 
-  var FIELDS = ['vehicle_type', 'make', 'model', 'year_from', 'year_to', 'year', 'min_budget', 'max_budget', 'price', 'name', 'phone', 'email', 'notes'];
+  var FIELDS = ['vehicle_type', 'make', 'model', 'year_from', 'year_to', 'year', 'min_budget', 'max_budget', 'price', 'name', 'phone', 'email', 'notes',
+                'mileage', 'fuel', 'transmission', 'condition', 'color', 'district'];
   function readForm() {
     var o = {};
     FIELDS.forEach(function (k) { var el = $('q_' + k); if (el) o[k] = el.value.trim(); });

@@ -17,7 +17,7 @@
 
 const APP = {
   NAME: 'VehicleHub',
-  VERSION: '3.6',   // must match MATCH_CONFIG.VERSION in Matching.gs and APP_VERSION in Index.html
+  VERSION: '3.7',   // must match MATCH_CONFIG.VERSION in Matching.gs and APP_VERSION in Index.html
   TZ: 'Asia/Colombo',
   SESSION_SECONDS: 6 * 60 * 60, // 6 hours (CacheService maximum)
   // Privacy: in matches, customers of OTHER officers are hidden — only the officer's
@@ -38,7 +38,7 @@ const APP = {
   // A lead goes to the officer in the link (?ref=username); otherwise round-robin between officers.
   LEADS_ENABLED: true,
   LEAD_ROUND_ROBIN_ROLES: ['staff', 'admin'],   // who takes part in round-robin
-  LEAD_MAX_PHOTOS: 5,
+  LEAD_MAX_PHOTOS: 8,
   LEAD_CONFIRM_EMAIL: true,                    // email the customer a confirmation (if they give an email)
   // Public showroom (vehicles.html): approved vehicles ticked "Show on website" + a Wanted board of buyer needs
   // (no names / phone numbers). PUBLIC_PHONE = number shown for Call / WhatsApp ('' = first admin's number).
@@ -59,7 +59,7 @@ const PUBLIC_FIELDS = {
   B: ['buyer_id', 'vehicle_type', 'make', 'model', 'year_from', 'year_to', 'min_budget',
       'max_budget', 'fuel', 'transmission', 'district', 'status'],
   V: ['vehicle_id', 'vehicle_type', 'make', 'model', 'year', 'price', 'mileage', 'fuel',
-      'transmission', 'color', 'district', 'condition', 'status', 'photo_count']
+      'transmission', 'color', 'district', 'condition', 'status', 'photo_count', 'description']
 };
 
 // ---------- Sheet structure ----------
@@ -71,14 +71,16 @@ const SCHEMA = {
   VEHICLES: ['vehicle_id', 'owner_name', 'owner_phone', 'phone2', 'vehicle_type', 'make',
     'model', 'year', 'price', 'mileage', 'fuel', 'transmission', 'color', 'district',
     'condition', 'notes', 'status', 'created_at', 'updated_at', 'created_by',
-    'photos_url', 'photo_count', 'thumb_id', 'cover_id', 'approved_by', 'approved_at', 'show_public'],
+    'photos_url', 'photo_count', 'thumb_id', 'cover_id', 'approved_by', 'approved_at', 'show_public',
+    'description', 'featured'],   // description: public ad text; featured: 'Yes' = shown at the top of the showroom (admin)
   VEHICLE_MASTER: ['vehicle_type', 'make', 'model'],
   DROPDOWN_LISTS: ['list_name', 'value'],
   MATCHES: ['match_id', 'buyer_id', 'vehicle_id', 'score', 'status', 'notes',
     'follow_up', 'created_at', 'updated_at', 'updated_by'], // follow_up: no longer used (kept for compatibility with existing sheets)
   LEADS: ['lead_id', 'type', 'name', 'phone', 'email', 'vehicle_type', 'make', 'model', 'year_from', 'year_to',
     'year', 'min_budget', 'max_budget', 'price', 'leasing', 'notes', 'photos_url', 'photo_count', 'source', 'ref',
-    'lang', 'status', 'assigned_to', 'created_at', 'updated_at', 'handled_by', 'converted_id', 'reject_reason', 'about']
+    'lang', 'status', 'assigned_to', 'created_at', 'updated_at', 'handled_by', 'converted_id', 'reject_reason', 'about',
+    'mileage', 'fuel', 'transmission', 'district', 'condition', 'color']
 };
 
 // Columns stored as plain text so leading zeros are not lost
@@ -708,8 +710,10 @@ function saveVehicle_(p, user) {
     condition: str_(p.condition),
     notes: str_(p.notes),
     status: str_(p.status) || 'Available',
-    show_public: p.show_public === 'Yes' ? 'Yes' : 'No'
+    show_public: p.show_public === 'Yes' ? 'Yes' : 'No',
+    description: str_(p.description).slice(0, 1500)
   };
+  if (isAdmin_(user)) d.featured = p.featured === 'Yes' ? 'Yes' : 'No';   // officers cannot feature their own ads
   if (!d.owner_name) throw new Error("Please enter the owner's name");
   if (d.owner_phone.length < 9) throw new Error('Please enter a valid phone number');
   if (!d.vehicle_type || !d.make || !d.model) throw new Error('Please enter Type, Make and Model');
@@ -733,6 +737,7 @@ function saveVehicle_(p, user) {
   const id = saveRecord_('VEHICLES', 'vehicle_id', 'V', d, user);
   if (p.lead_id) convertLead_(p.lead_id, id, user);   // also moves the customer's photos to the vehicle
   matchForVehicle_(id);
+  clearPublicCache_();
   const saved = findById_('VEHICLES', 'vehicle_id', id);
   return {
     id: id,
@@ -1107,6 +1112,7 @@ function approveVehicle_(p, user) {
     r.updated_at = new Date();
   });
   if (!v) throw new Error('Vehicle not found');
+  clearPublicCache_();
   let matches = 0;
   if (p.approve) {
     matchForVehicle_(v.vehicle_id);
@@ -1321,6 +1327,7 @@ function deleteRecord_(p, user) {
     // 3. The record itself
     sheet_(sheetName).deleteRow(rec._row);
     SpreadsheetApp.flush();
+    clearPublicCache_();
     return { ok: true, id: id, matchesDeleted: mrows.length };
   } finally {
     lock.releaseLock();
@@ -1527,7 +1534,9 @@ function submitLead(p) {
     min_budget: numOrBlank_(p.min_budget), max_budget: numOrBlank_(p.max_budget), price: numOrBlank_(p.price),
     leasing: p.leasing ? 'Yes' : 'No', notes: str_(p.notes).slice(0, 500),
     source: str_(p.source).slice(0, 40), ref: str_(p.ref).toLowerCase().slice(0, 40), lang: p.lang === 'en' ? 'en' : 'si',
-    about: ''
+    about: '',
+    mileage: numOrBlank_(p.mileage), fuel: str_(p.fuel).slice(0, 40), transmission: str_(p.transmission).slice(0, 40),
+    district: str_(p.district).slice(0, 40), condition: str_(p.condition).slice(0, 40), color: str_(p.color).slice(0, 40)
   };
   // Enquiry from the showroom (V…) or an offer for a Wanted request (B…) → goes to that record's officer
   const about = str_(p.about).toUpperCase();
@@ -1628,6 +1637,7 @@ function leadText_(l) {
       (l.leasing === 'Yes' ? ' · Needs leasing' : '');
   }
   return 'Wants to SELL: ' + [l.vehicle_type, l.make, l.model, l.year].filter(String).join(' ') + ' · ' + lakhs_(l.price) +
+    [l.mileage ? l.mileage + ' km' : '', l.fuel, l.transmission, l.condition, l.district].filter(String).map(function (x) { return ' · ' + x; }).join('') +
     (Number(l.photo_count) ? ' · ' + l.photo_count + ' photo(s)' : '');
 }
 
@@ -1846,17 +1856,47 @@ function publicContact_() {
   return { phone: phone, facebook: APP.FACEBOOK_URL };
 }
 
-/** PUBLIC: everything the showroom needs in one call (cached for 2 minutes). */
+/**
+ * The showroom data is cached in pieces (one cache value is limited to 100 KB).
+ * clearPublicCache_() is called whenever a vehicle is saved, approved or deleted,
+ * so a new ad shows on the website straight away.
+ */
+const PUBLIC_CACHE_KEY = 'PUBLIC_LISTINGS_V2';
+function clearPublicCache_() {
+  try { CacheService.getScriptCache().remove(PUBLIC_CACHE_KEY); } catch (e) {}
+}
+function cachePutBig_(key, text, seconds) {
+  const cache = CacheService.getScriptCache(), size = 90000, parts = {};
+  const n = Math.ceil(text.length / size);
+  if (n > 50) return;
+  const stamp = String(Date.now());
+  for (let i = 0; i < n; i++) parts[key + '_' + stamp + '_' + i] = text.slice(i * size, (i + 1) * size);
+  cache.putAll(parts, seconds);
+  cache.put(key, stamp + ':' + n, seconds);
+}
+function cacheGetBig_(key) {
+  const cache = CacheService.getScriptCache(), meta = cache.get(key);
+  if (!meta) return null;
+  const stamp = meta.split(':')[0], n = Number(meta.split(':')[1]), keys = [];
+  for (let i = 0; i < n; i++) keys.push(key + '_' + stamp + '_' + i);
+  const got = cache.getAll(keys);
+  if (keys.some(function (k) { return got[k] == null; })) return null;
+  return keys.map(function (k) { return got[k]; }).join('');
+}
+
+/** PUBLIC: everything the showroom needs in one call (cached for 5 minutes). */
 function publicListings() {
-  const cache = CacheService.getScriptCache();
-  const hit = cache.get('PUBLIC_LISTINGS');
+  const hit = cacheGetBig_(PUBLIC_CACHE_KEY);
   if (hit) { try { return JSON.parse(hit); } catch (e) {} }
 
+  const num = function (x) { return x === '' || x == null || isNaN(Number(x)) ? '' : Number(x); };
   const vehicles = readAll_('VEHICLES').filter(isPublicVehicle_).map(function (v) {
     return {
       id: String(v.vehicle_id), type: String(v.vehicle_type || ''), make: String(v.make || ''), model: String(v.model || ''),
-      year: v.year === '' ? '' : Number(v.year), price: v.price === '' ? '' : Number(v.price),
+      year: num(v.year), price: num(v.price), mileage: num(v.mileage),
+      fuel: String(v.fuel || ''), gear: String(v.transmission || ''), district: String(v.district || ''),
       condition: String(v.condition || ''), color: String(v.color || ''),
+      desc: String(v.description || ''), featured: String(v.featured) === 'Yes',
       photos: Number(v.photo_count) || 0, date: dayOf_(v.approved_at || v.created_at)
     };
   }).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
@@ -1866,12 +1906,16 @@ function publicListings() {
       id: String(b.buyer_id), type: String(b.vehicle_type || ''), make: String(b.make || ''), model: String(b.model || ''),
       year_from: b.year_from === '' ? '' : Number(b.year_from), year_to: b.year_to === '' ? '' : Number(b.year_to),
       min_budget: b.min_budget === '' ? '' : Number(b.min_budget), max_budget: b.max_budget === '' ? '' : Number(b.max_budget),
-      date: dayOf_(b.created_at)
+      district: String(b.district || ''), date: dayOf_(b.created_at)
     };
   }).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
 
-  const out = { vehicles: vehicles, wanted: wanted, contact: publicContact_(), types: DEFAULT_LISTS.VEHICLE_TYPE };
-  try { const s = JSON.stringify(out); if (s.length < 90000) cache.put('PUBLIC_LISTINGS', s, 120); } catch (e) {}
+  const lists = getLists_();
+  const out = { vehicles: vehicles, wanted: wanted, contact: publicContact_(),
+    types: lists.VEHICLE_TYPE || DEFAULT_LISTS.VEHICLE_TYPE, fuels: lists.FUEL || DEFAULT_LISTS.FUEL,
+    gears: lists.TRANSMISSION || DEFAULT_LISTS.TRANSMISSION, conditions: lists.CONDITION || DEFAULT_LISTS.CONDITION,
+    districts: lists.DISTRICT || DEFAULT_LISTS.DISTRICT };
+  try { cachePutBig_(PUBLIC_CACHE_KEY, JSON.stringify(out), 300); } catch (e) {}
   return out;
 }
 
@@ -1879,14 +1923,21 @@ function publicListings() {
 function publicThumbs(ids) {
   ids = (Array.isArray(ids) ? ids : []).slice(0, 24).map(String);
   const vMap = mapBy_(readAll_('VEHICLES'), 'vehicle_id');
+  const cache = CacheService.getScriptCache();
+  const keys = ids.map(function (id) { const v = vMap[id]; return v && v.thumb_id ? 'TH_' + v.thumb_id : ''; }).filter(String);
+  const cached = keys.length ? cache.getAll(keys) : {};
   const out = {};
   ids.forEach(function (id) {
     const v = vMap[id];
     if (!v || !isPublicVehicle_(v) || !Number(v.photo_count)) return;
+    if (v.thumb_id && cached['TH_' + v.thumb_id]) { out[id] = cached['TH_' + v.thumb_id]; return; }
     let blob = null;
     if (fileAlive_(v.thumb_id)) { try { blob = DriveApp.getFileById(String(v.thumb_id)).getBlob(); } catch (e) {} }
     if (!blob) blob = makeThumbFromDrive_(v);
-    if (blob) out[id] = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+    if (blob) {
+      out[id] = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+      if (v.thumb_id && out[id].length < 95000) { try { cache.put('TH_' + v.thumb_id, out[id], 21600); } catch (e) {} }
+    }
   });
   return out;
 }

@@ -9,7 +9,7 @@
  */
 
 const MATCH_CONFIG = {
-  VERSION: '3.6',        // must match APP.VERSION in Code.gs
+  VERSION: '3.7',        // must match APP.VERSION in Code.gs
   MIN_SCORE: 50,           // New matches below this score are not saved
   BUDGET_TOLERANCE: 0.10,  // Allow prices up to 10% over budget (room to negotiate)
   YEAR_TOLERANCE: 1,       // Half points if within 1 year outside the range
@@ -234,6 +234,7 @@ function updateMatch_(p, user) {
       closed = true;
     }
     SpreadsheetApp.flush();
+    if (closed && typeof clearPublicCache_ === 'function') clearPublicCache_();
     return { ok: true, closed: closed };
   } finally {
     lock.releaseLock();

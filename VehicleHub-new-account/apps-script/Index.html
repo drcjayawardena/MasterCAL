@@ -845,7 +845,7 @@ async function boot() {
   applyInit(r);
 }
 
-const APP_VERSION = '3.6';   // must match APP.VERSION in Code.gs
+const APP_VERSION = '3.7';   // must match APP.VERSION in Code.gs
 
 function applyInit(r) {
   S.user = r.user; S.lists = r.lists; S.master = r.master; S.formUrl = r.formUrl || '';
@@ -1268,11 +1268,13 @@ function convertLead(id) {
   if (l.type === 'buyer') {
     go('buyerForm', { phone: l.phone, lead: l.lead_id, prefill: {
       name: l.name, phone: l.phone, vehicle_type: l.vehicle_type, make: l.make, model: l.model,
-      year_from: l.year_from, year_to: l.year_to, min_budget: l.min_budget, max_budget: l.max_budget, notes } });
+      year_from: l.year_from, year_to: l.year_to, min_budget: l.min_budget, max_budget: l.max_budget, district: l.district, notes } });
   } else {
     go('vehicleForm', { phone: l.phone, lead: l.lead_id, prefill: {
       owner_name: l.name, owner_phone: l.phone, vehicle_type: l.vehicle_type, make: l.make, model: l.model,
-      year: l.year, price: l.price, notes, photo_count: l.photo_count } });
+      year: l.year, price: l.price, notes, photo_count: l.photo_count, show_public: 'Yes',
+      mileage: l.mileage, fuel: l.fuel, transmission: l.transmission, district: l.district, condition: l.condition, color: l.color,
+      description: l.notes || '' } });
   }
 }
 async function showLeadPhotos(id) {
@@ -1293,7 +1295,7 @@ async function showLeadPhotos(id) {
  *  VEHICLE FORM
  * ============================================================ */
 const VEHICLE_FIELDS = ['owner_name', 'owner_phone', 'phone2', 'vehicle_type', 'make', 'model', 'year', 'price',
-  'mileage', 'fuel', 'transmission', 'color', 'district', 'condition', 'notes', 'status'];
+  'mileage', 'fuel', 'transmission', 'color', 'district', 'condition', 'notes', 'status', 'description'];
 
 function viewVehicleForm() {
   const id = S.params.id;
@@ -1312,7 +1314,13 @@ function viewVehicleForm() {
         ${vehiclePickers('v', v)}
         ${fld('v', 'year', 'Year (YOM)', v.year, `type="number" min="1970" max="${yr + 1}" placeholder="2015"`)}
         ${sel('v', 'condition', 'Condition', S.lists.CONDITION, v.condition, '— Select —')}
+        ${fld('v', 'mileage', 'Mileage (km)', v.mileage, 'type="number" min="0" step="1" inputmode="numeric" placeholder="85000"')}
+        ${sel('v', 'fuel', 'Fuel', S.lists.FUEL, v.fuel, '— Select —')}
+        ${sel('v', 'transmission', 'Transmission', S.lists.TRANSMISSION, v.transmission, '— Select —')}
         ${fld('v', 'color', 'Color', v.color, 'placeholder="White"')}
+        ${sel('v', 'district', 'District (location)', S.lists.DISTRICT, v.district, '— Select —')}
+        <label class="f full"><span>Ad description <span class="muted">(shown on the website — no names or phone numbers)</span></span>
+          <textarea id="v_description" maxlength="1500" placeholder="e.g. First owner, full service records, new tyres, Japan auction grade 4.5">${esc(v.description || '')}</textarea></label>
 
         <div class="sec">${ic('tag')} Price</div>
         ${fld('v', 'price', 'Expected price (Lakhs)', v.price, 'type="number" step="0.1" min="0" placeholder="62.5" required', 'req')}
@@ -1324,6 +1332,8 @@ function viewVehicleForm() {
 
         <label class="check full"><input type="checkbox" id="v_show_public" ${v.show_public === 'Yes' || (!id && v.show_public !== 'No') ? 'checked' : ''}>
           Show on the public <b>website showroom</b> — the seller agrees <span class="muted">(price and photos are shown; no name or phone number)</span></label>
+        ${S.user.role === 'admin' ? `<label class="check full"><input type="checkbox" id="v_featured" ${v.featured === 'Yes' ? 'checked' : ''}>
+          ⭐ <b>Featured ad</b> <span class="muted">(shown at the top of the website)</span></label>` : ''}
         <div class="sec">${ic('camera')} Photos</div>
         <div class="full photo-pick">
           <div id="v_photo_link">${photoLink(v) || '<span class="muted">No photos yet</span>'}</div>
@@ -1348,7 +1358,8 @@ async function saveVehicle(e) {
   const old = d.vehicle_id ? (S.rec[d.vehicle_id] || {}) : (S.params.prefill || {});
   d.lead_id = d.vehicle_id ? '' : (S.params.lead || '');
   d.show_public = $('v_show_public') && $('v_show_public').checked ? 'Yes' : 'No';
-  ['phone2', 'district', 'mileage', 'fuel', 'transmission', 'notes'].forEach(f => { d[f] = old[f] == null ? '' : String(old[f]); });
+  if ($('v_featured')) d.featured = $('v_featured').checked ? 'Yes' : 'No';
+  ['phone2', 'notes'].forEach(f => { d[f] = old[f] == null ? '' : String(old[f]); });
   const btn = $('v_save'); btn.disabled = true;
   const r = await call('saveVehicle', d);
   btn.disabled = false;
