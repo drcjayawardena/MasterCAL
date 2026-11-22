@@ -179,3 +179,106 @@ function menuResetLogin_() {
   }
   ui.alert("Not found", keyToPhone_(key) + " was not found in the user list.", ui.ButtonSet.OK);
 }
+
+/* =========================================================
+   FORGOT PASSWORD
+   PUBLIC ACTION — resetRequest   args = [ whatsapp, newPassword ]
+   The new password is kept in the "Reset Password" column (salt$hash) and the
+   owner is e-mailed. The old password keeps working until an admin approves the
+   reset in the Admin tab, so knowing someone's number is not enough to take over
+   (or lock out) their account. The answer is the same whether or not the number
+   is registered.
+========================================================= */
+const RESET_HEADER = "Reset Password";
+const RESET_AT_HEADER = "Reset Requested";
+const RESET_MAX_PER_HOUR = 3;
+
+/* Column number of a USERS header (case-insensitive), 0 when missing; create = add it at the end. */
+function usersCol_(s, header, create) {
+  const h = s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getValues()[0];
+  for (var i = 0; i < h.length; i++) if (String(h[i]).trim().toLowerCase() === header.toLowerCase()) return i + 1;
+  if (!create) return 0;
+  const col = Math.max(s.getLastColumn(), PASS_COL) + 1;
+  s.getRange(1, col).setValue(header).setFontWeight("bold");
+  return col;
+}
+
+function resetRequest_(args) {
+  args = args || [];
+  const key = phoneKey_(args[0]);
+  const pass = String(args[1] || "");
+  if (!key) return { ok: false, error: "Enter a valid WhatsApp number." };
+  if (pass.length < 6 || pass.length > 100) return { ok: false, error: "Password must be at least 6 characters." };
+
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  const ck = "rreq_" + key, n = cache ? Number(cache.get(ck) || 0) : 0;
+  if (n >= RESET_MAX_PER_HOUR) return { ok: false, error: "Too many requests. Please try again in an hour." };
+  if (cache) { try { cache.put(ck, String(n + 1), 3600); } catch (e) {} }
+
+  const done = { ok: true, data: { status: "RESET_PENDING", phone: key.slice(3) } };
+  const s = getUsersSheet_();
+  var name = "", mail = "", found = false;
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const data = usersRows_(s);
+    for (var i = 1; i < data.length; i++) {
+      if (normEmail_(data[i][0]) !== key) continue;
+      if (String(data[i][2] || "").trim().toUpperCase() === "BLOCKED") return done;
+      if (!String(data[i][PASS_COL - 1] || "")) return done;   /* no login yet: they use Register */
+      const colP = usersCol_(s, RESET_HEADER, true), colT = usersCol_(s, RESET_AT_HEADER, true);
+      s.getRange(i + 1, colP).setValue(hashPassword_(pass));
+      s.getRange(i + 1, colT).setValue(new Date());
+      name = String(data[i][1] || ""); mail = String(data[i][7] || ""); found = true;
+      break;
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  if (found) notifyResetOwner_(key, name, mail);
+  return done;
+}
+
+function notifyResetOwner_(key, name, mail) {
+  try {
+    const to = adminEmail_(); if (!to) return;
+    const phone = keyToPhone_(key);
+    MailApp.sendEmail({
+      to: to,
+      subject: "MasterCAL Pro — password reset request: " + phone,
+      body: "Password reset requested for " + phone + " (" + (name || "") + ")" + (mail ? ", " + mail : "") + ".\n\n" +
+            "The number is not verified — phone the user first to make sure the request is theirs.\n" +
+            "Approve it in the Standalone app: Admin tab → filter \"Reset requests\" → Approve reset.\n" +
+            "Until then the old password keeps working."
+    });
+  } catch (e) {
+    try { Logger.log("notifyResetOwner_ FAILED for " + key + ": " + (e && e.message ? e.message : e)); } catch (e2) {}
+  }
+}
+
+/* Admin tab: approve (the requested password becomes the password, old sessions end) or reject a reset. */
+function adminResetDecide_(key, approve) {
+  key = normEmail_(key);
+  const s = getUsersSheet_();
+  const colP = usersCol_(s, RESET_HEADER, false), colT = usersCol_(s, RESET_AT_HEADER, false);
+  if (!colP) throw new Error("No reset request for this user.");
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const n = Math.max(s.getLastRow(), 1), keys = s.getRange(1, 1, n, 1).getValues(), pend = s.getRange(1, colP, n, 1).getValues();
+    for (var i = 1; i < n; i++) {
+      if (normEmail_(keys[i][0]) !== key) continue;
+      const hash = String(pend[i][0] || "");
+      if (!hash) throw new Error("No reset request for this user.");
+      if (approve) s.getRange(i + 1, PASS_COL).setValue(hash);
+      s.getRange(i + 1, colP).setValue("");
+      if (colT) s.getRange(i + 1, colT).setValue("");
+      accessCacheClear_(key);
+      return { key: key, reset: approve ? "APPROVED" : "REJECTED" };
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  throw new Error("User not found.");
+}

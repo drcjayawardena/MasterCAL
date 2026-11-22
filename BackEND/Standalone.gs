@@ -214,12 +214,14 @@ function standaloneAdminUsers_() {
   var s = getUsersSheet_(), n = Math.max(s.getLastRow(), 1);
   if (n < 2) return [];
   var col = saRoleCol_(s), d = s.getRange(1, 1, n, 5).getValues(), roles = col ? s.getRange(1, col, n, 1).getValues() : null, out = [];
+  var colR = usersCol_(s, RESET_AT_HEADER, false), resets = colR ? s.getRange(1, colR, n, 1).getValues() : null;
   for (var i = 1; i < n; i++) {
     var key = normEmail_(d[i][0]); if (!key) continue;
     out.push({ key: key, phone: keyToPhone_(key), name: String(d[i][1] || ""), status: String(d[i][2] || "PENDING").trim().toUpperCase(),
                requested: d[i][3] instanceof Date ? d[i][3].toISOString() : String(d[i][3] || ""),
                approved: d[i][4] instanceof Date ? d[i][4].toISOString() : String(d[i][4] || ""),
-               admin: roles ? String(roles[i][0]).trim().toUpperCase() === "ADMIN" : false });
+               admin: roles ? String(roles[i][0]).trim().toUpperCase() === "ADMIN" : false,
+               resetAt: resets && resets[i][0] ? (resets[i][0] instanceof Date ? resets[i][0].toISOString() : String(resets[i][0])) : "" });
   }
   var rank = { PENDING: 0, APPROVED: 1, BLOCKED: 2 };
   out.sort(function (a, b) { return (rank[a.status] == null ? 3 : rank[a.status]) - (rank[b.status] == null ? 3 : rank[b.status]); });
@@ -238,6 +240,22 @@ function standaloneSetStatus_(adminKey, key, status) {
       accessCacheClear_(key);
       return { key: key, status: status };
     }
+  }
+  throw new Error("User not found.");
+}
+
+/* Admin tab: give / take away the Admin role ("Role" column). An admin cannot remove their own role. */
+function standaloneSetRole_(adminKey, key, admin) {
+  key = normEmail_(key);
+  if (!admin && key === normEmail_(adminKey)) throw new Error("You cannot remove your own Admin role.");
+  var s = getUsersSheet_(), col = saRoleCol_(s);
+  if (!col) { if (!admin) return { key: key, admin: false }; col = Math.max(s.getLastColumn(), 10) + 1; s.getRange(1, col).setValue("Role").setFontWeight("bold"); }
+  var n = Math.max(s.getLastRow(), 1), d = s.getRange(1, 1, n, 3).getValues();
+  for (var i = 1; i < n; i++) {
+    if (normEmail_(d[i][0]) !== key) continue;
+    if (admin && String(d[i][2] || "").trim().toUpperCase() !== "APPROVED") throw new Error("Approve this user first.");
+    s.getRange(i + 1, col).setValue(admin ? "ADMIN" : "");
+    return { key: key, admin: !!admin };
   }
   throw new Error("User not found.");
 }

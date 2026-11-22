@@ -10,14 +10,16 @@
     "#adminPanel .adHead h2{margin:0 auto 0 0;font-size:16px;letter-spacing:.04em;text-transform:uppercase}" +
     /* the website styles give every input/select width:100% and a small fixed height: undo that here */
     "#adminPanel select,#adminPanel input{width:auto;height:38px;line-height:normal;padding:0 10px;border:1px solid #c9d1db;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box}" +
-    "#adminPanel .adHead select{flex:0 0 150px}#adminPanel .adHead input{flex:1 1 200px;min-width:0;max-width:340px}" +
+    "#adminPanel .adHead select{flex:0 0 200px}#adminPanel .adHead input{flex:1 1 200px;min-width:0;max-width:340px}" +
     "#adminPanel button.ref{height:38px}#adminPanel .adHead h2{flex:1 1 auto}" +
     "#adminPanel a.sheet{display:inline-flex;align-items:center;height:38px;padding:0 14px;border:1px solid #1c5e3a;border-radius:6px;color:#1c5e3a;font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}" +
     "#adminPanel a.sheet:hover{background:#f3f8f5}#adminPanel .adPubBtns{display:flex;flex-wrap:wrap;gap:8px}" +
     "#adminPanel table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:10px;overflow:hidden}" +
     "#adminPanel th{background:#1c5e3a;color:#fff;text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase}" +
     "#adminPanel td{padding:8px 10px;border-bottom:1px solid #eef1f5;vertical-align:middle;white-space:nowrap}" +
-    "#adminPanel table{min-width:620px}" +   /* phones: the table scrolls sideways instead of squeezing the columns */
+    "#adminPanel table{min-width:760px}" +   /* phones: the table scrolls sideways instead of squeezing the columns */
+    "#adminPanel .st.RESET{color:#6a3fb5}#adminPanel .rl{font-size:12px;color:#556}#adminPanel .rl.adm{color:#8a6100;font-weight:700}" +
+    "#adminPanel button.ab.role{background:#fff;color:#8a6100;border:1px solid #d9b24c}" +
     "#adminPanel .st{font-weight:700;font-size:12px}#adminPanel .st.PENDING{color:#b26a00}#adminPanel .st.APPROVED{color:#1c5e3a}#adminPanel .st.BLOCKED{color:#c62828}" +
     "#adminPanel button.ab{padding:6px 12px;border:0;border-radius:6px;font-weight:700;cursor:pointer;margin-right:6px;color:#fff}" +
     "#adminPanel button.ab.ok{background:#1c5e3a}#adminPanel button.ab.no{background:#d8261c}#adminPanel button.ref{background:#fff;border:1px solid #c9d1db;border-radius:8px;padding:8px 12px;cursor:pointer}" +
@@ -33,7 +35,19 @@
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var tab = document.querySelector('.tab[data-tab=admin]'), panel = document.getElementById("adminPanel");
-  var users = [], filter = "PENDING", q = "", pub = { busy: false, ok: false, text: "" }, sheetUrl = "";
+  var users = [], filter = "WAITING", q = "", pub = { busy: false, ok: false, text: "" }, sheetUrl = "";
+
+  var FILTERS = { WAITING: "Waiting (new + resets)", PENDING: "New (pending)", RESET: "Reset requests", APPROVED: "Approved",
+                  ADMIN: "Admins", BLOCKED: "Blocked", ALL: "All users" };
+  var FILTER_OK = {
+    WAITING: function (u) { return u.status === "PENDING" || !!u.resetAt; },
+    PENDING: function (u) { return u.status === "PENDING"; },
+    RESET: function (u) { return !!u.resetAt; },
+    APPROVED: function (u) { return u.status === "APPROVED"; },
+    ADMIN: function (u) { return !!u.admin; },
+    BLOCKED: function (u) { return u.status === "BLOCKED"; },
+    ALL: function () { return true; }
+  };
 
   function el(tag, props, kids) {
     var e = document.createElement(tag);
@@ -59,9 +73,10 @@
     }
     panel.appendChild(el("div", { className: "adPub" }, pubKids.concat([pubMsg])));
     var sel = el("select", { on: ["change", function () { filter = this.value; render(); }] },
-      ["PENDING", "APPROVED", "BLOCKED", "ALL"].map(function (v) { var o = el("option", { value: v, text: v === "ALL" ? "All users" : v.charAt(0) + v.slice(1).toLowerCase() }); if (v === filter) o.selected = true; return o; }));
+      ["WAITING", "PENDING", "RESET", "APPROVED", "ADMIN", "BLOCKED", "ALL"].map(function (v) { var o = el("option", { value: v, text: FILTERS[v] }); if (v === filter) o.selected = true; return o; }));
     var search = el("input", { type: "search", placeholder: "Search name / number", value: q, on: ["input", function () { q = this.value; renderRows(); }] });
-    var pending = users.filter(function (u) { return u.status === "PENDING"; }).length;
+    var pending = users.filter(function (u) { return u.status === "PENDING"; }).length,
+        resets = users.filter(function (u) { return u.resetAt; }).length;
     /* approve by typing the WhatsApp number (= the username) */
     var num = el("input", { type: "tel", id: "adNum", placeholder: "WhatsApp number, e.g. 0771234567", autocomplete: "off", maxLength: 20,
                             on: ["keydown", function (e) { if (e.key === "Enter") quickApprove(go); }] });
@@ -69,9 +84,9 @@
     panel.appendChild(el("div", { className: "adQuick" }, [el("b", { text: "Approve by number:" }), num, go]));
     panel.appendChild(el("div", { className: "adMsg", id: "adMsg", text: msg || "" }));
     panel.appendChild(el("div", { className: "adHead" }, [
-      el("h2", { text: "Users" + (pending ? " · " + pending + " waiting" : "") }), sel, search,
+      el("h2", { text: "Users" + (pending ? " · " + pending + " waiting" : "") + (resets ? " · " + resets + " password reset" + (resets > 1 ? "s" : "") : "") }), sel, search,
       el("button", { className: "ref", text: "Refresh", on: ["click", load] })]));
-    var tbl = el("table", {}, [el("thead", {}, [el("tr", {}, ["Name", "WhatsApp", "Status", "Requested", ""].map(function (h) { return el("th", { text: h }); }))]), el("tbody", { id: "adRows" })]);
+    var tbl = el("table", {}, [el("thead", {}, [el("tr", {}, ["Name", "WhatsApp", "Status", "Role", "Requested", ""].map(function (h) { return el("th", { text: h }); }))]), el("tbody", { id: "adRows" })]);
     panel.appendChild(el("div", { style: "overflow-x:auto" }, [tbl]));
     renderRows();
   }
@@ -79,21 +94,47 @@
     var body = document.getElementById("adRows"); if (!body) return; body.textContent = "";
     var needle = q.trim().toLowerCase(), n = 0;
     users.forEach(function (u) {
-      if (filter !== "ALL" && u.status !== filter) return;
+      if (!FILTER_OK[filter](u)) return;
       if (needle && (u.name + " " + u.phone).toLowerCase().indexOf(needle) < 0) return;
       n++;
       var acts = el("td");
       if (u.status !== "APPROVED") acts.appendChild(el("button", { className: "ab ok", text: u.status === "BLOCKED" ? "Unblock" : "Approve", on: ["click", function () { setStatus(u, "APPROVED", this); }] }));
       if (u.status !== "BLOCKED" && !u.admin) acts.appendChild(el("button", { className: "ab no", text: "Block", on: ["click", function () { setStatus(u, "BLOCKED", this); }] }));
-      body.appendChild(el("tr", {}, [el("td", { text: u.name + (u.admin ? "  (admin)" : "") }), el("td", { text: u.phone }),
-        el("td", {}, [el("span", { className: "st " + u.status, text: u.status })]), el("td", { text: fmt(u.requested) }), acts]));
+      if (u.resetAt) {
+        acts.appendChild(el("button", { className: "ab ok", text: "Approve reset", on: ["click", function () { decideReset(u, true, this); }] }));
+        acts.appendChild(el("button", { className: "ab no", text: "Reject reset", on: ["click", function () { decideReset(u, false, this); }] }));
+      }
+      if (u.status === "APPROVED") acts.appendChild(el("button", { className: "ab role", text: u.admin ? "Remove admin" : "Make admin", on: ["click", function () { setRole(u, !u.admin, this); }] }));
+      var stCell = el("td", {}, [el("span", { className: "st " + u.status, text: u.status })]);
+      if (u.resetAt) stCell.appendChild(el("span", { className: "st RESET", text: " · 🔑 reset " + fmt(u.resetAt) }));
+      body.appendChild(el("tr", {}, [el("td", { text: u.name }), el("td", { text: u.phone }), stCell,
+        el("td", {}, [el("span", { className: u.admin ? "rl adm" : "rl", text: u.admin ? "👑 Admin" : "User" })]), el("td", { text: fmt(u.requested) }), acts]));
     });
-    if (!n) body.appendChild(el("tr", {}, [el("td", { colSpan: 5, text: "No users to show.", style: "color:#778" })]));
+    if (!n) body.appendChild(el("tr", {}, [el("td", { colSpan: 6, text: "No users to show.", style: "color:#778" })]));
   }
   function setStatus(u, status, btn) {
     btn.disabled = true;
     api("adminSetStatus", [u.key, status]).then(function () { u.status = status; render(u.name + " → " + status); })
       .catch(function (e) { btn.disabled = false; var m = document.getElementById("adMsg"); if (m) m.textContent = e.message || "Failed."; });
+  }
+  function say(t) { var m = document.getElementById("adMsg"); if (m) m.textContent = t; }
+  /* "Forgot password" request: the user's new password starts working only when approved here. */
+  function decideReset(u, approve, btn) {
+    if (approve && !window.confirm("Approve the password reset for " + u.name + " (" + u.phone + ")?\n\n" +
+        "The number is not verified: phone the user first and make sure they asked for it.\n" +
+        "Their new password starts working now and their old password stops working.")) return;
+    if (!approve && !window.confirm("Reject the password reset for " + u.name + " (" + u.phone + ")?\nTheir old password keeps working.")) return;
+    btn.disabled = true;
+    api("adminReset", [u.key, approve]).then(function () { u.resetAt = ""; render(u.name + ": password reset " + (approve ? "approved ✅" : "rejected")); })
+      .catch(function (e) { btn.disabled = false; say(e.message || "Failed."); });
+  }
+  /* Admin role = the Admin tab (USERS "Role" column). The server refuses to remove your own role. */
+  function setRole(u, admin, btn) {
+    if (!window.confirm(admin ? "Make " + u.name + " (" + u.phone + ") an Admin?\n\nThey will see this Admin tab: approve / block users, reset passwords, update the app and open the Google Sheet."
+                              : "Remove the Admin role from " + u.name + " (" + u.phone + ")?")) return;
+    btn.disabled = true;
+    api("adminSetRole", [u.key, admin]).then(function () { u.admin = admin; render(u.name + (admin ? " is now an Admin 👑" : " is no longer an Admin")); })
+      .catch(function (e) { btn.disabled = false; say(e.message || "Failed."); });
   }
   /* Same rules as normPhone_ / phoneKey_ in BackEND (Register.gs, Access.gs): 077... -> 9477..., "" when not valid. */
   function normPhone(raw) {

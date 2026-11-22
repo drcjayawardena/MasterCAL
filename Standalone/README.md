@@ -29,7 +29,14 @@ from the hidden `_SA_STORE` sheet of the master Sheet, and every calculation run
 
 ## Admin tab
 Shown only to users whose USERS "Role" column = `ADMIN` (menu "👑 Make a user Admin (Standalone)").
-Approve users from the list or by typing their WhatsApp number, block users, and update the app.
+Approve users from the list or by typing their WhatsApp number, block users, make / remove admins
+(an admin cannot remove their own role), approve password resets, and update the app.
 The server re-checks every admin call.
+
+## Forgot password
+Login screen → **Forgot password?** → WhatsApp number + new password (`resetRequest`, public). The new password is kept
+as a hash in the USERS "Reset Password" column and the owner is e-mailed. The old password keeps working until an admin
+approves the reset (Admin tab → "Reset requests" → **Approve reset**); then old sessions end. Phone the user first:
+the number is not verified.
 
 Valuations: the riyasewana link always opens the same named tab (`riyasewanaTab`), so a new check reloads it instead of opening another.

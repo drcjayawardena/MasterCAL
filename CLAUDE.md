@@ -11,7 +11,7 @@
   Each APPROVED user is routed to their own copy of the sheet (Drive folder `MasterCAL_UserCopies`, keyed by `wa:<number>`).
 - **Backend**: Apps Script in `BackEND/` — `Api.gs` holds the only `doGet`/`doPost`; actions are dispatched in `dispatch_`.
   Script ID `1gqq5BdFrmG49ayfNcj9pXqxvne3y93Uow8gwpa9zMBFAEIQ9JW-EihTk` (see `BackEND/.clasp.json`).
-  Public actions before the login gate: `register`, `login`.
+  Public actions before the login gate: `register`, `login`, `resetRequest` (forgot password; an admin approves it in the Standalone Admin tab).
 - **Website**: `FrontEND/` (PWA), published by `.github/workflows/pages-deploy.yml` (Pages source = GitHub Actions) —
   https://drcjayawardena.github.io/MasterCAL/ . `FrontEND/app.js` `API_URL` holds the `/exec` URL.
   `sw.js` is cache-first: bump `CACHE_VERSION` whenever a FrontEND file changes.

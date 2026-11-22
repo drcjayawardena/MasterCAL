@@ -70,7 +70,7 @@ const VEHICLE_WRITE_ACTIONS = { init:1, saveProductType:1, saveScheduleType:1, a
 
 async function api(action, args) {
 
-  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "vcGradeYears" && action !== "sendQuote");   /* show the calculating spinner for calc actions */
+  const isCalc = (action !== "init" && action !== "checkVehicle" && action !== "vcIkman" && action !== "vcGradeYears" && action !== "resetRequest" && action !== "sendQuote");   /* show the calculating spinner for calc actions */
   const apiStartedAt = isCalc ? performance.now() : 0;
   if (VEHICLE_WRITE_ACTIONS[action]) {
     calcLastKey = "";                        /* server state changes -> next calcInputs must really run */
@@ -306,10 +306,12 @@ function showLogin(msg) {
     showPassBox() +
     '<button id="gateSend" class="gateBtn">Login</button>' +
     '<div id="gateErr" class="gateErr">' + escapeHtml(msg || "") + '</div>' +
-    '<button id="gateReg" class="gateBtnLink">Don&#39;t have an account? Register</button>');
+    '<button id="gateReg" class="gateBtnLink">Don&#39;t have an account? Register</button>' +
+    '<button id="gateForgot" class="gateBtnLink">Forgot password?</button>');
   document.getElementById("gateSend").addEventListener("click", submitLogin);
   wireShowPass();
   document.getElementById("gateReg").addEventListener("click", showRegister);
+  document.getElementById("gateForgot").addEventListener("click", showForgot);
   gateEnter(submitLogin);
   document.getElementById(getUsername() ? "gatePass" : "gateUser").focus();
 }
@@ -390,6 +392,58 @@ function submitRegister() {
       btn.disabled = false;
       btn.textContent = "Register";
       if (e.access === "BLOCKED") { showGate("BLOCKED"); return; }
+      err.textContent = e.message || "Unable to send your request. Please try again.";
+    });
+}
+
+/* -------- Forgot password: WhatsApp number + new password --------
+   The new password starts working only after an administrator approves the
+   request (Standalone app, Admin tab). Until then the old password still works. */
+function showForgot() {
+  gateShow(
+    '<h2>Forgot password</h2>' +
+    '<p>Enter your WhatsApp number and choose a new password. ' +
+    'The new password works after an administrator approves the request.</p>' +
+    '<input id="gatePhone" type="tel" inputmode="tel" autocomplete="username" placeholder="WhatsApp number (e.g. 0771234567)">' +
+    '<input id="gatePass" type="password" autocomplete="new-password" placeholder="New password (minimum 6 characters)">' +
+    '<input id="gatePass2" type="password" autocomplete="new-password" placeholder="New password again">' +
+    showPassBox() +
+    '<button id="gateSend" class="gateBtn">Send request</button>' +
+    '<div id="gateErr" class="gateErr"></div>' +
+    '<button id="gateBack" class="gateBtnLink">Back to login</button>');
+  document.getElementById("gateSend").addEventListener("click", submitForgot);
+  wireShowPass();
+  document.getElementById("gateBack").addEventListener("click", function () { showLogin(); });
+  gateEnter(submitForgot);
+  document.getElementById("gatePhone").focus();
+}
+
+function submitForgot() {
+  const phone = (document.getElementById("gatePhone").value || "").trim();
+  const pass  = document.getElementById("gatePass").value || "";
+  const pass2 = document.getElementById("gatePass2").value || "";
+  const err   = document.getElementById("gateErr");
+  const btn   = document.getElementById("gateSend");
+  if (phone.replace(/[^\d]/g, "").length < 9) { err.textContent = "Please enter a valid WhatsApp number."; return; }
+  if (pass.length < 6) { err.textContent = "Password must be at least 6 characters."; return; }
+  if (pass !== pass2) { err.textContent = "The passwords do not match."; return; }
+
+  err.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+  api("resetRequest", [phone, pass])
+    .then(function () {
+      gateShow(
+        '<h2>Request sent ⏳</h2>' +
+        '<p>If this number has a MasterCAL account, the administrator will check the request. ' +
+        'Once it is approved, sign in with your new password. Until then your old password still works.</p>' +
+        '<div class="gateMuted">' + escapeHtml(phone) + '</div>' +
+        '<button id="gateRetry" class="gateBtn">Back to login</button>');
+      document.getElementById("gateRetry").addEventListener("click", function () { showLogin(); });
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "Send request";
       err.textContent = e.message || "Unable to send your request. Please try again.";
     });
 }

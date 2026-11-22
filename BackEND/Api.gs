@@ -20,10 +20,11 @@ function doPost(e) {
     const action = body.action;
     if (!action) return json_({ ok: false, error: "Missing 'action'." });
 
-    /* 0) PUBLIC action — registration runs BEFORE the approval gate,
+    /* 0) PUBLIC actions — registration / login / forgot password run BEFORE the approval gate,
           because a brand-new user is not APPROVED yet. */
     if (action === "register")            return json_(register_(body.args || []));
     if (action === "login")               return json_(login_(body.args || []));
+    if (action === "resetRequest")        return json_(resetRequest_(body.args || []));
 
     /* 1) login + approval gate */
     const access = tokenAccess_(body.token);
@@ -44,6 +45,12 @@ function doPost(e) {
       if (!isAdmin_(access.who.key)) return json_({ ok: false, error: "Administrators only." });
       const a = body.args || [];
       return json_({ ok: true, data: action === "adminUsers" ? standaloneAdminUsers_() : standaloneSetStatus_(access.who.key, a[0], a[1]) });
+    }
+    /* Admin tab: approve / reject a "Forgot password" request, give / take away the Admin role */
+    if (action === "adminReset" || action === "adminSetRole") {
+      if (!isAdmin_(access.who.key)) return json_({ ok: false, error: "Administrators only." });
+      const a = body.args || [];
+      return json_({ ok: true, data: action === "adminReset" ? adminResetDecide_(a[0], !!a[1]) : standaloneSetRole_(access.who.key, a[0], !!a[1]) });
     }
     /* Admin tab "Update app" button = Sheet menu "Publish Standalone app" (same code, runs as the deploying account). */
     if (action === "adminPublish") {
