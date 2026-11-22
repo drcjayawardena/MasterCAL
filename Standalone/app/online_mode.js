@@ -15,7 +15,10 @@
     "#adminPanel .st{font-weight:700;font-size:12px}#adminPanel .st.PENDING{color:#b26a00}#adminPanel .st.APPROVED{color:#1c5e3a}#adminPanel .st.BLOCKED{color:#c62828}" +
     "#adminPanel button.ab{padding:6px 12px;border:0;border-radius:6px;font-weight:700;cursor:pointer;margin-right:6px;color:#fff}" +
     "#adminPanel button.ab.ok{background:#1c5e3a}#adminPanel button.ab.no{background:#d8261c}#adminPanel button.ref{background:#fff;border:1px solid #c9d1db;border-radius:8px;padding:8px 12px;cursor:pointer}" +
-    "#adminPanel .adMsg{margin:8px 0;font-size:13px;color:#c62828}";
+    "#adminPanel .adMsg{margin:8px 0;font-size:13px;color:#c62828}" +
+    "#adminPanel .adQuick{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f3f8f5;border:1px solid #d3e6da;border-radius:10px}" +
+    "#adminPanel .adQuick b{font-size:13px;color:#1c5e3a;margin-right:4px}#adminPanel .adQuick input{flex:1 1 180px;min-width:0}" +
+    "#adminPanel .adQuick button.ab{padding:8px 14px;margin:0}#adminPanel button.ab:disabled{opacity:.6;cursor:default}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var tab = document.querySelector('.tab[data-tab=admin]'), panel = document.getElementById("adminPanel");
@@ -38,6 +41,11 @@
     panel.appendChild(el("div", { className: "adHead" }, [
       el("h2", { text: "Users" + (pending ? " · " + pending + " waiting" : "") }), sel, search,
       el("button", { className: "ref", text: "Refresh", on: ["click", load] })]));
+    /* approve by typing the WhatsApp number (= the username) */
+    var num = el("input", { type: "tel", id: "adNum", placeholder: "WhatsApp number, e.g. 0771234567", autocomplete: "off", maxLength: 20,
+                            on: ["keydown", function (e) { if (e.key === "Enter") quickApprove(go); }] });
+    var go = el("button", { className: "ab ok", type: "button", text: "Approve", on: ["click", function () { quickApprove(this); }] });
+    panel.appendChild(el("div", { className: "adQuick" }, [el("b", { text: "Approve by number:" }), num, go]));
     panel.appendChild(el("div", { className: "adMsg", id: "adMsg", text: msg || "" }));
     var tbl = el("table", {}, [el("thead", {}, [el("tr", {}, ["Name", "WhatsApp", "Status", "Requested", ""].map(function (h) { return el("th", { text: h }); }))]), el("tbody", { id: "adRows" })]);
     panel.appendChild(el("div", { style: "overflow-x:auto" }, [tbl]));
@@ -62,6 +70,33 @@
     btn.disabled = true;
     api("adminSetStatus", [u.key, status]).then(function () { u.status = status; render(u.name + " → " + status); })
       .catch(function (e) { btn.disabled = false; var m = document.getElementById("adMsg"); if (m) m.textContent = e.message || "Failed."; });
+  }
+  /* Same rules as normPhone_ / phoneKey_ in BackEND (Register.gs, Access.gs): 077... -> 9477..., "" when not valid. */
+  function normPhone(raw) {
+    var d = String(raw || "").replace(/^\s*wa:/i, "").replace(/[^\d]/g, "");
+    if (!d) return "";
+    if (d.indexOf("00") === 0) d = d.slice(2);
+    if (!(d.indexOf("94") === 0 && d.length >= 10)) {
+      if (d.charAt(0) === "0") d = "94" + d.slice(1);
+      else if (d.length <= 10) d = "94" + d;
+    }
+    return (d.length >= 10 && d.length <= 15) ? d : "";
+  }
+  function quickApprove(btn) {
+    var inp = document.getElementById("adNum"), m = document.getElementById("adMsg");
+    function say(t) { if (m) m.textContent = t; }
+    var d = normPhone(inp && inp.value);
+    if (!d) { say("Enter a valid WhatsApp number."); return; }
+    btn.disabled = true; say("Checking +" + d + " …");
+    /* fresh list: the user may have registered after this tab was opened */
+    api("adminUsers").then(function (r) {
+      users = r || [];
+      var u = null;
+      for (var i = 0; i < users.length; i++) if (users[i].key === "wa:" + d) { u = users[i]; break; }
+      if (!u) { render("+" + d + " has not registered yet. Ask them to Register first, then try again."); return; }
+      if (u.status === "APPROVED") { render(u.name + " (+" + d + ") is already approved."); return; }
+      setStatus(u, "APPROVED", btn);
+    }).catch(function (e) { btn.disabled = false; say(e.message || "Could not load users."); });
   }
   function load() {
     api("adminUsers").then(function (r) { users = r || []; render(); }).catch(function (e) { render(e.message || "Could not load users."); });
