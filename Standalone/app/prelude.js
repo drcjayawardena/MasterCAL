@@ -4,7 +4,7 @@
  *                 model is downloaded (approved users only) and everything runs locally */
 (function () {
   var REMOTE = "__REMOTE_URL__";
-  var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1 };
+  var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1, adminPublish: 1 };
   var model = JSON.parse(document.getElementById("mc-model").textContent);
   var online = window.__mcRemote = !!model.remote;
   var L = null;

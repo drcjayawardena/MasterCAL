@@ -41,6 +41,11 @@ function doPost(e) {
       const a = body.args || [];
       return json_({ ok: true, data: action === "adminUsers" ? standaloneAdminUsers_() : standaloneSetStatus_(access.who.key, a[0], a[1]) });
     }
+    /* Admin tab "Update app" button = Sheet menu "Publish Standalone app" (same code, runs as the deploying account). */
+    if (action === "adminPublish") {
+      if (!isAdmin_(access.who.key)) return json_({ ok: false, error: "Administrators only." });
+      return json_({ ok: true, data: standaloneAdminPublish_() });
+    }
     if (action === "checkVehicle" || action === "vcIkman" || action === "vcGradeYears") {
       return json_({ ok: true, data: dispatch_(action, body.args || []) });
     }

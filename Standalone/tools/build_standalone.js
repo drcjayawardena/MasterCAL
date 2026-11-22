@@ -24,7 +24,7 @@ app = patch(app, 'lsSet("mastercal_phone", data.phone || ""); loadApp(); return;
 app = patch(app, "function vcClipTry() {", "function vcClipTry() { if (!window.__mcRemote) return;", "clip try");
 app = patch(app, "if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {});", "if (window.__mcRemote && navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {});", "clip base");
 app = patch(app, "and come back to this tab: the prices are calculated automatically (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:", "' + (window.__mcRemote ? 'and come back to this tab: the prices are calculated automatically (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:' : 'then come back here, click in the box below, press <b>Ctrl+V</b> and press <b>Calculate prices</b>:') + '", "clip hint");
-app = patch(app, 'action !== "sendQuote");', 'action !== "sendQuote" && action !== "adminWho" && action !== "adminUsers" && action !== "adminSetStatus");', "isCalc");
+app = patch(app, 'action !== "sendQuote");', 'action !== "sendQuote" && action !== "adminWho" && action !== "adminUsers" && action !== "adminSetStatus" && action !== "adminPublish");', "isCalc");
 app = patch(app, 'vcheck: "vcheckPanel" };', 'vcheck: "vcheckPanel", admin: "adminPanel" };', "panels");
 app = patch(app, "if (!getToken()) { showLogin(); return; }", "if (window.__mcRemote && !getToken()) { showLogin(); return; }   /* online mode: MasterCAL login */", "login gate");
 app = patch(app, "  setupWhatsAppQuotes();\n", "  /* standalone: no WhatsApp */\n", "whatsapp");

@@ -18,11 +18,16 @@
     "#adminPanel .adMsg{margin:8px 0;font-size:13px;color:#c62828}" +
     "#adminPanel .adQuick{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;background:#f3f8f5;border:1px solid #d3e6da;border-radius:10px}" +
     "#adminPanel .adQuick b{font-size:13px;color:#1c5e3a;margin-right:4px}#adminPanel .adQuick input{flex:1 1 180px;min-width:0}" +
+    "#adminPanel .adPub{margin-bottom:14px;padding:12px;background:#fff;border:1px solid #d5dbe3;border-radius:10px}" +
+    "#adminPanel .adPub{display:flex;flex-wrap:wrap;gap:10px;align-items:center}#adminPanel .adPubTxt{flex:1 1 260px;font-size:13px;color:#556}" +
+    "#adminPanel .adPubTxt b{display:block;font-size:14px;color:#1c5e3a;margin-bottom:2px}#adminPanel .adPub button.ab{padding:9px 16px;margin:0}" +
+    "#adminPanel .adPubMsg{flex-basis:100%;font-size:13px;color:#c62828}#adminPanel .adPubMsg:empty{display:none}" +
+    "#adminPanel .adPubMsg.ok{color:#1c5e3a}#adminPanel .adPubMsg button,#adminPanel .adPubMsg a{margin:6px 10px 0 0;font-size:13px}" +
     "#adminPanel .adQuick button.ab{padding:8px 14px;margin:0}#adminPanel button.ab:disabled{opacity:.6;cursor:default}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var tab = document.querySelector('.tab[data-tab=admin]'), panel = document.getElementById("adminPanel");
-  var users = [], filter = "PENDING", q = "";
+  var users = [], filter = "PENDING", q = "", pub = { busy: false, ok: false, text: "" };
 
   function el(tag, props, kids) {
     var e = document.createElement(tag);
@@ -34,6 +39,17 @@
 
   function render(msg) {
     panel.textContent = "";
+    /* "Update app" = Sheet menu "Publish Standalone app" */
+    var pubKids = [
+      el("div", { className: "adPubTxt" }, [el("b", { text: "App update" }),
+        el("span", { text: "Takes the current rates from the Google Sheet and the latest app code, then updates both staff links and the offline file." })]),
+      el("button", { className: "ab ok", type: "button", id: "adPubGo", disabled: pub.busy, text: pub.busy ? "Updating…" : "🔄 Update app", on: ["click", publish] })];
+    var pubMsg = el("div", { className: "adPubMsg" + (pub.ok ? " ok" : ""), id: "adPubMsg", text: pub.text || "" });
+    if (pub.ok) {
+      pubMsg.appendChild(el("button", { className: "ref", type: "button", text: "Reload this page", on: ["click", function () { location.reload(); }] }));
+      if (pub.file) pubMsg.appendChild(el("a", { href: pub.file, target: "_blank", rel: "noopener", text: "Download offline file" }));
+    }
+    panel.appendChild(el("div", { className: "adPub" }, pubKids.concat([pubMsg])));
     var sel = el("select", { on: ["change", function () { filter = this.value; render(); }] },
       ["PENDING", "APPROVED", "BLOCKED", "ALL"].map(function (v) { var o = el("option", { value: v, text: v === "ALL" ? "All users" : v.charAt(0) + v.slice(1).toLowerCase() }); if (v === filter) o.selected = true; return o; }));
     var search = el("input", { type: "search", placeholder: "Search name / number", value: q, on: ["input", function () { q = this.value; renderRows(); }] });
@@ -97,6 +113,23 @@
       if (u.status === "APPROVED") { render(u.name + " (+" + d + ") is already approved."); return; }
       setStatus(u, "APPROVED", btn);
     }).catch(function (e) { btn.disabled = false; say(e.message || "Could not load users."); });
+  }
+  function publish() {
+    if (pub.busy) return;
+    if (!window.confirm("Update the app now?\n\nThis takes the CURRENT rates from the Google Sheet and the latest app code, " +
+                        "and updates both staff links and the offline file. It takes about 20-40 seconds.")) return;
+    pub = { busy: true, ok: false, text: "Updating… keep this tab open (about 20-40 seconds)." };
+    render();
+    api("adminPublish").then(function (r) {
+      r = r || {};
+      pub = { busy: false, ok: true, file: r.fileUrl || "",
+              text: "Done ✅ " + r.sheets + " sheets, " + r.formulas + " formulas in " + r.seconds + " s. Rates updated: " + String(r.when || "").slice(0, 10) + ". " +
+                    "Staff get the new version the next time they open the link. If you share the offline file, share the new one. " };
+      render();
+    }).catch(function (e) {
+      pub = { busy: false, ok: false, text: "Update failed: " + (e.message || "unknown error") };
+      render();
+    });
   }
   function load() {
     api("adminUsers").then(function (r) { users = r || []; render(); }).catch(function (e) { render(e.message || "Could not load users."); });

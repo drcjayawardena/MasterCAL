@@ -117,6 +117,21 @@ function standalonePublish_() {
            kb: Math.round(html.length / 1024), seconds: Math.round((Date.now() - t0) / 100) / 10, when: new Date() };
 }
 
+/* Admin tab "Update app" button. A second click while one is running is told to wait.
+   (A cache flag, not the script lock: register / login use the script lock and a publish takes 20-40 s.) */
+function standaloneAdminPublish_() {
+  var cache = CacheService.getScriptCache(), FLAG = "sa_publishing";
+  if (cache.get(FLAG)) throw new Error("An update is already running. Wait a minute and try again.");
+  cache.put(FLAG, "1", 300);
+  try {
+    var r = standalonePublish_();
+    return { formulas: r.formulas, sheets: r.sheets, kb: r.kb, seconds: r.seconds, when: r.when.toISOString(),
+             fileUrl: "https://drive.google.com/uc?export=download&id=" + r.id, folderUrl: r.folderUrl };
+  } finally {
+    cache.remove(FLAG);
+  }
+}
+
 function menuPublishStandalone_() {
   var ui = SpreadsheetApp.getUi();
   var ok = ui.alert("Publish Standalone app?",
