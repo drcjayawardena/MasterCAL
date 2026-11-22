@@ -1,19 +1,18 @@
 /******************************************************
  * MasterCAL Pro — Standalone.gs
- * Menu: "Publish Standalone app": builds the single-file offline MasterCAL (4W/3W/BIKE)
- * from THIS sheet's formulas and saves it in Drive (folder "MasterCAL_Standalone").
+ * Menu "Publish Standalone app" / Admin tab "Update app": refreshes the online Standalone app
+ * (4W/3W/BIKE) from THIS sheet's formulas and rates.
  *
- * The page/engine template (code only, no rates) is fetched from GitHub; the model
- * (formulas + rates of this sheet) is injected here and the result stays in Drive.
+ * The page/engine template (code only, no rates) is fetched from GitHub. The model (formulas + rates)
+ * is kept in the hidden _SA_STORE sheet and only APPROVED users can download it after login.
  * Never touches the user-copies folder. Never reads USERS / APPROVED_USERS.
  ******************************************************/
 
 var SA_STORE_SHEET = "_SA_STORE";
 var SA_SKIP_SHEETS = { "USERS": 1, "APPROVED_USERS": 1, "Formula Dump": 1, "_SA_STORE": 1 };
-var SA_FOLDER = "MasterCAL_Standalone";
 var SA_TEMPLATE_URL = "https://raw.githubusercontent.com/drcjayawardena/MasterCAL/main/Standalone/template/MasterCAL_Standalone_template.html";
-var SA_FILE_NAME = "MasterCAL_Pro_Standalone.html";
 var SA_APP_FILE = "online_app.html", SA_MODEL_FILE = "online_model.json";
+var SA_PAGES_URL = "https://drcjayawardena.github.io/MasterCAL/standalone/";
 var SA_EXEC_URL = "https://script.google.com/macros/s/AKfycbx8m_v6iMUy8tTSGzxSfxi79ZyTfJgpy89WjVkqRMO3dvnm734znkdTvjpW92DhO-xN/exec";
 
 /* formulas whose result can spill over neighbouring cells */
@@ -105,16 +104,12 @@ function standalonePublish_() {
   model.order.forEach(function (n) { nF += Object.keys(model.sheets[n].f).length; nDv += model.sheets[n].dv.length; });
   ["CALCULATOR_TEMPLATE", "3W", "BIKE"].forEach(function (n) { if (!model.sheets[n]) throw new Error("Sheet '" + n + "' is missing: the app cannot be published."); });
   if (nF < 1000) throw new Error("Only " + nF + " formulas were found: something is wrong, nothing was published.");
-  var json = JSON.stringify(model).replace(/<\//g, "<\\/");
-  var html = tpl.split("__MC_MODEL__").join(json);
-  var it = DriveApp.getFoldersByName(SA_FOLDER), folder = it.hasNext() ? it.next() : DriveApp.createFolder(SA_FOLDER);
-  var file = saPutFile_(folder, SA_FILE_NAME, html, MimeType.HTML);
-  /* online mode (link): the page without rates + the model that only approved users can download */
-  /* kept inside the master Sheet (hidden sheet): the web app may run as a different Google account than the one who clicks Publish,
-     and could not see a Drive folder of that other account */
-  saStoreWrite_({ "online_app.html": tpl.split("__MC_MODEL__").join('{"remote":true}'), "online_model.json": JSON.stringify(model) });
-  return { id: file.getId(), folderUrl: folder.getUrl(), formulas: nF, dropdownRules: nDv, sheets: model.order.length,
-           kb: Math.round(html.length / 1024), seconds: Math.round((Date.now() - t0) / 100) / 10, when: new Date() };
+  /* the page without rates + the model that only approved users can download. Kept inside the master Sheet (hidden sheet):
+     the web app may run as a different Google account than the one who clicks Publish. */
+  var modelJson = JSON.stringify(model);
+  saStoreWrite_({ "online_app.html": tpl.split("__MC_MODEL__").join('{"remote":true}'), "online_model.json": modelJson });
+  return { formulas: nF, dropdownRules: nDv, sheets: model.order.length,
+           kb: Math.round(modelJson.length / 1024), seconds: Math.round((Date.now() - t0) / 100) / 10, when: new Date() };
 }
 
 /* Admin tab "Update app" button. A second click while one is running is told to wait.
@@ -125,8 +120,7 @@ function standaloneAdminPublish_() {
   cache.put(FLAG, "1", 300);
   try {
     var r = standalonePublish_();
-    return { formulas: r.formulas, sheets: r.sheets, kb: r.kb, seconds: r.seconds, when: r.when.toISOString(),
-             fileUrl: "https://drive.google.com/uc?export=download&id=" + r.id, folderUrl: r.folderUrl };
+    return { formulas: r.formulas, sheets: r.sheets, kb: r.kb, seconds: r.seconds, when: r.when.toISOString() };
   } finally {
     cache.remove(FLAG);
   }
@@ -135,29 +129,22 @@ function standaloneAdminPublish_() {
 function menuPublishStandalone_() {
   var ui = SpreadsheetApp.getUi();
   var ok = ui.alert("Publish Standalone app?",
-    "Builds the offline MasterCAL file (4W / 3W / BIKE) from the CURRENT formulas and rates of this sheet and saves it in your Drive folder '" + SA_FOLDER + "'. " +
-    "The staff link (…?app=standalone) is updated at the same time. It takes about 20-40 seconds. Continue?", ui.ButtonSet.YES_NO);
+    "Updates the Standalone app (4W / 3W / BIKE) with the CURRENT formulas and rates of this sheet and the latest app code. " +
+    "Both staff links get the new version. It takes about 20-40 seconds. Continue?", ui.ButtonSet.YES_NO);
   if (ok !== ui.Button.YES) return;
   var r;
   try { r = standalonePublish_(); }
   catch (e) { ui.alert("Publish failed", String(e && e.message ? e.message : e), ui.ButtonSet.OK); return; }
-  var dl = "https://drive.google.com/uc?export=download&id=" + r.id;
   var html = HtmlService.createHtmlOutput(
     '<div style="font-family:Arial;font-size:14px;line-height:1.5">' +
-    '<p><b>Done \u2705</b> ' + r.sheets + ' sheets, ' + r.formulas + ' formulas, ' + r.kb + ' KB, ' + r.seconds + ' s.</p>' +
-    '<p><b>Staff link</b> (always the latest, approved MasterCAL users only):<br>' +
-    '<input readonly style="width:100%;font-size:12px" value="' + SA_EXEC_URL + '?app=standalone" onclick="this.select()"></p>' +
-    '<p style="color:#666">Offline file (optional): <a href="' + dl + '" target="_blank">download</a> &middot; ' +
-    '<a href="' + r.folderUrl + '" target="_blank">' + SA_FOLDER + ' folder</a></p></div>')
-    .setWidth(460).setHeight(270);
+    '<p><b>Done \u2705</b> ' + r.sheets + ' sheets, ' + r.formulas + ' formulas, ' + r.seconds + ' s.</p>' +
+    '<p><b>Staff links</b> (always the latest, approved MasterCAL users only):<br>' +
+    '<input readonly style="width:100%;font-size:12px;margin-bottom:6px" value="' + SA_PAGES_URL + '" onclick="this.select()"><br>' +
+    '<input readonly style="width:100%;font-size:12px" value="' + SA_EXEC_URL + '?app=standalone" onclick="this.select()"></p></div>')
+    .setWidth(460).setHeight(250);
   ui.showModalDialog(html, "Publish Standalone app");
 }
 
-function saPutFile_(folder, name, content, mime) {
-  var it = folder.getFilesByName(name), f;
-  if (it.hasNext()) { f = it.next(); f.setContent(content); } else f = folder.createFile(name, content, mime);
-  return f;
-}
 /* Every chunk is wrapped in "~" ... "~" so Sheets cannot treat a leading ' or = or space specially, and is never split inside a surrogate pair. */
 function saStoreWrite_(files) {
   var ss = master_(), sh = ss.getSheetByName(SA_STORE_SHEET) || ss.insertSheet(SA_STORE_SHEET);

@@ -42,12 +42,11 @@
     /* "Update app" = Sheet menu "Publish Standalone app" */
     var pubKids = [
       el("div", { className: "adPubTxt" }, [el("b", { text: "App update" }),
-        el("span", { text: "Takes the current rates from the Google Sheet and the latest app code, then updates both staff links and the offline file." })]),
+        el("span", { text: "Takes the current rates from the Google Sheet and the latest app code, then updates both staff links." })]),
       el("button", { className: "ab ok", type: "button", id: "adPubGo", disabled: pub.busy, text: pub.busy ? "Updating…" : "🔄 Update app", on: ["click", publish] })];
     var pubMsg = el("div", { className: "adPubMsg" + (pub.ok ? " ok" : ""), id: "adPubMsg", text: pub.text || "" });
     if (pub.ok) {
       pubMsg.appendChild(el("button", { className: "ref", type: "button", text: "Reload this page", on: ["click", function () { location.reload(); }] }));
-      if (pub.file) pubMsg.appendChild(el("a", { href: pub.file, target: "_blank", rel: "noopener", text: "Download offline file" }));
     }
     panel.appendChild(el("div", { className: "adPub" }, pubKids.concat([pubMsg])));
     var sel = el("select", { on: ["change", function () { filter = this.value; render(); }] },
@@ -117,14 +116,14 @@
   function publish() {
     if (pub.busy) return;
     if (!window.confirm("Update the app now?\n\nThis takes the CURRENT rates from the Google Sheet and the latest app code, " +
-                        "and updates both staff links and the offline file. It takes about 20-40 seconds.")) return;
+                        "and updates both staff links. It takes about 20-40 seconds.")) return;
     pub = { busy: true, ok: false, text: "Updating… keep this tab open (about 20-40 seconds)." };
     render();
     api("adminPublish").then(function (r) {
       r = r || {};
-      pub = { busy: false, ok: true, file: r.fileUrl || "",
+      pub = { busy: false, ok: true,
               text: "Done ✅ " + r.sheets + " sheets, " + r.formulas + " formulas in " + r.seconds + " s. Rates updated: " + String(r.when || "").slice(0, 10) + ". " +
-                    "Staff get the new version the next time they open the link. If you share the offline file, share the new one. " };
+                    "Staff get the new version the next time they open the link. " };
       render();
     }).catch(function (e) {
       pub = { busy: false, ok: false, text: "Update failed: " + (e.message || "unknown error") };

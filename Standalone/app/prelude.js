@@ -1,15 +1,12 @@
 /* Runs before app.js: replaces the server with the local engine.
- *  - file mode  : the model is inside the page (rates included), no MasterCAL login except for Valuations
- *  - online mode: the page was opened from the link (model = {"remote":true}); after the MasterCAL login the
- *                 model is downloaded (approved users only) and everything runs locally */
+ * The page holds no rates (model = {"remote":true}). After the MasterCAL login the model is downloaded
+ * (approved users only) and every calculation runs on this device. */
 (function () {
   var REMOTE = "__REMOTE_URL__";
   var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1, adminPublish: 1 };
-  var model = JSON.parse(document.getElementById("mc-model").textContent);
-  var online = window.__mcRemote = !!model.remote;
+  window.__mcRemote = true;   /* online_mode.js runs only when this is set */
   var L = null;
-  window.__mcPublished = model.published || "";
-  if (!online) L = window.__mc = MasterLocal.create(model, { now: new Date() });
+  window.__mcPublished = "";
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
   var NETERR = "Cannot reach the MasterCAL server (Google). Check the internet connection; the company firewall may be blocking script.google.com.";
 
@@ -52,17 +49,4 @@
       return later({ ok: false, access: e.access, error: e.access ? "Access " + e.access : (e.message || NETERR) });
     });
   };
-
-  if (!online) {
-    /* file mode: "Cancel" on the MasterCAL login that Valuations asks for */
-    setInterval(function () {
-      var g = document.getElementById("gate"), b = document.getElementById("mcVcCancel");
-      var on = g && g.style.display !== "none" && g.style.display !== "";
-      if (on && !b) {
-        b = document.createElement("button"); b.id = "mcVcCancel"; b.type = "button"; b.textContent = "Cancel";
-        b.onclick = function () { g.style.display = "none"; var t = document.querySelector('.tab[data-tab=vehicle]'); if (t) t.click(); };
-        document.body.appendChild(b);
-      } else if (!on && b) b.remove();
-    }, 300);
-  }
 })();
