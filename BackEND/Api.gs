@@ -35,7 +35,11 @@ function doPost(e) {
     /* 1b) Standalone app (Standalone.gs): the model and the admin tab need no per-user spreadsheet copy.
            The valuation actions read no sheet either, so they skip the copy as well. */
     if (action === "standaloneModel") return json_({ ok: true, data: standaloneModel_() });
-    if (action === "adminWho")        return json_({ ok: true, data: { admin: isAdmin_(access.who.key) } });
+    if (action === "adminWho") {
+      const isAdm = isAdmin_(access.who.key);
+      /* the master Sheet link is given to admins only (Admin tab "Open Google Sheet") */
+      return json_({ ok: true, data: { admin: isAdm, sheetUrl: isAdm ? master_().getUrl() : "" } });
+    }
     if (action === "adminUsers" || action === "adminSetStatus") {
       if (!isAdmin_(access.who.key)) return json_({ ok: false, error: "Administrators only." });
       const a = body.args || [];

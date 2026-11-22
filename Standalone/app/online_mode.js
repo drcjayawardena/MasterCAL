@@ -8,10 +8,16 @@
     "#mcVer{position:fixed;left:10px;bottom:8px;z-index:9999;font-size:11px;color:#778}" +
     "#adminPanel .adHead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}" +
     "#adminPanel .adHead h2{margin:0 auto 0 0;font-size:16px;letter-spacing:.04em;text-transform:uppercase}" +
-    "#adminPanel select,#adminPanel input{padding:8px;border:1px solid #c9d1db;border-radius:8px;font-size:14px}" +
+    /* the website styles give every input/select width:100% and a small fixed height: undo that here */
+    "#adminPanel select,#adminPanel input{width:auto;height:38px;line-height:normal;padding:0 10px;border:1px solid #c9d1db;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box}" +
+    "#adminPanel .adHead select{flex:0 0 150px}#adminPanel .adHead input{flex:1 1 200px;min-width:0;max-width:340px}" +
+    "#adminPanel button.ref{height:38px}#adminPanel .adHead h2{flex:1 1 auto}" +
+    "#adminPanel a.sheet{display:inline-flex;align-items:center;height:38px;padding:0 14px;border:1px solid #1c5e3a;border-radius:6px;color:#1c5e3a;font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}" +
+    "#adminPanel a.sheet:hover{background:#f3f8f5}#adminPanel .adPubBtns{display:flex;flex-wrap:wrap;gap:8px}" +
     "#adminPanel table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:10px;overflow:hidden}" +
     "#adminPanel th{background:#1c5e3a;color:#fff;text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase}" +
-    "#adminPanel td{padding:8px 10px;border-bottom:1px solid #eef1f5;vertical-align:middle}" +
+    "#adminPanel td{padding:8px 10px;border-bottom:1px solid #eef1f5;vertical-align:middle;white-space:nowrap}" +
+    "#adminPanel table{min-width:620px}" +   /* phones: the table scrolls sideways instead of squeezing the columns */
     "#adminPanel .st{font-weight:700;font-size:12px}#adminPanel .st.PENDING{color:#b26a00}#adminPanel .st.APPROVED{color:#1c5e3a}#adminPanel .st.BLOCKED{color:#c62828}" +
     "#adminPanel button.ab{padding:6px 12px;border:0;border-radius:6px;font-weight:700;cursor:pointer;margin-right:6px;color:#fff}" +
     "#adminPanel button.ab.ok{background:#1c5e3a}#adminPanel button.ab.no{background:#d8261c}#adminPanel button.ref{background:#fff;border:1px solid #c9d1db;border-radius:8px;padding:8px 12px;cursor:pointer}" +
@@ -27,7 +33,7 @@
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var tab = document.querySelector('.tab[data-tab=admin]'), panel = document.getElementById("adminPanel");
-  var users = [], filter = "PENDING", q = "", pub = { busy: false, ok: false, text: "" };
+  var users = [], filter = "PENDING", q = "", pub = { busy: false, ok: false, text: "" }, sheetUrl = "";
 
   function el(tag, props, kids) {
     var e = document.createElement(tag);
@@ -43,7 +49,10 @@
     var pubKids = [
       el("div", { className: "adPubTxt" }, [el("b", { text: "App update" }),
         el("span", { text: "Takes the current rates from the Google Sheet and the latest app code, then updates both staff links." })]),
-      el("button", { className: "ab ok", type: "button", id: "adPubGo", disabled: pub.busy, text: pub.busy ? "Updating…" : "🔄 Update app", on: ["click", publish] })];
+      el("div", { className: "adPubBtns" }, [
+        /* link from the server, admins only */
+        sheetUrl ? el("a", { className: "sheet", href: sheetUrl, target: "_blank", rel: "noopener", text: "📊 Open Google Sheet" }) : el("span"),
+        el("button", { className: "ab ok", type: "button", id: "adPubGo", disabled: pub.busy, text: pub.busy ? "Updating…" : "🔄 Update app", on: ["click", publish] })])];
     var pubMsg = el("div", { className: "adPubMsg" + (pub.ok ? " ok" : ""), id: "adPubMsg", text: pub.text || "" });
     if (pub.ok) {
       pubMsg.appendChild(el("button", { className: "ref", type: "button", text: "Reload this page", on: ["click", function () { location.reload(); }] }));
@@ -53,15 +62,15 @@
       ["PENDING", "APPROVED", "BLOCKED", "ALL"].map(function (v) { var o = el("option", { value: v, text: v === "ALL" ? "All users" : v.charAt(0) + v.slice(1).toLowerCase() }); if (v === filter) o.selected = true; return o; }));
     var search = el("input", { type: "search", placeholder: "Search name / number", value: q, on: ["input", function () { q = this.value; renderRows(); }] });
     var pending = users.filter(function (u) { return u.status === "PENDING"; }).length;
-    panel.appendChild(el("div", { className: "adHead" }, [
-      el("h2", { text: "Users" + (pending ? " · " + pending + " waiting" : "") }), sel, search,
-      el("button", { className: "ref", text: "Refresh", on: ["click", load] })]));
     /* approve by typing the WhatsApp number (= the username) */
     var num = el("input", { type: "tel", id: "adNum", placeholder: "WhatsApp number, e.g. 0771234567", autocomplete: "off", maxLength: 20,
                             on: ["keydown", function (e) { if (e.key === "Enter") quickApprove(go); }] });
     var go = el("button", { className: "ab ok", type: "button", text: "Approve", on: ["click", function () { quickApprove(this); }] });
     panel.appendChild(el("div", { className: "adQuick" }, [el("b", { text: "Approve by number:" }), num, go]));
     panel.appendChild(el("div", { className: "adMsg", id: "adMsg", text: msg || "" }));
+    panel.appendChild(el("div", { className: "adHead" }, [
+      el("h2", { text: "Users" + (pending ? " · " + pending + " waiting" : "") }), sel, search,
+      el("button", { className: "ref", text: "Refresh", on: ["click", load] })]));
     var tbl = el("table", {}, [el("thead", {}, [el("tr", {}, ["Name", "WhatsApp", "Status", "Requested", ""].map(function (h) { return el("th", { text: h }); }))]), el("tbody", { id: "adRows" })]);
     panel.appendChild(el("div", { style: "overflow-x:auto" }, [tbl]));
     renderRows();
@@ -138,6 +147,7 @@
     if (!getToken()) return;
     api("adminWho").then(function (r) {
       var admin = !!(r && r.admin);
+      sheetUrl = admin && r.sheetUrl && /^https:\/\/docs\.google\.com\//.test(r.sheetUrl) ? r.sheetUrl : "";
       if (tab) tab.hidden = !admin;
       if (admin) load();
     }).catch(function () { if (tab) tab.hidden = true; });
