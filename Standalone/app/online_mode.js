@@ -154,7 +154,10 @@
   }
   function pill() {
     if (document.getElementById("mcOut")) return;
-    var b = el("div", { id: "mcOut", text: "Logout", on: ["click", function () { setToken(""); location.reload(); }] });
+    var b = el("div", { id: "mcOut", text: "Logout", on: ["click", function () {
+      setToken("");   /* the rates saved for offline use are deleted too */
+      Promise.resolve(window.__mcForget ? window.__mcForget() : null).then(function () { location.reload(); });
+    }] });
     document.body.appendChild(b);
   }
   window.__mcAfterLogin = function () { pill(); probe(); };

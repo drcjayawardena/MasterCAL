@@ -29,6 +29,8 @@ app = patch(app, /^warmServer\(\);$/m, "/* standalone: no warm-up */", "warm-up"
 let html = rd(path.join(FE, "index.html"));
 html = html.replace(/<meta property="og:[^>]*>\n?/g, "").replace(/<meta name="twitter:[^>]*>\n?/g, "");
 html = html.replace(/<link rel="(manifest|icon|apple-touch-icon|preconnect)"[^>]*>\n?/g, "");
+html = patch(html, "You are offline — calculations need an internet connection. The app will keep working once you reconnect.",
+  "You are offline — calculations use the rates saved on this device. Valuations need an internet connection.", "offline bar");
 html = patch(html, '<button type="button" class="tab" data-tab="vcheck">Valuations</button>', '<button type="button" class="tab" data-tab="vcheck">Valuations</button>\n    <button type="button" class="tab" data-tab="admin" hidden>Admin</button>', "admin tab");
 html = patch(html, '<div id="vcheckPanel"', '<div id="adminPanel" class="vcPanel" hidden></div>\n  <div id="vcheckPanel"', "admin panel");
 html = patch(html, '<link rel="stylesheet" href="styles.css">', "<style>\n" + rd(path.join(FE, "styles.css")) +

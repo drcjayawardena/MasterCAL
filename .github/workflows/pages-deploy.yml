@@ -11,6 +11,7 @@ on:
       - 'FrontEND/**'
       - 'Standalone/template/**'
       - 'Standalone/tools/build_pages.js'
+      - 'Standalone/app/sw.js'
   workflow_dispatch:
 
 permissions:

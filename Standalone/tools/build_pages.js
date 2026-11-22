@@ -32,4 +32,9 @@ const manifest = {
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, "index.html"), html);
 fs.writeFileSync(path.join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+/* service worker: opens the page without internet; a new build gets a new cache name */
+const build = require("crypto").createHash("sha256").update(html).digest("hex").slice(0, 12);
+const sw = fs.readFileSync(path.join(SA, "app", "sw.js"), "utf8");
+if (sw.indexOf("__BUILD__") < 0) throw new Error("sw.js: __BUILD__ not found");
+fs.writeFileSync(path.join(outDir, "sw.js"), sw.split("__BUILD__").join(build));
 console.log("standalone page: " + path.join(outDir, "index.html") + " (" + html.length + " chars)");
