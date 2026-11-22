@@ -23,13 +23,13 @@ const VC_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHT
 /* App vehicle type -> ikman.lk category (+ body filter). */
 const VC_IKMAN_CATS = {
   "Car": { cat: "cars" }, "SUV / Jeep": { cat: "cars", body: "suv-4x4" }, "Cab / Pickup": { cat: "cars" },
-  "Van / MPV": { cat: "vans" }, "Three Wheeler": { cat: "three-wheelers" }, "Motorcycle": { cat: "motorbikes-scooters" }
+  "Van / MPV": { cat: "vans" }, "Lorry": { cat: "lorries" }, "Three Wheeler": { cat: "three-wheelers" }, "Motorcycle": { cat: "motorbikes-scooters" }
 };
 
 /* App vehicle type -> riyasewana.com category ("Buy Three Wheels" = /search/three-wheels/...). */
 const VC_RIYA_CATS = {
   "Car": "cars", "SUV / Jeep": "suvs", "Cab / Pickup": "pickups",
-  "Van / MPV": "vans", "Three Wheeler": "three-wheels", "Motorcycle": "motorcycles"
+  "Van / MPV": "vans", "Lorry": "lorries", "Three Wheeler": "three-wheels", "Motorcycle": "motorcycles"
 };
 
 function vcKey_(k) {

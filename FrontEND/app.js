@@ -2396,21 +2396,21 @@ var vc_ready = false;
 /* Makes and models most often bought and sold in Sri Lanka (Make -> Model -> Year; see VC_YEARS).
    "Other" opens a text box for anything not listed. */
 const VC_MODELS = {
-  "Toyota": ["Aqua", "Allion", "Axio", "Belta", "Camry", "C-HR", "Corolla", "Corona", "Fortuner", "Hiace", "Hilux", "KDH",
+  "Toyota": ["Aqua", "Allion", "Axio", "Belta", "Camry", "C-HR", "Corolla", "Corona", "Dyna", "Fortuner", "Hiace", "Hilux", "KDH",
              "Land Cruiser", "Land Cruiser Prado", "Noah", "Passo", "Premio", "Prius", "Raize", "Roomy", "Rush", "Shell", "Starlet", "TownAce", "Vios", "Vitz", "Yaris"],
   "Suzuki": ["A-Star", "Alto", "Celerio", "Dzire", "Ertiga", "Every", "Estilo", "Hustler", "Jimny", "Spacia",
              "Swift", "Vitara", "Wagon R", "Wagon R FX", "Wagon R Stingray", "GN125"],
   "Honda": ["Accord", "City", "Civic", "CR-V", "Fit", "Fit Shuttle", "Freed", "Grace", "Insight", "N Box", "Odyssey", "PCX", "Shuttle", "Vezel", "WR-V",
             "CB Shine", "CD 125", "Dio", "Hornet", "X-Blade"],
   "Nissan": ["Caravan", "Cefiro", "Clipper", "Dayz", "Leaf", "March", "Navara", "Note", "Roox", "Sunny", "Tiida", "Vanette", "X-Trail"],
-  "Mitsubishi": ["Lancer", "L300", "Montero", "Outlander", "Pajero", "L200", "Eclipse Cross", "Mirage", "eK Wagon"],
+  "Mitsubishi": ["Canter", "Fuso", "Lancer", "L300", "Montero", "Outlander", "Pajero", "L200", "Eclipse Cross", "Mirage", "eK Wagon"],
   "Mazda": ["Axela", "Bongo", "BT-50", "CX-3", "CX-5", "Demio", "Familia"],
   "Micro": ["Panda", "Trend", "MX7", "Actyon", "Kyron", "Rexton"],
   "Hyundai": ["Accent", "Creta", "Elantra", "Grand i10", "i20", "Santa Fe", "Tucson", "Venue"],
   "Kia": ["Cerato", "Picanto", "Rio", "Sorento", "Sportage", "Sonet", "Stonic"],
   "Daihatsu": ["Boon", "Hijet", "Mira", "Move", "Rocky", "Tanto", "Terios"],
   "Perodua": ["Axia", "Bezza", "Kelisa", "Myvi", "Viva"],
-  "Tata": ["Ace", "Indica", "Nano", "Super Ace", "Xenon"],
+  "Tata": ["Ace", "Indica", "LPT 709", "Nano", "Super Ace", "Xenon"],
   "Mahindra": ["Bolero", "KUV100", "Maxximo", "Scorpio", "XUV500"],
   "Bajaj": ["RE Three Wheeler", "Catak", "Discover", "Platina", "Pulsar", "CT 100"],
   "TVS": ["King Three Wheeler", "Apache", "Metro", "Ntorq", "Scooty Pep"],
@@ -2426,7 +2426,9 @@ const VC_MODELS = {
   "Ford": ["Everest", "Ranger", "Territory"],
   "Geely": ["Coolray", "Emgrand", "GX3 Pro"],
   "Haval": ["H6", "Jolion"],
-  "Isuzu": ["D-Max", "Fargo", "NPR"],
+  "Isuzu": ["D-Max", "Elf", "Fargo", "NPR"],
+  "Ashok Leyland": ["Dost", "Partner"],
+  "Hino": ["Dutro", "Ranger"],
   "JAC": ["J7", "JS4", "T8"],
   "Jeep": ["Cherokee", "Compass", "Wrangler"],
   "Land Rover": ["Defender", "Discovery", "Range Rover", "Range Rover Evoque"],
@@ -2443,14 +2445,14 @@ const VC_MODELS = {
   "Volkswagen": ["Golf", "Polo", "Tiguan", "Transporter"],
   "Volvo": ["S60", "XC40", "XC60", "XC90"]
 };
-const VC_VEHICLE_TYPES = ["Car", "SUV / Jeep", "Van / MPV", "Cab / Pickup", "Three Wheeler", "Motorcycle"];
+const VC_VEHICLE_TYPES = ["Car", "SUV / Jeep", "Van / MPV", "Cab / Pickup", "Lorry", "Three Wheeler", "Motorcycle"];
 /* Models not listed here are treated as Cars. */
 const VC_MODEL_TYPES = {
-  "Toyota": { "C-HR": "SUV / Jeep", "Fortuner": "SUV / Jeep", "Land Cruiser": "SUV / Jeep", "Land Cruiser Prado": "SUV / Jeep", "Raize": "SUV / Jeep", "Rush": "SUV / Jeep", "Hiace": "Van / MPV", "KDH": "Van / MPV", "Noah": "Van / MPV", "TownAce": "Van / MPV", "Shell": "Van / MPV", "Hilux": "Cab / Pickup" },
+  "Toyota": { "Dyna": "Lorry", "C-HR": "SUV / Jeep", "Fortuner": "SUV / Jeep", "Land Cruiser": "SUV / Jeep", "Land Cruiser Prado": "SUV / Jeep", "Raize": "SUV / Jeep", "Rush": "SUV / Jeep", "Hiace": "Van / MPV", "KDH": "Van / MPV", "Noah": "Van / MPV", "TownAce": "Van / MPV", "Shell": "Van / MPV", "Hilux": "Cab / Pickup" },
   "Suzuki": { "Ertiga": "Van / MPV", "Every": "Van / MPV", "Spacia": "Van / MPV", "Hustler": "SUV / Jeep", "Jimny": "SUV / Jeep", "Vitara": "SUV / Jeep", "GN125": "Motorcycle" },
   "Honda": { "CR-V": "SUV / Jeep", "Vezel": "SUV / Jeep", "WR-V": "SUV / Jeep", "Freed": "Van / MPV", "Fit Shuttle": "Van / MPV", "Odyssey": "Van / MPV", "PCX": "Motorcycle", "CB Shine": "Motorcycle", "CD 125": "Motorcycle", "Dio": "Motorcycle", "Hornet": "Motorcycle", "X-Blade": "Motorcycle" },
   "Nissan": { "Caravan": "Van / MPV", "Clipper": "Van / MPV", "Roox": "Van / MPV", "Vanette": "Van / MPV", "Navara": "Cab / Pickup", "X-Trail": "SUV / Jeep" },
-  "Mitsubishi": { "Montero": "SUV / Jeep", "Outlander": "SUV / Jeep", "Pajero": "SUV / Jeep", "Eclipse Cross": "SUV / Jeep", "L200": "Cab / Pickup", "L300": "Van / MPV" },
+  "Mitsubishi": { "Canter": "Lorry", "Fuso": "Lorry", "Montero": "SUV / Jeep", "Outlander": "SUV / Jeep", "Pajero": "SUV / Jeep", "Eclipse Cross": "SUV / Jeep", "L200": "Cab / Pickup", "L300": "Van / MPV" },
   "Mazda": { "BT-50": "Cab / Pickup", "CX-3": "SUV / Jeep", "CX-5": "SUV / Jeep", "Bongo": "Van / MPV" },
   "Micro": { "Actyon": "SUV / Jeep", "Kyron": "SUV / Jeep", "Rexton": "SUV / Jeep" },
   "Hyundai": { "Creta": "SUV / Jeep", "Santa Fe": "SUV / Jeep", "Tucson": "SUV / Jeep", "Venue": "SUV / Jeep" },
@@ -2460,7 +2462,9 @@ const VC_MODEL_TYPES = {
   "BYD": { "Atto 3": "SUV / Jeep", "Dolphin": "Car", "Seal": "Car" },
   "Ford": { "Everest": "SUV / Jeep", "Ranger": "Cab / Pickup" },
   "Haval": { "H6": "SUV / Jeep", "Jolion": "SUV / Jeep" },
-  "Isuzu": { "D-Max": "Cab / Pickup", "Fargo": "Van / MPV" },
+  "Isuzu": { "D-Max": "Cab / Pickup", "Fargo": "Van / MPV", "Elf": "Lorry", "NPR": "Lorry" },
+  "Ashok Leyland": { "Dost": "Lorry", "Partner": "Lorry" },
+  "Hino": { "Dutro": "Lorry", "Ranger": "Lorry" },
   "JAC": { "T8": "Cab / Pickup" },
   "Jeep": { "Cherokee": "SUV / Jeep", "Compass": "SUV / Jeep", "Wrangler": "SUV / Jeep" },
   "Land Rover": { "Defender": "SUV / Jeep", "Discovery": "SUV / Jeep", "Range Rover": "SUV / Jeep", "Range Rover Evoque": "SUV / Jeep" },
@@ -2473,7 +2477,7 @@ const VC_MODEL_TYPES = {
   "Volkswagen": { "Tiguan": "SUV / Jeep", "Transporter": "Van / MPV" },
   "Volvo": { "XC40": "SUV / Jeep", "XC60": "SUV / Jeep", "XC90": "SUV / Jeep" },
   "Daihatsu": { "Hijet": "Van / MPV", "Rocky": "SUV / Jeep", "Terios": "SUV / Jeep" },
-  "Tata": { "Ace": "Cab / Pickup", "Super Ace": "Cab / Pickup", "Xenon": "Cab / Pickup" },
+  "Tata": { "LPT 709": "Lorry", "Ace": "Cab / Pickup", "Super Ace": "Cab / Pickup", "Xenon": "Cab / Pickup" },
   "Mahindra": { "Bolero": "SUV / Jeep", "KUV100": "SUV / Jeep", "Maxximo": "Cab / Pickup", "Scorpio": "SUV / Jeep", "XUV500": "SUV / Jeep" },
   "Bajaj": { "RE Three Wheeler": "Three Wheeler", "Catak": "Motorcycle", "Discover": "Motorcycle", "Platina": "Motorcycle", "Pulsar": "Motorcycle", "CT 100": "Motorcycle" },
   "TVS": { "King Three Wheeler": "Three Wheeler", "Apache": "Motorcycle", "Metro": "Motorcycle", "Ntorq": "Motorcycle", "Scooty Pep": "Motorcycle" },
