@@ -24,7 +24,7 @@ const APP = {
   // name, phone and the vehicle details are shown. Set true to let admins see everyone.
   ADMIN_SEES_ALL_CUSTOMERS: false,
   // Self-registration from the login page. New accounts stay inactive until an admin approves them.
-  ALLOW_REGISTRATION: true,
+  ALLOW_REGISTRATION: false,   // only the admin uses the app; set true to let officers sign up again
   REQUIRE_APPROVAL: true,
   // Vehicles added by officers (staff) stay "Pending" until an admin approves them.
   // Pending vehicles are not matched. Vehicles added by admins are approved automatically.
@@ -321,7 +321,30 @@ function doGet(e) {
  * The page sends: POST { fn: "api" | "login" | "register" | "registrationOpen", args: [...] }
  * Only the functions listed here can be called from outside.
  */
+/**
+ * After a code update, adds any new columns to the sheets once (instead of running setup() by hand).
+ * Runs on the first request of each new APP.VERSION; never throws.
+ */
+function autoMigrate_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('SCHEMA_VERSION') === APP.VERSION) return;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return;
+  try {
+    if (props.getProperty('SCHEMA_VERSION') === APP.VERSION) return;
+    const ss = ss_();
+    Object.keys(SCHEMA).forEach(function (name) { ensureSheet_(ss, name); });
+    props.setProperty('SCHEMA_VERSION', APP.VERSION);
+    clearPublicCache_();
+  } catch (err) {
+    Logger.log('autoMigrate_: ' + err.message);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doPost(e) {
+  autoMigrate_();
   const allowed = { api: api, login: login, register: register, registrationOpen: registrationOpen, submitLead: submitLead, publicListings: publicListings, publicThumbs: publicThumbs, publicPhotos: publicPhotos, publicPhoto: publicPhoto };
   let out;
   try {
