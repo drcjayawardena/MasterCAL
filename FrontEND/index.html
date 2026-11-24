@@ -85,6 +85,7 @@
     <button type="button" class="tab" data-tab="threewheel">3W</button>
     <button type="button" class="tab" data-tab="bike">BIKE</button>
     <button type="button" class="tab" data-tab="vcheck">Valuations</button>
+    <button type="button" class="tab" data-tab="vinfo">Vehicle Info</button>
   </div>
 
 
@@ -267,6 +268,37 @@
   </div>
 
 
+
+  <!-- ============ VEHICLE INFO (DMT "Limited Vehicle Information": the officer looks it up, copies the page, the app reads it) ============ -->
+  <div id="vinfoPanel" class="vcPanel" hidden>
+    <div class="viStep">
+      <h3>1. Department of Motor Traffic (DMT)</h3>
+      <form id="viForm" class="viRow" autocomplete="off">
+        <input id="viReg" type="text" autocapitalize="characters" spellcheck="false" placeholder="Vehicle number, e.g. CAB-1234, KB-2073, 15-4321">
+        <button type="button" id="viCopy" class="viBtnLight">Copy number</button>
+        <a id="viOpen" class="vcOpenBtn" href="https://eservices.motortraffic.gov.lk/VehicleInfo/home" target="dmtTab" rel="noopener">Open DMT ↗</a>
+      </form>
+      <p class="vcHint">On the DMT site: <b>Limited Vehicle Information → Proceed</b>, sign in, paste the number and <b>Submit</b>.
+        On the result page press <b>Ctrl+A</b> then <b>Ctrl+C</b> and come back to this tab: the details are filled in automatically
+        (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:</p>
+      <div class="vcPaste">
+        <textarea id="viPaste" rows="3" placeholder="Paste the DMT result page text here"></textarea>
+        <button type="button" id="viRead" class="vcGo">Read details</button>
+      </div>
+      <div id="viOut"></div>
+    </div>
+    <div class="viStep">
+      <h3>2. Chassis number</h3>
+      <div class="viRow">
+        <input id="viChassis" type="text" autocapitalize="characters" spellcheck="false" placeholder="Chassis number, e.g. NHP10-1234567 or a 17-character VIN">
+        <button type="button" id="viChCopy" class="viBtnLight">Copy</button>
+        <button type="button" id="viVin" class="vcGo">Decode VIN</button>
+        <a class="vcOpenBtn" href="https://carvx.jp/chassis-number" target="_blank" rel="noopener">Japan history (CAR VX) ↗</a>
+      </div>
+      <div id="viChOut" class="vcHint">A 17-character VIN is decoded here (make, model, year, engine). Japanese chassis numbers are not VINs:
+        copy the number and search it on CAR VX (free search, paid report).</div>
+    </div>
+  </div>
 
   <!-- ============ VEHICLE CHECKING (ikman.lk / riyasewana.com ad prices, filled by app.js) ============ -->
   <div id="vcheckPanel" class="vcPanel" hidden>

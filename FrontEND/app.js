@@ -1591,7 +1591,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   vcheck: "vcheckPanel" };
+                   vinfo: "vinfoPanel", vcheck: "vcheckPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -1609,6 +1609,7 @@ function setupTabs() {
       if (which === "threewheel" && !wasActive) load3W(true);
       if (which === "bike" && !wasActive) loadBike(true);
       if (which === "vcheck") setupVehicleCheck();
+      if (which === "vinfo") setupVehicleInfo();
     });
   });
 }
@@ -3165,3 +3166,199 @@ function sendQuoteApi(q, btn) {
     .catch(function (e) { alert("Could not send the quotation.\n\n" + e.message); })
     .then(function () { btn.disabled = false; btn.textContent = old; });
 }
+
+
+/* =========================================================
+   VEHICLE INFO tab
+   DMT "Limited Vehicle Information" (eservices.motortraffic.gov.lk) needs the officer's own
+   sign-in and has bot protection, so the app never reads it itself: the officer opens it,
+   copies the result page (Ctrl+A, Ctrl+C) and this tab reads the copied text. Nothing is
+   sent anywhere. A 17-character VIN is decoded with the free NHTSA vPIC service.
+========================================================= */
+const VI_FIELDS = [
+  ["reportDate", "Report Date"], ["regNo", "Vehicle Registration Number"],
+  ["owner", "Name of the absolute ownership"], ["engine", "Engine number"], ["vclass", "Vehicle class"],
+  ["notes", "Conditions and notes"], ["make", "Make"], ["model", "Model"], ["year", "Year of manufacture"]
+];
+let vi_ready = false, viClipBase = null;
+
+/* "cab 1234" / "CAB1234" / "15 4321" -> "CAB-1234" / "15-4321" (DMT's own format) */
+function viNormReg(raw) {
+  const t = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const m = /^([A-Z]{1,3}|\d{1,3})(\d{4})$/.exec(t);
+  return m ? m[1] + "-" + m[2] : String(raw || "").trim().toUpperCase();
+}
+
+/* The copied DMT result page -> { regNo, make, model, year, ... } (missing fields stay ""). */
+function viParse(text) {
+  const lines = String(text || "").replace(/\r/g, "").split("\n")
+    .map(function (s) { return s.replace(/\s+/g, " ").trim(); }).filter(Boolean);
+  const isLabel = function (l) { return VI_FIELDS.some(function (f) { return l.toLowerCase().indexOf(f[1].toLowerCase()) === 0; }); };
+  const out = {};
+  VI_FIELDS.forEach(function (f) { out[f[0]] = ""; });
+  for (let i = 0; i < lines.length; i++) {
+    const L = lines[i];
+    for (let k = 0; k < VI_FIELDS.length; k++) {
+      const key = VI_FIELDS[k][0], label = VI_FIELDS[k][1];
+      if (out[key] || L.toLowerCase().indexOf(label.toLowerCase()) !== 0) continue;
+      let rest = L.slice(label.length);
+      if (key === "owner") rest = rest.replace(/^\s*\/?\s*(mortgage if any)?/i, "");
+      rest = rest.replace(/^\s*:\s*/, "").trim();
+      for (let j = i + 1; !rest && j < lines.length && j <= i + 3; j++) {
+        const n = key === "owner" ? lines[j].replace(/^\/?\s*mortgage if any\s*/i, "").trim() : lines[j];
+        if (!n || n === ":") continue;
+        if (isLabel(n)) break;
+        rest = n.replace(/^:\s*/, "").trim();
+      }
+      out[key] = rest;
+      break;
+    }
+  }
+  out.year = (/\b(19|20)\d\d\b/.exec(out.year) || [""])[0];
+  return out;
+}
+
+/* DMT vehicle class -> Valuations vehicle type ("" = let the officer choose) */
+function viTypeFor(vclass) {
+  const c = String(vclass || "").toUpperCase();
+  if (/TRI ?CYCLE|THREE/.test(c)) return "Three Wheeler";
+  if (/CYCLE/.test(c)) return "Motorcycle";
+  if (/LORRY|GOODS|TRUCK/.test(c)) return "Lorry";
+  if (/MOTOR CAR/.test(c)) return "Car";
+  return "";
+}
+
+function viShow(v) {
+  const out = document.getElementById("viOut");
+  const none = function (x) { return !x || /^n\/?a$/i.test(x); };
+  const age = v.year ? new Date().getFullYear() - Number(v.year) : null;
+  const row = function (label, val) {
+    return '<div class="viRowItem"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(val || "—") + '</b></div>';
+  };
+  const owner = none(v.owner) ? "" : v.owner;
+  out.innerHTML =
+    '<div class="viCard">' +
+      '<div class="viCardHead"><b>' + escapeHtml(v.regNo || "") + '</b><span>DMT report ' + escapeHtml(v.reportDate || "") + '</span></div>' +
+      (owner ? '<div class="viWarn">⚠ Absolute owner / mortgage: <b>' + escapeHtml(owner) + '</b></div>'
+             : '<div class="viOk">No absolute owner / mortgage recorded</div>') +
+      '<div class="viGrid">' +
+        row("Make", v.make) + row("Model", v.model) +
+        row("Year of manufacture", v.year ? v.year + (age != null && age >= 0 ? "  (" + age + " years)" : "") : "") +
+        row("Vehicle class", v.vclass) + row("Engine number", v.engine) + row("Conditions and notes", v.notes) +
+      '</div>' +
+      '<button type="button" id="viToVal" class="vcGo">Check market value (Valuations) →</button>' +
+    '</div>';
+  document.getElementById("viToVal").addEventListener("click", function () { viToValuation(v); });
+}
+
+function viRead(text, quiet) {
+  const v = viParse(text);
+  if (!v.regNo || !(v.make || v.year)) {
+    if (!quiet) document.getElementById("viOut").innerHTML =
+      '<p class="vcErr">No DMT vehicle details found. On the DMT result page press Ctrl+A, then Ctrl+C, and paste again.</p>';
+    return false;
+  }
+  const reg = document.getElementById("viReg");
+  if (reg && !reg.value) reg.value = v.regNo;
+  viShow(v);
+  return true;
+}
+
+/* Wait until cond() is true (the Valuations dropdowns load from ikman.lk). */
+function viWait(cond, ms) {
+  return new Promise(function (resolve) {
+    const t0 = Date.now();
+    (function tick() { if (cond()) return resolve(true); if (Date.now() - t0 > ms) return resolve(false); setTimeout(tick, 200); })();
+  });
+}
+
+/* Open Valuations with the vehicle type, make and year filled in; the officer picks the model
+   (DMT gives a chassis code such as "LA-HR51S", not the model name). */
+async function viToValuation(v) {
+  const say = function (t) { const m = document.getElementById("vcOut"); if (m) m.innerHTML = '<p class="vcHint">' + t + '</p>'; };
+  document.querySelector('.tab[data-tab="vcheck"]').click();
+  const typeSel = document.getElementById("vcType"), makeSel = document.getElementById("vcMake");
+  const modelSel = document.getElementById("vcModel"), yearSel = document.getElementById("vcYear");
+  const type = viTypeFor(v.vclass);
+  const from = "From DMT: " + escapeHtml([v.regNo, v.make, v.model, v.year].filter(Boolean).join(" · ")) + ". ";
+  if (!type) { say(from + "Select the vehicle type, make, model and year, then tap <b>Check</b>."); return; }
+  typeSel.value = type;
+  typeSel.dispatchEvent(new Event("change"));
+  await viWait(function () { return !makeSel.disabled && makeSel.options.length > 2; }, 15000);
+  const want = String(v.make || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const opt = Array.prototype.find.call(makeSel.options, function (o) {
+    return want && o.value && o.text.replace(/\s*\(\d[\d,]*\)\s*$/, "").toLowerCase().replace(/[^a-z0-9]/g, "") === want;
+  });
+  if (!opt) { say(from + "Select the make, model and year, then tap <b>Check</b>."); return; }
+  makeSel.value = opt.value;
+  makeSel.dispatchEvent(new Event("change"));
+  await viWait(function () { return !modelSel.disabled && modelSel.options.length > 1 && !/Loading/i.test(modelSel.options[0].text); }, 15000);
+  if (v.year && yearSel.querySelector('option[value="' + v.year + '"]')) yearSel.value = v.year;
+  say(from + "Select the <b>model</b>" + (v.model ? " (DMT model code " + escapeHtml(v.model) + ")" : "") + ", then tap <b>Check</b>.");
+  modelSel.focus();
+}
+
+/* 17-character VIN -> make / model / year / engine (NHTSA vPIC, free, no key). */
+function viDecodeVin() {
+  const raw = (document.getElementById("viChassis").value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const out = document.getElementById("viChOut");
+  if (raw.length !== 17 || /[IOQ]/.test(raw)) {
+    out.textContent = "This is not a 17-character VIN" + (raw ? " (" + raw.length + " characters)" : "") +
+      ". Japanese chassis numbers (e.g. NHP10-1234567) cannot be decoded here: copy it and search it on CAR VX.";
+    return;
+  }
+  out.textContent = "Decoding…";
+  fetch("https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/" + raw + "?format=json")
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      const d = (j && j.Results && j.Results[0]) || {};
+      const parts = [["Make", d.Make], ["Model", d.Model], ["Year", d.ModelYear], ["Body", d.BodyClass],
+                     ["Engine", [d.DisplacementL ? Number(d.DisplacementL).toFixed(1) + " L" : "", d.FuelTypePrimary].filter(Boolean).join(" ")],
+                     ["Made in", d.PlantCountry]].filter(function (p) { return p[1]; });
+      out.innerHTML = parts.length
+        ? '<div class="viGrid">' + parts.map(function (p) { return '<div class="viRowItem"><span>' + escapeHtml(p[0]) + '</span><b>' + escapeHtml(p[1]) + '</b></div>'; }).join("") + '</div>'
+        : "This VIN could not be decoded.";
+    })
+    .catch(function () { out.textContent = "The VIN decoder could not be reached. Check the internet connection."; });
+}
+
+function viCopy(text, btn) {
+  if (!text || !navigator.clipboard || !navigator.clipboard.writeText) return;
+  navigator.clipboard.writeText(text).then(function () {
+    viClipBase = text;
+    const o = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(function () { btn.textContent = o; }, 1500);
+  }, function () {});
+}
+
+function setupVehicleInfo() {
+  if (vi_ready) return;
+  vi_ready = true;
+  const reg = document.getElementById("viReg");
+  reg.addEventListener("blur", function () { if (reg.value) reg.value = viNormReg(reg.value); });
+  document.getElementById("viForm").addEventListener("submit", function (e) { e.preventDefault(); });
+  document.getElementById("viCopy").addEventListener("click", function () { reg.value = viNormReg(reg.value); viCopy(reg.value, this); });
+  /* Open DMT also copies the number, so it can be pasted straight into the DMT form */
+  document.getElementById("viOpen").addEventListener("click", function () {
+    if (reg.value) { reg.value = viNormReg(reg.value); viCopy(reg.value, document.getElementById("viCopy")); }
+  });
+  document.getElementById("viRead").addEventListener("click", function () { viRead(document.getElementById("viPaste").value); });
+  document.getElementById("viChCopy").addEventListener("click", function () {
+    const c = document.getElementById("viChassis"); c.value = c.value.trim().toUpperCase(); viCopy(c.value, this);
+  });
+  document.getElementById("viVin").addEventListener("click", viDecodeVin);
+}
+
+/* CLIPBOARD: back from the DMT page with its text copied -> read it (only while the Vehicle Info tab is open,
+   only a new copy that holds "Year of manufacture"). The text stays in this browser. */
+function viClipTry() {
+  const panel = document.getElementById("vinfoPanel");
+  if (!panel || panel.hidden || !navigator.clipboard || !navigator.clipboard.readText) return;
+  navigator.clipboard.readText().then(function (t) {
+    t = String(t || "");
+    if (!t || t === viClipBase || !/Year of manufacture/i.test(t)) return;
+    viClipBase = t;
+    viRead(t, true);
+  }, function () { /* no permission: the paste box still works */ });
+}
+document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") viClipTry(); });
+window.addEventListener("focus", viClipTry);
