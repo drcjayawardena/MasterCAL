@@ -3260,6 +3260,9 @@ function viRead(text, quiet) {
   }
   const reg = document.getElementById("viReg");
   if (reg && !reg.value) reg.value = v.regNo;
+  /* the DMT make also selects the make for the recall check */
+  const mk = document.getElementById("viMake"), want = String(v.make || "").toLowerCase();
+  if (mk && !mk.value) Array.prototype.forEach.call(mk.options, function (o) { if (o.value && o.value.toLowerCase() === want) mk.value = o.value; });
   viShow(v);
   return true;
 }
@@ -3322,6 +3325,45 @@ function viDecodeVin() {
     .catch(function () { out.textContent = "The VIN decoder could not be reached. Check the internet connection."; });
 }
 
+/* Makers' own recall searches (Japan) by chassis number "<model>-<serial>": A = model part, B = serial.
+   get = result URL; post = the maker's search form, sent to a new tab; open = search page only (number copied). */
+const VI_RECALL = {
+  "Toyota":     { get: "https://www.toyota.co.jp/recall-search/dc/result?FRAME_DIV={A}&FRAME_NO={B}" },
+  "Nissan":     { post: "https://www.nissan.co.jp/RECALL/SEARCH/RecallServlet", f: { frameno: "A", chassino: "B" } },
+  "Honda":      { open: "https://recallsearch4.honda.co.jp/sqs/r001/R00101.do?fn=link.disp" },
+  "Suzuki":     { open: "https://recall-search.suzuki.co.jp/" },
+  "Mazda":      { post: "https://www2.mazda.co.jp/service/recall/vsearch", f: { PROC: "=vsearch", VIEW: "=vsearch_result", vin1: "A", vin2: "B" } },
+  "Mitsubishi": { post: "https://recall.mitsubishi-motors.co.jp/Recall/searchrecallstatus.do", f: { serialnumber: "=", serialnumber1: "A", serialnumber2: "B" } },
+  "Daihatsu":   { post: "https://www.daihatsu.co.jp/info/recall/search/recall_search.php", f: { mode: "=1", model_no: "A", car_no: "B" } },
+  "Subaru":     { post: "https://recall.subaru.co.jp/lqsb/recall.do", f: { txtCarNoKami: "A", txtCarNoShimo: "B", btnSearch: "=検索", txtButton: "=" } },
+  "Isuzu":      { post: "https://www.isuzu.co.jp/recall/input", f: { _method: "=POST", "data[RecallSearch][num_front]": "A", "data[RecallSearch][num_rear]": "B" } }
+};
+
+function viRecallCheck() {
+  const out = document.getElementById("viChOut"), make = document.getElementById("viMake").value;
+  const ch = document.getElementById("viChassis"), n = ch.value.trim().toUpperCase().replace(/\s+/g, "");
+  const r = VI_RECALL[make];
+  if (!n) { ch.focus(); out.textContent = "Type the chassis number first."; return; }
+  if (!r) { document.getElementById("viMake").focus(); out.textContent = "Select the make (Toyota, Nissan, Honda, Suzuki, Mazda, Mitsubishi, Daihatsu, Subaru or Isuzu)."; return; }
+  if (r.open) { viCopy(n, document.getElementById("viChCopy")); window.open(r.open, "recallTab"); return; }
+  const dash = n.lastIndexOf("-");
+  if (dash < 1 || dash === n.length - 1) {
+    out.textContent = "Type the chassis number with its dash, as in the CR book (e.g. LA300A-1036682)."; return;
+  }
+  const A = n.slice(0, dash), B = n.slice(dash + 1);
+  if (r.get) { window.open(r.get.replace("{A}", encodeURIComponent(A)).replace("{B}", encodeURIComponent(B)), "recallTab"); return; }
+  const f = document.createElement("form");
+  f.method = "post"; f.action = r.post; f.target = "recallTab"; f.acceptCharset = "UTF-8"; f.style.display = "none";
+  Object.keys(r.f).forEach(function (k) {
+    const v = r.f[k], i = document.createElement("input");
+    i.type = "hidden"; i.name = k; i.value = v === "A" ? A : v === "B" ? B : v.slice(1);
+    f.appendChild(i);
+  });
+  document.body.appendChild(f);
+  f.submit();
+  f.remove();
+}
+
 function viCopy(text, btn) {
   if (!text || !navigator.clipboard || !navigator.clipboard.writeText) return;
   navigator.clipboard.writeText(text).then(function () {
@@ -3342,6 +3384,9 @@ function setupVehicleInfo() {
     if (reg.value) { reg.value = viNormReg(reg.value); viCopy(reg.value, document.getElementById("viCopy")); }
   });
   document.getElementById("viRead").addEventListener("click", function () { viRead(document.getElementById("viPaste").value); });
+  const mk = document.getElementById("viMake");
+  Object.keys(VI_RECALL).forEach(function (m) { const o = document.createElement("option"); o.value = o.textContent = m; mk.appendChild(o); });
+  document.getElementById("viRecall").addEventListener("click", viRecallCheck);
   /* PartSouq decodes a Japanese chassis (frame) number: the link always carries the typed number */
   const ch = document.getElementById("viChassis"), ps = document.getElementById("viPartsouq");
   const psLink = function () {
