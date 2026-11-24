@@ -300,9 +300,11 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   font-size:13px; font-weight:700; text-align:center;
 }
 #scheduleTable td{ height:26px; padding:2px 3px; border:1px solid #eef1f4; text-align:center; }
-#scheduleTable td:nth-child(1){ width:24%; }
-#scheduleTable td:nth-child(2){ width:24%; }
-#scheduleTable td:nth-child(3){ width:56%; }
+/* table-layout:fixed takes the column widths from the header row, so the widths go on th as well as td
+   (FROM / TO hold month numbers; AMOUNT also holds the ADD / DELETE button) */
+#scheduleTable th:nth-child(1), #scheduleTable td:nth-child(1){ width:22%; }
+#scheduleTable th:nth-child(2), #scheduleTable td:nth-child(2){ width:22%; }
+#scheduleTable th:nth-child(3), #scheduleTable td:nth-child(3){ width:56%; }
 #scheduleTable input{
   width:100%; height:var(--ctl-h-sm); padding:0 6px;
   font-size:13px; text-align:center;
