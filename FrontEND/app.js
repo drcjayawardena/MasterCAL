@@ -1591,7 +1591,7 @@ const TW_READONLY_CELLS = ["B5"];
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
   const PANELS = { vehicle: "vehiclePanel", threewheel: "threewheelPanel", bike: "bikePanel",
-                   vinfo: "vinfoPanel", vcheck: "vcheckPanel" };
+                   vcheck: "vcheckPanel" };
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(function (t) {
     t.addEventListener("click", function () {
@@ -1609,7 +1609,6 @@ function setupTabs() {
       if (which === "threewheel" && !wasActive) load3W(true);
       if (which === "bike" && !wasActive) loadBike(true);
       if (which === "vcheck") setupVehicleCheck();
-      if (which === "vinfo") setupVehicleInfo();
     });
   });
 }
@@ -2807,6 +2806,8 @@ function setupVehicleCheck() {
       .catch(function () { if (my === gseq) fillYears(); });
   };
   gradeSel.addEventListener("change", function () { fillYears(); refineYears(); });
+  /* common chassis code under the form: any change of make / model / grade / year */
+  document.getElementById("vcForm").addEventListener("change", function () { setTimeout(vcShowChassis, 0); });
   document.getElementById("vcForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     runVehicleCheck();
@@ -3169,287 +3170,125 @@ function sendQuoteApi(q, btn) {
 
 
 /* =========================================================
-   VEHICLE INFO tab
-   DMT "Limited Vehicle Information" (eservices.motortraffic.gov.lk) needs the officer's own
-   sign-in and has bot protection, so the app never reads it itself: the officer opens it,
-   copies the result page (Ctrl+A, Ctrl+C) and this tab reads the copied text. Nothing is
-   sent anywhere. A 17-character VIN is decoded with the free NHTSA vPIC service.
+   COMMON CHASSIS CODES (Valuations tab)
+   The model part of a Japanese chassis number ("NHP10" in NHP10-1234567) for the chosen make /
+   model / year, so the officer can compare it with the CR book. [code, first year, last year (0 = still
+   made), note]. Common codes only: a model may have other codes (engine, 4WD, special versions).
 ========================================================= */
-const VI_FIELDS = [
-  ["reportDate", "Report Date"], ["regNo", "Vehicle Registration Number"],
-  ["owner", "Name of the absolute ownership"], ["engine", "Engine number"], ["vclass", "Vehicle class"],
-  ["notes", "Conditions and notes"], ["make", "Make"], ["model", "Model"], ["year", "Year of manufacture"]
-];
-let vi_ready = false, viClipBase = null;
-
-/* "cab 1234" / "CAB1234" / "15 4321" -> "CAB-1234" / "15-4321" (DMT's own format) */
-function viNormReg(raw) {
-  const t = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const m = /^([A-Z]{1,3}|\d{1,3})(\d{4})$/.exec(t);
-  return m ? m[1] + "-" + m[2] : String(raw || "").trim().toUpperCase();
-}
-
-/* The copied DMT result page -> { regNo, make, model, year, ... } (missing fields stay ""). */
-function viParse(text) {
-  const lines = String(text || "").replace(/\r/g, "").split("\n")
-    .map(function (s) { return s.replace(/\s+/g, " ").trim(); }).filter(Boolean);
-  const isLabel = function (l) { return VI_FIELDS.some(function (f) { return l.toLowerCase().indexOf(f[1].toLowerCase()) === 0; }); };
-  const out = {};
-  VI_FIELDS.forEach(function (f) { out[f[0]] = ""; });
-  for (let i = 0; i < lines.length; i++) {
-    const L = lines[i];
-    for (let k = 0; k < VI_FIELDS.length; k++) {
-      const key = VI_FIELDS[k][0], label = VI_FIELDS[k][1];
-      if (out[key] || L.toLowerCase().indexOf(label.toLowerCase()) !== 0) continue;
-      let rest = L.slice(label.length);
-      if (key === "owner") rest = rest.replace(/^\s*\/?\s*(mortgage if any)?/i, "");
-      rest = rest.replace(/^\s*:\s*/, "").trim();
-      for (let j = i + 1; !rest && j < lines.length && j <= i + 3; j++) {
-        const n = key === "owner" ? lines[j].replace(/^\/?\s*mortgage if any\s*/i, "").trim() : lines[j];
-        if (!n || n === ":") continue;
-        if (isLabel(n)) break;
-        rest = n.replace(/^:\s*/, "").trim();
-      }
-      out[key] = rest;
-      break;
-    }
+const VC_CHASSIS = {
+  "Toyota": {
+    "Aqua": [["NHP10", 2011, 2021], ["MXPK10 / MXPK11", 2021, 0]],
+    "Axio": [["NZE141 / NZE144", 2006, 2012], ["NZE161 / NZE164", 2012, 0], ["NKE165", 2013, 0, "Hybrid"]],
+    "Allion": [["NZT240 / ZZT240", 2001, 2007], ["NZT260 / ZRT260 / ZRT261", 2007, 2021]],
+    "Premio": [["NZT240 / ZZT240", 2001, 2007], ["NZT260 / ZRT260 / ZRT261", 2007, 2021]],
+    "Prius": [["NHW20", 2003, 2009], ["ZVW30", 2009, 2015], ["ZVW50 / ZVW51", 2015, 2022], ["MXWH60", 2023, 0]],
+    "Vitz": [["SCP90 / KSP90 / NCP91", 2005, 2010], ["KSP130 / NSP130 / NCP131", 2010, 2019]],
+    "Yaris": [["KSP210 / MXPA10", 2020, 0], ["MXPH10", 2020, 0, "Hybrid"]],
+    "Passo": [["KGC10 / QNC10", 2004, 2010], ["KGC30 / NGC30", 2010, 2016], ["M700A", 2016, 0]],
+    "Belta": [["SCP92 / KSP92", 2005, 2012]],
+    "Camry": [["ACV40", 2006, 2011], ["AVV50", 2011, 2017, "Hybrid"], ["AXVH70", 2017, 0, "Hybrid"]],
+    "C-HR": [["ZYX10", 2016, 0, "Hybrid"], ["NGX50", 2016, 0]],
+    "Raize": [["A200A / A210A", 2019, 0]],
+    "Roomy": [["M900A / M910A", 2016, 0]],
+    "Land Cruiser Prado": [["KDJ120 / TRJ120", 2002, 2009], ["TRJ150 / GDJ150", 2009, 0]],
+    "Land Cruiser": [["UZJ100 / HDJ101", 1998, 2007], ["URJ202 / VDJ200", 2007, 2021], ["VJA300 / FJA300", 2021, 0]],
+    "Hilux": [["KUN25 / KUN26", 2004, 2015], ["GUN125 / GUN126", 2015, 0]],
+    "Fortuner": [["KUN60 / TGN51", 2005, 2015], ["GUN156", 2015, 0]],
+    "Hiace": [["KDH200 / TRH200 series", 2004, 0]],
+    "KDH": [["KDH201 / KDH205 / KDH223", 2004, 0]],
+    "Noah": [["ZRR70", 2007, 2014], ["ZRR80 / ZWR80", 2014, 2021], ["MZRA90 / ZWR90", 2022, 0]],
+    "Corolla": [["NZE121 / ZZE121", 2000, 2006], ["NZE141 / ZRE142", 2006, 2012]],
+    "Vios": [["NCP93", 2007, 2013], ["NSP151", 2013, 0]],
+    "Pixis": [["LA300A", 2011, 2017]],
+    "Dyna": [["XZU / LY series", 1999, 0]]
+  },
+  "Suzuki": {
+    "Alto": [["HA24S", 2004, 2009], ["HA25S", 2009, 2014], ["HA36S", 2014, 2021], ["HA37S / HA97S", 2021, 0]],
+    "Wagon R": [["MH21S / MH22S", 2003, 2008], ["MH23S", 2008, 2012], ["MH34S / MH44S", 2012, 2017], ["MH35S / MH55S", 2017, 0]],
+    "Wagon R FX": [["MH21S", 2003, 2008], ["MH23S", 2008, 2012], ["MH34S / MH44S", 2012, 2017]],
+    "Wagon R Stingray": [["MH22S", 2007, 2008], ["MH23S", 2008, 2012], ["MH34S / MH44S", 2012, 2017], ["MH55S", 2017, 0]],
+    "Every": [["DA64V", 2005, 2015], ["DA17V", 2015, 0]],
+    "Spacia": [["MK32S / MK42S", 2013, 2017], ["MK53S", 2017, 0]],
+    "Hustler": [["MR31S / MR41S", 2014, 2019], ["MR52S / MR92S", 2020, 0]],
+    "Swift": [["ZC71S / ZC72S", 2004, 2016], ["ZC83S / ZC13S / ZD83S", 2017, 0]],
+    "Jimny": [["JB23W", 1998, 2018], ["JB64W", 2018, 0]]
+  },
+  "Honda": {
+    "Fit": [["GD1 / GD3", 2001, 2007], ["GE6 / GE8", 2007, 2013], ["GP1", 2010, 2013, "Hybrid"], ["GK3 / GK5", 2013, 2020], ["GP5", 2013, 2020, "Hybrid"], ["GR1 / GR3", 2020, 0]],
+    "Fit Shuttle": [["GG7 / GG8", 2011, 2015], ["GP2", 2011, 2015, "Hybrid"]],
+    "Grace": [["GM4 / GM5", 2014, 2020, "Hybrid"], ["GM6", 2015, 2020]],
+    "Vezel": [["RU1 / RU2", 2013, 2021], ["RU3 / RU4", 2013, 2021, "Hybrid"], ["RV3 / RV5", 2021, 0]],
+    "Insight": [["ZE2 / ZE3", 2009, 2014], ["ZE4", 2018, 2022]],
+    "Freed": [["GB3 / GB4", 2008, 2016], ["GP3", 2011, 2016, "Hybrid"], ["GB5 / GB7", 2016, 0]],
+    "Civic": [["FD1 / FD2", 2005, 2011], ["FK7 / FC1", 2017, 2021]],
+    "CR-V": [["RE4", 2006, 2011], ["RM1 / RM4", 2011, 2016], ["RW1 / RT5", 2018, 2022]]
+  },
+  "Nissan": {
+    "Leaf": [["ZE0 / AZE0", 2010, 2017], ["ZE1", 2017, 0]],
+    "Note": [["E11", 2005, 2012], ["E12 / HE12", 2012, 2020], ["E13", 2020, 0]],
+    "Dayz": [["B21W", 2013, 2019], ["B43W / B44W", 2019, 0]],
+    "March": [["K12", 2002, 2010], ["K13", 2010, 2022]],
+    "Tiida": [["C11", 2004, 2012]],
+    "X-Trail": [["T31", 2007, 2013], ["T32 / HT32", 2013, 2022]],
+    "Caravan": [["E25", 2001, 2012], ["E26", 2012, 0]],
+    "Navara": [["D40", 2005, 2015], ["D23", 2015, 0]],
+    "Sunny": [["FB15", 1998, 2004], ["N17", 2012, 2017]]
+  },
+  "Mitsubishi": {
+    "Outlander": [["CW5W", 2005, 2012], ["GF7W / GF8W", 2012, 2021], ["GG2W", 2013, 2021, "PHEV"]],
+    "Montero": [["V93W / V97W / V98W", 2006, 2021]],
+    "Pajero": [["V93W / V97W / V98W", 2006, 2021]],
+    "Lancer": [["CS2A / CS5A", 2000, 2007], ["CY4A", 2007, 2017]],
+    "Mirage": [["A03A / A05A", 2012, 0]],
+    "eK Wagon": [["B11W", 2013, 2019], ["B33W / B36W", 2019, 0]],
+    "Eclipse Cross": [["GK1W", 2017, 0]],
+    "L200": [["KB4T", 2005, 2015], ["KJ / KL series", 2015, 0]],
+    "Canter": [["FE / FB series", 1993, 0]]
+  },
+  "Mazda": {
+    "Axela": [["BK5P / BKEP", 2003, 2009], ["BL5FP / BLEFP", 2009, 2013], ["BM5FP / BYEFP", 2013, 2019]],
+    "Demio": [["DY3W / DY5W", 2002, 2007], ["DE3FS / DE5FS", 2007, 2014], ["DJ3FS / DJ5FS", 2014, 2019]],
+    "CX-5": [["KE2FW / KEEFW", 2012, 2017], ["KF2P / KFEP", 2017, 0]],
+    "CX-3": [["DK5FW / DK8FW", 2015, 0]]
+  },
+  "Daihatsu": {
+    "Mira": [["L275S / L285S", 2006, 2018], ["LA300S / LA350S", 2011, 0, "Mira e:S"]],
+    "Move": [["L175S", 2006, 2010], ["LA100S", 2010, 2014], ["LA150S", 2014, 2023]],
+    "Tanto": [["L375S", 2007, 2013], ["LA600S", 2013, 2019], ["LA650S", 2019, 0]],
+    "Hijet": [["S200P / S320V", 1999, 2021], ["S700V / S500P", 2014, 0]],
+    "Rocky": [["A200S / A210S", 2019, 0]],
+    "Boon": [["M600S", 2010, 2016], ["M700S", 2016, 0]],
+    "Terios": [["J100G", 1997, 2006], ["J200G", 2006, 2016]]
   }
-  out.year = (/\b(19|20)\d\d\b/.exec(out.year) || [""])[0];
-  return out;
-}
-
-/* DMT vehicle class -> Valuations vehicle type ("" = let the officer choose) */
-function viTypeFor(vclass) {
-  const c = String(vclass || "").toUpperCase();
-  if (/TRI ?CYCLE|THREE/.test(c)) return "Three Wheeler";
-  if (/CYCLE/.test(c)) return "Motorcycle";
-  if (/LORRY|GOODS|TRUCK/.test(c)) return "Lorry";
-  if (/MOTOR CAR/.test(c)) return "Car";
-  return "";
-}
-
-function viShow(v) {
-  const out = document.getElementById("viOut");
-  const none = function (x) { return !x || /^n\/?a$/i.test(x); };
-  const age = v.year ? new Date().getFullYear() - Number(v.year) : null;
-  const row = function (label, val) {
-    return '<div class="viRowItem"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(val || "—") + '</b></div>';
-  };
-  const owner = none(v.owner) ? "" : v.owner;
-  out.innerHTML =
-    '<div class="viCard">' +
-      '<div class="viCardHead"><b>' + escapeHtml(v.regNo || "") + '</b><span>DMT report ' + escapeHtml(v.reportDate || "") + '</span></div>' +
-      (owner ? '<div class="viWarn">⚠ Absolute owner / mortgage: <b>' + escapeHtml(owner) + '</b></div>'
-             : '<div class="viOk">No absolute owner / mortgage recorded</div>') +
-      '<div class="viGrid">' +
-        row("Make", v.make) + row("Model", v.model) +
-        row("Year of manufacture", v.year ? v.year + (age != null && age >= 0 ? "  (" + age + " years)" : "") : "") +
-        row("Vehicle class", v.vclass) + row("Engine number", v.engine) + row("Conditions and notes", v.notes) +
-      '</div>' +
-      '<button type="button" id="viToVal" class="vcGo">Check market value (Valuations) →</button>' +
-    '</div>';
-  document.getElementById("viToVal").addEventListener("click", function () { viToValuation(v); });
-}
-
-function viRead(text, quiet) {
-  const v = viParse(text);
-  if (!v.regNo || !(v.make || v.year)) {
-    if (!quiet) document.getElementById("viOut").innerHTML =
-      '<p class="vcErr">No DMT vehicle details found. On the DMT result page press Ctrl+A, then Ctrl+C, and paste again.</p>';
-    return false;
-  }
-  const reg = document.getElementById("viReg");
-  if (reg && !reg.value) reg.value = v.regNo;
-  /* the DMT make also selects the make for the recall check */
-  const mk = document.getElementById("viMake"), want = String(v.make || "").toLowerCase();
-  if (mk && !mk.value) Array.prototype.forEach.call(mk.options, function (o) { if (o.value && o.value.toLowerCase() === want) mk.value = o.value; });
-  viShow(v);
-  return true;
-}
-
-/* Wait until cond() is true (the Valuations dropdowns load from ikman.lk). */
-function viWait(cond, ms) {
-  return new Promise(function (resolve) {
-    const t0 = Date.now();
-    (function tick() { if (cond()) return resolve(true); if (Date.now() - t0 > ms) return resolve(false); setTimeout(tick, 200); })();
-  });
-}
-
-/* Open Valuations with the vehicle type, make and year filled in; the officer picks the model
-   (DMT gives a chassis code such as "LA-HR51S", not the model name). */
-async function viToValuation(v) {
-  const say = function (t) { const m = document.getElementById("vcOut"); if (m) m.innerHTML = '<p class="vcHint">' + t + '</p>'; };
-  document.querySelector('.tab[data-tab="vcheck"]').click();
-  const typeSel = document.getElementById("vcType"), makeSel = document.getElementById("vcMake");
-  const modelSel = document.getElementById("vcModel"), yearSel = document.getElementById("vcYear");
-  const type = viTypeFor(v.vclass);
-  const from = "From DMT: " + escapeHtml([v.regNo, v.make, v.model, v.year].filter(Boolean).join(" · ")) + ". ";
-  if (!type) { say(from + "Select the vehicle type, make, model and year, then tap <b>Check</b>."); return; }
-  typeSel.value = type;
-  typeSel.dispatchEvent(new Event("change"));
-  await viWait(function () { return !makeSel.disabled && makeSel.options.length > 2; }, 15000);
-  const want = String(v.make || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const opt = Array.prototype.find.call(makeSel.options, function (o) {
-    return want && o.value && o.text.replace(/\s*\(\d[\d,]*\)\s*$/, "").toLowerCase().replace(/[^a-z0-9]/g, "") === want;
-  });
-  if (!opt) { say(from + "Select the make, model and year, then tap <b>Check</b>."); return; }
-  makeSel.value = opt.value;
-  makeSel.dispatchEvent(new Event("change"));
-  await viWait(function () { return !modelSel.disabled && modelSel.options.length > 1 && !/Loading/i.test(modelSel.options[0].text); }, 15000);
-  if (v.year && yearSel.querySelector('option[value="' + v.year + '"]')) yearSel.value = v.year;
-  say(from + "Select the <b>model</b>" + (v.model ? " (DMT model code " + escapeHtml(v.model) + ")" : "") + ", then tap <b>Check</b>.");
-  modelSel.focus();
-}
-
-/* 17-character VIN -> make / model / year / engine (NHTSA vPIC, free, no key). */
-function viDecodeVin() {
-  const raw = (document.getElementById("viChassis").value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const out = document.getElementById("viChOut");
-  if (raw.length !== 17 || /[IOQ]/.test(raw)) {
-    out.textContent = "This is not a 17-character VIN" + (raw ? " (" + raw.length + " characters)" : "") +
-      ". Japanese chassis numbers (e.g. NHP10-1234567) cannot be decoded here: copy it and search it on CAR VX.";
-    return;
-  }
-  out.textContent = "Decoding…";
-  fetch("https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/" + raw + "?format=json")
-    .then(function (r) { return r.json(); })
-    .then(function (j) {
-      const d = (j && j.Results && j.Results[0]) || {};
-      const parts = [["Make", d.Make], ["Model", d.Model], ["Year", d.ModelYear], ["Body", d.BodyClass],
-                     ["Engine", [d.DisplacementL ? Number(d.DisplacementL).toFixed(1) + " L" : "", d.FuelTypePrimary].filter(Boolean).join(" ")],
-                     ["Made in", d.PlantCountry]].filter(function (p) { return p[1]; });
-      out.innerHTML = parts.length
-        ? '<div class="viGrid">' + parts.map(function (p) { return '<div class="viRowItem"><span>' + escapeHtml(p[0]) + '</span><b>' + escapeHtml(p[1]) + '</b></div>'; }).join("") + '</div>'
-        : "This VIN could not be decoded (the decoder knows only vehicles sold in the USA). Try Find model (PartSouq).";
-    })
-    .catch(function () { out.textContent = "The VIN decoder could not be reached. Check the internet connection."; });
-}
-
-/* Makers' own recall searches (Japan) by chassis number "<model>-<serial>": A = model part, B = serial.
-   get = result URL; post = the maker's search form, sent to a new tab; open = search page only (number copied). */
-const VI_RECALL = {
-  "Toyota":     { get: "https://www.toyota.co.jp/recall-search/dc/result?FRAME_DIV={A}&FRAME_NO={B}" },
-  "Nissan":     { post: "https://www.nissan.co.jp/RECALL/SEARCH/RecallServlet", f: { frameno: "A", chassino: "B" } },
-  "Honda":      { open: "https://recallsearch4.honda.co.jp/sqs/r001/R00101.do?fn=link.disp" },
-  "Suzuki":     { open: "https://recall-search.suzuki.co.jp/" },
-  "Mazda":      { post: "https://www2.mazda.co.jp/service/recall/vsearch", f: { PROC: "=vsearch", VIEW: "=vsearch_result", vin1: "A", vin2: "B" } },
-  "Mitsubishi": { post: "https://recall.mitsubishi-motors.co.jp/Recall/searchrecallstatus.do", f: { serialnumber: "=", serialnumber1: "A", serialnumber2: "B" } },
-  "Daihatsu":   { post: "https://www.daihatsu.co.jp/info/recall/search/recall_search.php", f: { mode: "=1", model_no: "A", car_no: "B" } },
-  "Subaru":     { post: "https://recall.subaru.co.jp/lqsb/recall.do", f: { txtCarNoKami: "A", txtCarNoShimo: "B", btnSearch: "=検索", txtButton: "=" } },
-  "Isuzu":      { post: "https://www.isuzu.co.jp/recall/input", f: { _method: "=POST", "data[RecallSearch][num_front]": "A", "data[RecallSearch][num_rear]": "B" } }
 };
 
-function viRecallCheck() {
-  const out = document.getElementById("viChOut"), make = document.getElementById("viMake").value;
-  const ch = document.getElementById("viChassis"), n = ch.value.trim().toUpperCase().replace(/\s+/g, "");
-  const r = VI_RECALL[make];
-  if (!n) { ch.focus(); out.textContent = "Type the chassis number first."; return; }
-  if (!r) { document.getElementById("viMake").focus(); out.textContent = "Select the make (Toyota, Nissan, Honda, Suzuki, Mazda, Mitsubishi, Daihatsu, Subaru or Isuzu)."; return; }
-  if (r.open) { viCopy(n, document.getElementById("viChCopy")); window.open(r.open, "recallTab"); return; }
-  const dash = n.lastIndexOf("-");
-  if (dash < 1 || dash === n.length - 1) {
-    out.textContent = "Type the chassis number with its dash, as in the CR book (e.g. LA300A-1036682)."; return;
-  }
-  const A = n.slice(0, dash), B = n.slice(dash + 1);
-  if (r.get) { window.open(r.get.replace("{A}", encodeURIComponent(A)).replace("{B}", encodeURIComponent(B)), "recallTab"); return; }
-  const f = document.createElement("form");
-  f.method = "post"; f.action = r.post; f.target = "recallTab"; f.acceptCharset = "UTF-8"; f.style.display = "none";
-  Object.keys(r.f).forEach(function (k) {
-    const v = r.f[k], i = document.createElement("input");
-    i.type = "hidden"; i.name = k; i.value = v === "A" ? A : v === "B" ? B : v.slice(1);
-    f.appendChild(i);
-  });
-  document.body.appendChild(f);
-  f.submit();
-  f.remove();
-}
+function vcNormName(s) { return String(s || "").toLowerCase().replace(/\s*\(\d[\d,]*\)\s*$/, "").replace(/[^a-z0-9]/g, ""); }
 
-function viCopy(text, btn) {
-  if (!text || !navigator.clipboard || !navigator.clipboard.writeText) return;
-  navigator.clipboard.writeText(text).then(function () {
-    viClipBase = text;
-    const o = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(function () { btn.textContent = o; }, 1500);
-  }, function () {});
-}
-
-function setupVehicleInfo() {
-  if (vi_ready) return;
-  vi_ready = true;
-  const reg = document.getElementById("viReg");
-  reg.addEventListener("blur", function () { if (reg.value) reg.value = viNormReg(reg.value); });
-  document.getElementById("viForm").addEventListener("submit", function (e) { e.preventDefault(); });
-  document.getElementById("viCopy").addEventListener("click", function () { reg.value = viNormReg(reg.value); viCopy(reg.value, this); });
-  /* Open DMT also copies the number, so it can be pasted straight into the DMT form. window.open (not a
-     noopener link) keeps window.opener, so the "Send to MasterCAL" bookmark can post the result back here. */
-  document.getElementById("viOpen").addEventListener("click", function (e) {
-    if (reg.value) { reg.value = viNormReg(reg.value); viCopy(reg.value, document.getElementById("viCopy")); }
-    if (window.open(this.href, "dmtTab")) e.preventDefault();
-  });
-  /* the bookmarklet: drag it to the bookmarks bar; clicking it here only explains that */
-  const bm = document.getElementById("viBm");
-  bm.href = VI_BOOKMARKLET;
-  bm.addEventListener("click", function (e) {
-    e.preventDefault();
-    alert("Drag this button to your browser's bookmarks bar (Ctrl+Shift+B shows it).\n\n" +
-          "Then, on the DMT result page, click the bookmark: the details appear in MasterCAL.");
-  });
-  document.getElementById("viRead").addEventListener("click", function () { viRead(document.getElementById("viPaste").value); });
-  const mk = document.getElementById("viMake");
-  Object.keys(VI_RECALL).forEach(function (m) { const o = document.createElement("option"); o.value = o.textContent = m; mk.appendChild(o); });
-  document.getElementById("viRecall").addEventListener("click", viRecallCheck);
-  /* PartSouq decodes a Japanese chassis (frame) number: the link always carries the typed number */
-  const ch = document.getElementById("viChassis"), ps = document.getElementById("viPartsouq");
-  const psLink = function () {
-    const n = ch.value.trim().toUpperCase().replace(/\s+/g, "");
-    ps.href = n ? "https://partsouq.com/en/search/all?q=" + encodeURIComponent(n) : "https://partsouq.com/";
+/* The common chassis codes for the chosen make / model (/ year), shown under the form. */
+function vcShowChassis() {
+  const box = document.getElementById("vcChassis");
+  if (!box) return;
+  const makeSel = document.getElementById("vcMake"), modelSel = document.getElementById("vcModel");
+  const year = Number(document.getElementById("vcYear").value) || 0;
+  const grade = String(document.getElementById("vcGrade").value || "").toLowerCase();
+  const pick = function (obj, name) {
+    const want = vcNormName(name);
+    const k = want && Object.keys(obj).find(function (x) { return vcNormName(x) === want; });
+    return k ? obj[k] : null;
   };
-  ch.addEventListener("input", psLink);
-  ps.addEventListener("click", function (e) {
-    psLink();
-    if (!ch.value.trim()) { e.preventDefault(); ch.focus(); document.getElementById("viChOut").textContent = "Type the chassis number first."; }
-  });
-  document.getElementById("viChCopy").addEventListener("click", function () {
-    const c = document.getElementById("viChassis"); c.value = c.value.trim().toUpperCase(); viCopy(c.value, this);
-  });
-  document.getElementById("viVin").addEventListener("click", viDecodeVin);
+  const makeOpt = makeSel.options[makeSel.selectedIndex], modelOpt = modelSel.options[modelSel.selectedIndex];
+  const models = pick(VC_CHASSIS, makeSel.value || (makeOpt && makeOpt.text));
+  const list = models && pick(models, modelSel.value || (modelOpt && modelOpt.text));
+  if (!list) { box.hidden = true; box.textContent = ""; return; }
+  let rows = list.filter(function (r) { return !year || (year >= r[1] - 1 && (!r[2] || year <= r[2] + 1)); });
+  if (!rows.length) rows = list;
+  /* a hybrid grade shows the hybrid codes first */
+  if (/hybrid|phev|e-power/.test(grade)) rows = rows.slice().sort(function (a, b) { return (b[3] ? 1 : 0) - (a[3] ? 1 : 0); });
+  const yrs = function (r) { return r[1] + "–" + (r[2] || "now"); };
+  box.innerHTML = '<span class="vcChLabel">Common chassis code' + (rows.length > 1 ? "s" : "") + ':</span> ' +
+    rows.map(function (r) {
+      return '<span class="vcChCode"><b>' + escapeHtml(r[0]) + '</b> <small>' + yrs(r) + (r[3] ? " · " + escapeHtml(r[3]) : "") + '</small></span>';
+    }).join("") +
+    '<span class="vcChNote">Compare with the CR book (e.g. ' + escapeHtml(rows[0][0].split(" ")[0]) + '-1234567). Other codes exist for some engines / 4WD.</span>';
+  box.hidden = false;
 }
-
-/* "📥 Send to MasterCAL" bookmark. It runs on the DMT result page the officer is looking at (their own browser,
-   their own click): it sends that page's text to the MasterCAL window that opened DMT, or copies it when there is
-   none (then MasterCAL reads the clipboard). MasterCAL accepts the message only from the DMT site. */
-const VI_BOOKMARKLET = "javascript:(function(){" +
-  "if(!/motortraffic\\.gov\\.lk$/.test(location.hostname)){alert('Use this on the DMT Limited Vehicle Information result page.');return;}" +
-  "var t=document.body.innerText;" +
-  "if(!/Year of manufacture/i.test(t)){alert('Open the Limited Vehicle Information result page first (enter the number and Submit).');return;}" +
-  "var d=document.createElement('div');d.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;background:#1c5e3a;color:#fff;padding:12px 20px;border-radius:10px;font:bold 15px Arial;box-shadow:0 4px 16px rgba(0,0,0,.3)';" +
-  "var o=window.opener;" +
-  "if(o&&!o.closed){o.postMessage({type:'mc-dmt',text:t},'*');try{o.focus()}catch(e){}d.textContent='\\u2713 Sent to MasterCAL \\u2014 switch back to the MasterCAL window';document.body.appendChild(d);setTimeout(function(){d.remove()},6000);}" +
-  "else{navigator.clipboard.writeText(t).then(function(){d.textContent='\\u2713 Copied \\u2014 go back to MasterCAL (Vehicle Info tab): the details are filled in';document.body.appendChild(d);setTimeout(function(){d.remove()},6000);},function(){alert('Press Ctrl+A, Ctrl+C on this page and paste it in MasterCAL.');});}" +
-  "})();";
-
-window.addEventListener("message", function (e) {
-  if (e.origin !== "https://eservices.motortraffic.gov.lk") return;
-  const d = e.data;
-  if (!d || d.type !== "mc-dmt" || typeof d.text !== "string" || d.text.length > 20000) return;
-  const tab = document.querySelector('.tab[data-tab="vinfo"]');
-  if (tab && !tab.classList.contains("active")) tab.click();
-  setupVehicleInfo();
-  viClipBase = d.text;
-  viRead(d.text);
-  try { window.focus(); } catch (err) {}
-});
-
-/* CLIPBOARD: back from the DMT page with its text copied -> read it (only while the Vehicle Info tab is open,
-   only a new copy that holds "Year of manufacture"). The text stays in this browser. */
-function viClipTry() {
-  const panel = document.getElementById("vinfoPanel");
-  if (!panel || panel.hidden || !navigator.clipboard || !navigator.clipboard.readText) return;
-  navigator.clipboard.readText().then(function (t) {
-    t = String(t || "");
-    if (!t || t === viClipBase || !/Year of manufacture/i.test(t)) return;
-    viClipBase = t;
-    viRead(t, true);
-  }, function () { /* no permission: the paste box still works */ });
-}
-document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") viClipTry(); });
-window.addEventListener("focus", viClipTry);

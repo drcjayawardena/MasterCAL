@@ -31,8 +31,8 @@ html = html.replace(/<meta property="og:[^>]*>\n?/g, "").replace(/<meta name="tw
 html = html.replace(/<link rel="(manifest|icon|apple-touch-icon|preconnect)"[^>]*>\n?/g, "");
 html = patch(html, "You are offline — calculations need an internet connection. The app will keep working once you reconnect.",
   "You are offline — calculations use the rates saved on this device. Valuations need an internet connection.", "offline bar");
-html = patch(html, '<button type="button" class="tab" data-tab="vinfo">Vehicle Info</button>', '<button type="button" class="tab" data-tab="vinfo">Vehicle Info</button>\n    <button type="button" class="tab" data-tab="admin" hidden>Admin</button>', "admin tab");
-html = patch(html, '<div id="vinfoPanel"', '<div id="adminPanel" class="vcPanel" hidden></div>\n  <div id="vinfoPanel"', "admin panel");
+html = patch(html, '<button type="button" class="tab" data-tab="vcheck">Valuations</button>', '<button type="button" class="tab" data-tab="vcheck">Valuations</button>\n    <button type="button" class="tab" data-tab="admin" hidden>Admin</button>', "admin tab");
+html = patch(html, '<div id="vcheckPanel"', '<div id="adminPanel" class="vcPanel" hidden></div>\n  <div id="vcheckPanel"', "admin panel");
 html = patch(html, '<link rel="stylesheet" href="styles.css">', "<style>\n" + rd(path.join(FE, "styles.css")) +
   "\n.tab[hidden]{display:none!important}#installBar{display:none!important}\n</style>", "css");
 const i0 = html.indexOf('<script src="app.js'); if (i0 < 0) throw new Error("script tag not found");

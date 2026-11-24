@@ -85,7 +85,6 @@
     <button type="button" class="tab" data-tab="threewheel">3W</button>
     <button type="button" class="tab" data-tab="bike">BIKE</button>
     <button type="button" class="tab" data-tab="vcheck">Valuations</button>
-    <button type="button" class="tab" data-tab="vinfo">Vehicle Info</button>
   </div>
 
 
@@ -269,52 +268,6 @@
 
 
 
-  <!-- ============ VEHICLE INFO (DMT "Limited Vehicle Information": the officer looks it up, copies the page, the app reads it) ============ -->
-  <div id="vinfoPanel" class="vcPanel" hidden>
-    <div class="viStep">
-      <h3>1. Department of Motor Traffic (DMT)</h3>
-      <form id="viForm" class="viRow" autocomplete="off">
-        <input id="viReg" type="text" autocapitalize="characters" spellcheck="false" placeholder="Vehicle number, e.g. CAB-1234, KB-2073, 15-4321">
-        <button type="button" id="viCopy" class="viBtnLight">Copy number</button>
-        <a id="viOpen" class="vcOpenBtn" href="https://eservices.motortraffic.gov.lk/VehicleInfo/home" target="dmtTab">Open DMT ↗</a>
-      </form>
-      <div class="viBmBox">
-        <b>One-time setup (computer):</b> drag this button to your browser's bookmarks bar →
-        <a id="viBm" class="viBm" href="#">📥 Send to MasterCAL</a>
-        <span>(Ctrl+Shift+B shows the bookmarks bar)</span>
-      </div>
-      <p class="vcHint">On the DMT site: <b>Limited Vehicle Information → Proceed</b>, paste the number (Ctrl+V) and <b>Submit</b>.
-        On the result page click the <b>📥 Send to MasterCAL</b> bookmark: the details appear here at once.
-        Without the bookmark: press <b>Ctrl+A</b> then <b>Ctrl+C</b> on the result page and come back to this tab
-        (if your browser asks to allow clipboard access, choose Allow), or paste here:</p>
-      <div class="vcPaste">
-        <textarea id="viPaste" rows="3" placeholder="Paste the DMT result page text here"></textarea>
-        <button type="button" id="viRead" class="vcGo">Read details</button>
-      </div>
-      <div id="viOut"></div>
-    </div>
-    <div class="viStep">
-      <h3>2. Chassis number</h3>
-      <div class="viRow">
-        <input id="viChassis" type="text" autocapitalize="characters" spellcheck="false" placeholder="Chassis number, e.g. NHP10-1234567 or a 17-character VIN">
-        <a id="viPartsouq" class="vcOpenBtn" href="https://partsouq.com/" target="partsouqTab" rel="noopener">Find model (PartSouq) ↗</a>
-        <button type="button" id="viChCopy" class="viBtnLight">Copy</button>
-        <button type="button" id="viVin" class="vcGo">Decode VIN</button>
-        <a class="vcOpenBtn" href="https://carvx.jp/chassis-number" target="_blank" rel="noopener">Japan history (CAR VX) ↗</a>
-      </div>
-      <div class="viRow">
-        <select id="viMake" class="viSelect"><option value="">Make (for the recall check)…</option></select>
-        <button type="button" id="viRecall" class="vcGo">Recall check (maker's site) ↗</button>
-      </div>
-      <div id="viChOut" class="vcHint"><b>Find model (PartSouq)</b>: a Japanese chassis number (e.g. LA300A-1036682) shows the model, grade,
-        engine, colour code and production period (Toyota, Lexus, Nissan, Honda, Suzuki, Mazda, Mitsubishi, Subaru, Isuzu…; some old
-        trucks are not listed). A 17-character VIN of a US-market vehicle is decoded here with <b>Decode VIN</b>.
-        Auction / mileage history: copy the number and search it on CAR VX (free search, paid report).
-        <b>Recall check</b>: the maker's own Japanese site shows the car name and its recalls / service campaigns (vehicles sold in Japan only;
-        use the browser's Translate). Honda and Suzuki open their search page with the number copied: paste it there.</div>
-    </div>
-  </div>
-
   <!-- ============ VEHICLE CHECKING (ikman.lk / riyasewana.com ad prices, filled by app.js) ============ -->
   <div id="vcheckPanel" class="vcPanel" hidden>
     <form id="vcForm" class="vcForm" autocomplete="off">
@@ -327,6 +280,7 @@
       <label><span>Year</span><select id="vcYear"></select></label>
       <button type="submit" id="vcGo" class="vcGo">Check</button>
     </form>
+    <div id="vcChassis" class="vcChassis" hidden></div>
     <div id="vcOut" class="vcOut"><p class="vcHint">Select the make, model and year, then tap <b>Check</b> to see a price summary of current ads on ikman.lk and riyasewana.com.</p></div>
   </div>
 
