@@ -276,11 +276,17 @@
       <form id="viForm" class="viRow" autocomplete="off">
         <input id="viReg" type="text" autocapitalize="characters" spellcheck="false" placeholder="Vehicle number, e.g. CAB-1234, KB-2073, 15-4321">
         <button type="button" id="viCopy" class="viBtnLight">Copy number</button>
-        <a id="viOpen" class="vcOpenBtn" href="https://eservices.motortraffic.gov.lk/VehicleInfo/home" target="dmtTab" rel="noopener">Open DMT ↗</a>
+        <a id="viOpen" class="vcOpenBtn" href="https://eservices.motortraffic.gov.lk/VehicleInfo/home" target="dmtTab">Open DMT ↗</a>
       </form>
-      <p class="vcHint">On the DMT site: <b>Limited Vehicle Information → Proceed</b>, sign in, paste the number and <b>Submit</b>.
-        On the result page press <b>Ctrl+A</b> then <b>Ctrl+C</b> and come back to this tab: the details are filled in automatically
-        (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:</p>
+      <div class="viBmBox">
+        <b>One-time setup (computer):</b> drag this button to your browser's bookmarks bar →
+        <a id="viBm" class="viBm" href="#">📥 Send to MasterCAL</a>
+        <span>(Ctrl+Shift+B shows the bookmarks bar)</span>
+      </div>
+      <p class="vcHint">On the DMT site: <b>Limited Vehicle Information → Proceed</b>, paste the number (Ctrl+V) and <b>Submit</b>.
+        On the result page click the <b>📥 Send to MasterCAL</b> bookmark: the details appear here at once.
+        Without the bookmark: press <b>Ctrl+A</b> then <b>Ctrl+C</b> on the result page and come back to this tab
+        (if your browser asks to allow clipboard access, choose Allow), or paste here:</p>
       <div class="vcPaste">
         <textarea id="viPaste" rows="3" placeholder="Paste the DMT result page text here"></textarea>
         <button type="button" id="viRead" class="vcGo">Read details</button>

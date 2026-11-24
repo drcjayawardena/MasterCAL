@@ -3379,9 +3379,19 @@ function setupVehicleInfo() {
   reg.addEventListener("blur", function () { if (reg.value) reg.value = viNormReg(reg.value); });
   document.getElementById("viForm").addEventListener("submit", function (e) { e.preventDefault(); });
   document.getElementById("viCopy").addEventListener("click", function () { reg.value = viNormReg(reg.value); viCopy(reg.value, this); });
-  /* Open DMT also copies the number, so it can be pasted straight into the DMT form */
-  document.getElementById("viOpen").addEventListener("click", function () {
+  /* Open DMT also copies the number, so it can be pasted straight into the DMT form. window.open (not a
+     noopener link) keeps window.opener, so the "Send to MasterCAL" bookmark can post the result back here. */
+  document.getElementById("viOpen").addEventListener("click", function (e) {
     if (reg.value) { reg.value = viNormReg(reg.value); viCopy(reg.value, document.getElementById("viCopy")); }
+    if (window.open(this.href, "dmtTab")) e.preventDefault();
+  });
+  /* the bookmarklet: drag it to the bookmarks bar; clicking it here only explains that */
+  const bm = document.getElementById("viBm");
+  bm.href = VI_BOOKMARKLET;
+  bm.addEventListener("click", function (e) {
+    e.preventDefault();
+    alert("Drag this button to your browser's bookmarks bar (Ctrl+Shift+B shows it).\n\n" +
+          "Then, on the DMT result page, click the bookmark: the details appear in MasterCAL.");
   });
   document.getElementById("viRead").addEventListener("click", function () { viRead(document.getElementById("viPaste").value); });
   const mk = document.getElementById("viMake");
@@ -3403,6 +3413,31 @@ function setupVehicleInfo() {
   });
   document.getElementById("viVin").addEventListener("click", viDecodeVin);
 }
+
+/* "📥 Send to MasterCAL" bookmark. It runs on the DMT result page the officer is looking at (their own browser,
+   their own click): it sends that page's text to the MasterCAL window that opened DMT, or copies it when there is
+   none (then MasterCAL reads the clipboard). MasterCAL accepts the message only from the DMT site. */
+const VI_BOOKMARKLET = "javascript:(function(){" +
+  "if(!/motortraffic\\.gov\\.lk$/.test(location.hostname)){alert('Use this on the DMT Limited Vehicle Information result page.');return;}" +
+  "var t=document.body.innerText;" +
+  "if(!/Year of manufacture/i.test(t)){alert('Open the Limited Vehicle Information result page first (enter the number and Submit).');return;}" +
+  "var d=document.createElement('div');d.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;background:#1c5e3a;color:#fff;padding:12px 20px;border-radius:10px;font:bold 15px Arial;box-shadow:0 4px 16px rgba(0,0,0,.3)';" +
+  "var o=window.opener;" +
+  "if(o&&!o.closed){o.postMessage({type:'mc-dmt',text:t},'*');try{o.focus()}catch(e){}d.textContent='\\u2713 Sent to MasterCAL \\u2014 switch back to the MasterCAL window';document.body.appendChild(d);setTimeout(function(){d.remove()},6000);}" +
+  "else{navigator.clipboard.writeText(t).then(function(){d.textContent='\\u2713 Copied \\u2014 go back to MasterCAL (Vehicle Info tab): the details are filled in';document.body.appendChild(d);setTimeout(function(){d.remove()},6000);},function(){alert('Press Ctrl+A, Ctrl+C on this page and paste it in MasterCAL.');});}" +
+  "})();";
+
+window.addEventListener("message", function (e) {
+  if (e.origin !== "https://eservices.motortraffic.gov.lk") return;
+  const d = e.data;
+  if (!d || d.type !== "mc-dmt" || typeof d.text !== "string" || d.text.length > 20000) return;
+  const tab = document.querySelector('.tab[data-tab="vinfo"]');
+  if (tab && !tab.classList.contains("active")) tab.click();
+  setupVehicleInfo();
+  viClipBase = d.text;
+  viRead(d.text);
+  try { window.focus(); } catch (err) {}
+});
 
 /* CLIPBOARD: back from the DMT page with its text copied -> read it (only while the Vehicle Info tab is open,
    only a new copy that holds "Year of manufacture"). The text stays in this browser. */
