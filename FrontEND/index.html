@@ -291,12 +291,15 @@
       <h3>2. Chassis number</h3>
       <div class="viRow">
         <input id="viChassis" type="text" autocapitalize="characters" spellcheck="false" placeholder="Chassis number, e.g. NHP10-1234567 or a 17-character VIN">
+        <a id="viPartsouq" class="vcOpenBtn" href="https://partsouq.com/" target="partsouqTab" rel="noopener">Find model (PartSouq) ↗</a>
         <button type="button" id="viChCopy" class="viBtnLight">Copy</button>
         <button type="button" id="viVin" class="vcGo">Decode VIN</button>
         <a class="vcOpenBtn" href="https://carvx.jp/chassis-number" target="_blank" rel="noopener">Japan history (CAR VX) ↗</a>
       </div>
-      <div id="viChOut" class="vcHint">A 17-character VIN is decoded here (make, model, year, engine). Japanese chassis numbers are not VINs:
-        copy the number and search it on CAR VX (free search, paid report).</div>
+      <div id="viChOut" class="vcHint"><b>Find model (PartSouq)</b>: a Japanese chassis number (e.g. LA300A-1036682) shows the model, grade,
+        engine, colour code and production period (Toyota, Lexus, Nissan, Honda, Suzuki, Mazda, Mitsubishi, Subaru, Isuzu…; some old
+        trucks are not listed). A 17-character VIN of a US-market vehicle is decoded here with <b>Decode VIN</b>.
+        Auction / mileage history: copy the number and search it on CAR VX (free search, paid report).</div>
     </div>
   </div>
 

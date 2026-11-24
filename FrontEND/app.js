@@ -3317,7 +3317,7 @@ function viDecodeVin() {
                      ["Made in", d.PlantCountry]].filter(function (p) { return p[1]; });
       out.innerHTML = parts.length
         ? '<div class="viGrid">' + parts.map(function (p) { return '<div class="viRowItem"><span>' + escapeHtml(p[0]) + '</span><b>' + escapeHtml(p[1]) + '</b></div>'; }).join("") + '</div>'
-        : "This VIN could not be decoded.";
+        : "This VIN could not be decoded (the decoder knows only vehicles sold in the USA). Try Find model (PartSouq).";
     })
     .catch(function () { out.textContent = "The VIN decoder could not be reached. Check the internet connection."; });
 }
@@ -3342,6 +3342,17 @@ function setupVehicleInfo() {
     if (reg.value) { reg.value = viNormReg(reg.value); viCopy(reg.value, document.getElementById("viCopy")); }
   });
   document.getElementById("viRead").addEventListener("click", function () { viRead(document.getElementById("viPaste").value); });
+  /* PartSouq decodes a Japanese chassis (frame) number: the link always carries the typed number */
+  const ch = document.getElementById("viChassis"), ps = document.getElementById("viPartsouq");
+  const psLink = function () {
+    const n = ch.value.trim().toUpperCase().replace(/\s+/g, "");
+    ps.href = n ? "https://partsouq.com/en/search/all?q=" + encodeURIComponent(n) : "https://partsouq.com/";
+  };
+  ch.addEventListener("input", psLink);
+  ps.addEventListener("click", function (e) {
+    psLink();
+    if (!ch.value.trim()) { e.preventDefault(); ch.focus(); document.getElementById("viChOut").textContent = "Type the chassis number first."; }
+  });
   document.getElementById("viChCopy").addEventListener("click", function () {
     const c = document.getElementById("viChassis"); c.value = c.value.trim().toUpperCase(); viCopy(c.value, this);
   });
