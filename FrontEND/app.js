@@ -2890,9 +2890,9 @@ window.addEventListener("focus", vcClipTry);
    list, the middle price of that list, rounded to the nearest Rs 10,000. Each ad counts once, so the site with more
    ads weighs more and a few extreme prices do not move it. On a computer, until the riyasewana prices are calculated,
    it says how to include them; on a phone riyasewana is not offered (copying a whole page is not practical there). */
-var vcMedian = { ikman: [], riya: [], saleme: [] };      /* the ad prices of each site */
+var vcMedian = { ikman: [], riya: [] };      /* the ad prices of each site */
 function vcValuation() {
-  const parts = [["ikman.lk", vcMedian.ikman], ["saleme.lk", vcMedian.saleme], ["riyasewana.com", vcMedian.riya]]
+  const parts = [["ikman.lk", vcMedian.ikman], ["riyasewana.com", vcMedian.riya]]
     .filter(function (p) { return p[1].length; });
   const all = [].concat.apply([], parts.map(function (p) { return p[1]; })).filter(function (v) { return v > 0; })
     .sort(function (x, y) { return x - y; });
@@ -2932,8 +2932,8 @@ function runVehicleCheck() {
   btn.textContent = "Checking…";
   /* phone: ikman.lk only (riyasewana needs the whole page copied, which a phone can't do easily) */
   const phone = isPhone();
-  out.innerHTML = '<p class="vcHint">Checking ikman.lk, saleme.lk' + (phone ? '' : ' and riyasewana.com') + '…</p>';
-  vcMedian = { ikman: [], riya: [], saleme: [] };
+  out.innerHTML = '<p class="vcHint">Checking ikman.lk' + (phone ? '' : ' and riyasewana.com') + '…</p>';
+  vcMedian = { ikman: [], riya: [] };
   /* remember what is on the clipboard now: only a NEWER copy (from riyasewana) is picked up automatically */
   vcClipBase = null;
   if (!phone) try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {}); } catch (e) {}
@@ -2941,11 +2941,9 @@ function runVehicleCheck() {
   api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
-      out.innerHTML = (phone ? '' : vcSiteHtml(r.riyasewana, "riyasewana.com")) + vcSiteHtml(r.ikman, "ikman.lk") +
-                      (r.saleme ? vcSiteHtml(r.saleme, "saleme.lk") : '');
+      out.innerHTML = (phone ? '' : vcSiteHtml(r.riyasewana, "riyasewana.com")) + vcSiteHtml(r.ikman, "ikman.lk");
       const prices = function (x) { return (x && !x.blocked && x.ads || []).map(function (a) { return Number(a.priceValue) || 0; }).filter(Boolean); };
       vcMedian.ikman = prices(r.ikman);
-      vcMedian.saleme = prices(r.saleme);
       vcMedian.riya = phone ? [] : prices(r.riyasewana);      /* normally empty: our server cannot read riyasewana */
       vcBindPaste(out);
       vcShowValuation(out);
