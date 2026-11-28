@@ -36,6 +36,8 @@ function doPost(e) {
     /* 1b) Standalone app (Standalone.gs): the model and the admin tab need no per-user spreadsheet copy.
            The valuation actions read no sheet either, so they skip the copy as well. */
     if (action === "standaloneModel") return json_({ ok: true, data: standaloneModel_() });
+    /* the time of the last "Update app" (the apps show "MasterCAL updated — new version here" when theirs is older) */
+    if (action === "appVersion") return json_({ ok: true, data: { published: PropertiesService.getScriptProperties().getProperty("SA_PUBLISHED") || "" } });
     if (action === "adminWho") {
       const isAdm = isAdmin_(access.who.key);
       /* the master Sheet link is given to admins only (Admin tab "Open Google Sheet") */

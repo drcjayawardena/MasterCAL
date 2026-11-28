@@ -102,6 +102,37 @@
   }
   window.addEventListener("online", function () { setTimeout(recheck, 1500); });
 
+  /* NEW VERSION: after an admin's "Update app" the open apps say "MasterCAL updated — new version here".
+     A tiny request (the time of the last update) every 10 minutes and whenever the app comes to the front. */
+  var verAsked = 0;
+  function checkVersion() {
+    if (!L || usingSaved || navigator.onLine === false || Date.now() - verAsked < 60000) return;
+    var token = ""; try { token = localStorage.getItem(TOKEN_KEY) || ""; } catch (e) {}
+    if (!token || !window.__mcPublished) return;
+    verAsked = Date.now();
+    realFetch(REMOTE, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, redirect: "follow",
+                        body: JSON.stringify({ action: "appVersion", args: [], token: token }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var p = j && j.ok && j.data && j.data.published;
+        if (p && p > String(window.__mcPublished)) updateBanner();
+      }, function () {});
+  }
+  function updateBanner() {
+    if (document.getElementById("mcUpdate")) return;
+    var b = document.createElement("div");
+    b.id = "mcUpdate";
+    b.setAttribute("role", "button");
+    b.textContent = "🔔 MasterCAL updated — new version here (tap to load)";
+    b.style.cssText = "position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:10000;background:#1c5e3a;color:#fff;" +
+      "padding:12px 20px;border-radius:24px;font:700 15px Arial,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;max-width:92vw;text-align:center";
+    b.onclick = function () { location.reload(); };
+    document.body.appendChild(b);
+  }
+  setInterval(checkVersion, 10 * 60 * 1000);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") checkVersion(); });
+  window.addEventListener("focus", checkVersion);
+
   function verBox() {
     var v = document.getElementById("mcVer");
     if (!v && document.body) { v = document.createElement("div"); v.id = "mcVer"; document.body.appendChild(v); }

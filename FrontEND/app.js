@@ -224,6 +224,8 @@ function init() {
   setupBkScheduleToggle();
   setupTabs();
   ["facilityAmount", "insurance"].forEach(function (id) { mcMoney(document.getElementById(id)); });
+  setupLtv();
+  setupCompare();
   setupWhatsAppQuotes();
 
   /* Gate: log in before doing anything. */
@@ -2888,6 +2890,9 @@ function vcShowValuation(out) {
   const old = out.querySelector("#vcValBox"); if (old) old.remove();
   const v = vcValuation();
   if (!v) return;
+  ltvFromValuation(v.value, ["vcMake", "vcModel", "vcYear"].map(function (id) {
+    const el = document.getElementById(id); return el && el.selectedIndex > 0 ? el.options[el.selectedIndex].text.replace(/\s*\(\d[\d,]*\)$/, "") : "";
+  }).filter(Boolean).join(" "));
   const from = v.parts.map(function (p) { return p[0] + " " + p[1].length; }).join(" + ");
   const riyaTip = !vcMedian.riya.length && out.querySelector("#vcPasteBtn") ? " Calculate the riyasewana prices below to include riyasewana.com." : "";
   out.insertAdjacentHTML("afterbegin",
@@ -3052,11 +3057,14 @@ function setupWhatsAppQuotes() {
       '<input id="waq_' + q.kind + '" type="tel" inputmode="tel" placeholder="Customer WhatsApp (07XXXXXXXX)">' +
       (phone && canPickContact() ? '<button type="button" class="waQuotePick" aria-label="Contacts">📇 Contacts</button>' : '') +
       (phone ? '<button type="button" class="waQuoteBtn waQuoteLink">Send via WhatsApp</button>' : '') +
-      '<button type="button" class="waQuoteBtn waQuoteAuto" title="Sent from the company WhatsApp number">Send automatically</button></div>' +
+      '<button type="button" class="waQuoteBtn waQuoteAuto" title="Sent from the company WhatsApp number (English)">Send automatically</button>' +
+      '<select id="waqLang_' + q.kind + '" class="waQuoteLang" aria-label="Quotation language"><option value="en">English</option><option value="si">සිංහල</option></select>' +
+      '<button type="button" class="waQuotePdf">📄 PDF</button></div>' +
       (!phone || canPickContact() ? '' : '<div class="waQuoteHint">Leave the number blank and tap Send to choose the customer from your WhatsApp contacts.</div>');
     const link = bar.querySelector(".waQuoteLink");
     if (link) link.addEventListener("click", function () { sendQuoteWhatsApp(q); });
     bar.querySelector(".waQuoteAuto").addEventListener("click", function () { sendQuoteApi(q, this); });
+    bar.querySelector(".waQuotePdf").addEventListener("click", function () { quotePdf(q, this); });
     const pick = bar.querySelector(".waQuotePick");
     if (pick) pick.addEventListener("click", function () { pickContactInto(document.getElementById("waq_" + q.kind)); });
     anchor.parentNode.insertBefore(bar, anchor.nextSibling);
@@ -3149,21 +3157,22 @@ const QUOTE_MARK = "•";
 function quoteText(q, num) {
   const d = quoteLines(q.kind);
   if (!d) return "";
-  const t = ["Dear Customer,", "Please find below your requested *" + q.title + "* quotation:", ""];
+  const T = QT[quoteLang(q.kind)];
+  const t = [T.dear, T.intro(T.titles[q.title] || q.title), ""];
   d.main.forEach(function (r) {
-    if (r[0] === "Facility Amount") t.push("Facility Amount  : " + r[1]);
-    else if (r[0] === "Period (months)") t.push("Period (months) : " + qMoney(r[1]));   /* 24 -> 24.00 */
+    if (r[0] === "Facility Amount") t.push(T.facility + "  : " + r[1]);
+    else if (r[0] === "Period (months)") t.push(T.period + " : " + qMoney(r[1]));   /* 24 -> 24.00 */
     else t.push(r[0] + " : " + r[1]);
   });
   const hasBullet = d.bullets && d.bullets.length;
-  t.push("", "*Monthly Rental" + (hasBullet ? " (with Bullet)" : "") + "  : " + d.rental + "*");
+  t.push("", "*" + T.rental + (hasBullet ? T.withBullet : "") + "  : " + d.rental + "*");
   if (hasBullet) {
-    t.push("", "*Bullet Payments:*");
-    d.bullets.forEach(function (r) { t.push(r[0] + ": " + r[1]); });
+    t.push("", "*" + T.bullets + ":*");
+    d.bullets.forEach(function (r) { t.push(qtMonth(r[0], T) + ": " + r[1]); });
   }
-  if (qNum(d.total)) t.push("", "*Initial Charges    : " + d.total + "*");
+  if (qNum(d.total)) t.push("", "*" + T.initial + "    : " + d.total + "*");
   const tel = lsGet("mastercal_phone");   /* the officer's WhatsApp number */
-  t.push("", "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + localPhone(tel) : "") + ".");
+  t.push("", T.note(tel ? localPhone(tel) : ""));
   return t.join("\n");
 }
 
@@ -3327,4 +3336,236 @@ function vcShowChassis() {
     }).join("") +
     '<span class="vcChNote">Compare with the CR book (e.g. ' + escapeHtml(rows[0][0].split(" ")[0]) + '-1234567). Other codes exist for some engines / 4WD.</span>';
   box.hidden = false;
+}
+
+
+/* =========================================================
+   LTV (4W): facility amount as a % of the vehicle's market value.
+   The market value is filled in from the last Valuations check (Estimated market value) and can be typed.
+   Up to 70% green, up to 80% amber, above 80% red.
+========================================================= */
+const LTV_OK = 70, LTV_WARN = 80;
+var vcLastValue = null;   /* { value, label } from the last Valuations check */
+
+function setupLtv() {
+  const fa = document.getElementById("facilityAmount");
+  if (!fa || document.getElementById("mktValue")) return;
+  const field = fa.closest(".field");
+  const wrap = document.createElement("div");
+  wrap.className = "field ltvField";
+  wrap.innerHTML = '<label for="mktValue">MARKET VALUE <span id="ltvOut" class="ltvOut"></span></label>' +
+    '<input id="mktValue" type="text" inputmode="decimal" placeholder="From Valuations, or type">';
+  field.parentNode.insertBefore(wrap, field.nextSibling);
+  const mv = mcMoney(document.getElementById("mktValue"));
+  mv.addEventListener("input", function () { mv.dataset.auto = ""; showLtv(); });
+  mv.addEventListener("blur", showLtv);
+  fa.addEventListener("input", showLtv);
+  fa.addEventListener("blur", showLtv);
+}
+
+function showLtv() {
+  const out = document.getElementById("ltvOut"), mv = document.getElementById("mktValue");
+  if (!out || !mv) return;
+  const f = qNum(value("facilityAmount")), m = qNum(mv.value);
+  if (!f || !m) { out.textContent = ""; out.className = "ltvOut"; return; }
+  const p = f / m * 100;
+  out.textContent = "· LTV " + p.toFixed(1) + "%";
+  out.className = "ltvOut " + (p <= LTV_OK ? "ok" : p <= LTV_WARN ? "warn" : "bad");
+  out.title = p > LTV_WARN ? "Facility is more than " + LTV_WARN + "% of the market value" : "";
+}
+
+/* called by Valuations when an Estimated market value is shown */
+function ltvFromValuation(value, label) {
+  vcLastValue = { value: value, label: label };
+  const mv = document.getElementById("mktValue");
+  if (!mv) return;
+  if (!qNum(mv.value) || mv.dataset.auto === "1") { mv.value = value; mv.dataset.auto = "1"; mv.title = "From Valuations: " + label; }
+  showLtv();
+}
+
+
+/* =========================================================
+   COMPARE PERIODS (4W): the same facility for 24 / 36 / 48 / 60 months (and the current period).
+   Each period is calculated by the normal calculator (same rules as the screen), then the
+   current inputs are calculated again so the screen is unchanged.
+========================================================= */
+var cmpLast = null;   /* { key, rows: [[period, rental, totalPaid]] } */
+
+function setupCompare() {
+  const card = document.querySelector(".paymentCard .summary");
+  if (!card || document.getElementById("cmpBtn")) return;
+  const box = document.createElement("div");
+  box.className = "cmpBox";
+  box.innerHTML = '<button type="button" id="cmpBtn" class="cmpBtn">Compare periods (24 · 36 · 48 · 60)</button><div id="cmpOut"></div>';
+  card.appendChild(box);
+  document.getElementById("cmpBtn").addEventListener("click", function () { comparePeriods(this); });
+}
+
+function waitFor(cond, ms) {
+  return new Promise(function (resolve) {
+    const t0 = Date.now();
+    (function tick() { if (cond()) return resolve(true); if (Date.now() - t0 > ms) return resolve(false); setTimeout(tick, 150); })();
+  });
+}
+
+function cmpKey(d) { return [d.productType, d.facilityAmount, d.bic, d.insurance, d.stampDuty, d.irr, d.scheduleType].join("|"); }
+
+async function comparePeriods(btn) {
+  const out = document.getElementById("cmpOut");
+  const base = collectInputData();
+  if (!qNum(base.facilityAmount) || !qNum(base.irr)) { out.innerHTML = '<p class="vcErr">Enter the facility amount and IRR first.</p>'; return; }
+  const cur = Number(base.period) || 0;
+  const periods = [24, 36, 48, 60];
+  if (cur && periods.indexOf(cur) < 0) periods.push(cur);
+  periods.sort(function (a, b) { return a - b; });
+  btn.disabled = true;
+  out.innerHTML = '<p class="vcHint">Calculating…</p>';
+  await waitFor(function () { return !calcInFlight; }, 30000);
+  calcInFlight = true;
+  const rows = [];
+  try {
+    for (let i = 0; i < periods.length; i++) {
+      const d = Object.assign({}, base, { period: String(periods[i]), withSchedule: false });
+      try {
+        const r = await api("calcInputs", [d]);
+        const o = (r && r.outputs) || {};
+        rows.push([periods[i], o.monthlyRental || "-", o.totalPaid || "-"]);
+      } catch (e) { rows.push([periods[i], "-", "-"]); }
+    }
+  } finally {
+    /* the sheet now holds the last period: calculate the current inputs again */
+    calcInFlight = false; calcLastKey = ""; calcSent = null; calcEpoch++; calcCache = {}; calcCacheN = 0;
+    saveInputs();
+    btn.disabled = false;
+  }
+  cmpLast = { key: cmpKey(base), rows: rows };
+  const hasBullet = quoteBullets().length;
+  out.innerHTML = '<table class="cmpTable"><thead><tr><th>Period</th><th>Monthly Rental</th><th>Total Paid</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      return '<tr' + (r[0] === cur ? ' class="cur"' : '') + '><td>' + r[0] + ' months</td><td>' + escapeHtml(r[1]) + '</td><td>' + escapeHtml(r[2]) + '</td></tr>';
+    }).join("") + '</tbody></table>' +
+    (hasBullet ? '<p class="vcHint">The bullet payments are the same in every period.</p>' : '') +
+    '<p class="vcHint">This table is added to the PDF quotation.</p>';
+}
+
+/* the comparison rows, when they belong to the current inputs */
+function cmpRowsNow() {
+  return cmpLast && cmpLast.key === cmpKey(collectInputData()) ? cmpLast.rows : null;
+}
+
+
+/* =========================================================
+   QUOTATION LANGUAGE (English / සිංහල) + PDF QUOTATION
+   The WhatsApp text (Send via WhatsApp) and the PDF follow the language chosen in the quotation bar.
+   "Send automatically" uses the company's approved WhatsApp template, which is in English.
+   The PDF is drawn from an HTML page in the browser (so Sinhala letters join correctly), then saved
+   as an A4 PDF: shared to WhatsApp on a phone, downloaded on a computer.
+========================================================= */
+const QT = {
+  en: { dear: "Dear Customer,", intro: function (t) { return "Please find below your requested *" + t + "* quotation:"; },
+        heading: "Quotation", facility: "Facility Amount", period: "Period (months)", rental: "Monthly Rental",
+        withBullet: " (with Bullet)", bullets: "Bullet Payments", month: "Month", initial: "Initial Charges",
+        compare: "Other periods", cPeriod: "Period", cRental: "Monthly Rental", cTotal: "Total Paid", months: "months",
+        note: function (tel) { return "This quotation is an estimate only. For further details, please contact us" + (tel ? " on " + tel : "") + "."; },
+        officer: "Prepared by", date: "Date",
+        titles: { "Vehicle Lease": "Vehicle Lease", "Three-Wheel Lease": "Three-Wheel Lease", "Bike Lease": "Bike Lease" } },
+  si: { dear: "හිතවත් පාරිභෝගිකයාණෙනි,", intro: function (t) { return "ඔබ ඉල්ලූ *" + t + "* මිල ගණන් පහත දැක්වේ:"; },
+        heading: "මිල ගණන් පත්‍රය", facility: "ණය මුදල", period: "කාලය (මාස)", rental: "මාසික වාරිකය",
+        withBullet: " (Bullet ගෙවීම් සමග)", bullets: "Bullet ගෙවීම්", month: "මාසය", initial: "මූලික ගාස්තු",
+        compare: "වෙනත් කාල සීමා", cPeriod: "කාලය", cRental: "මාසික වාරිකය", cTotal: "මුළු ගෙවීම", months: "මාස",
+        note: function (tel) { return "මෙය ඇස්තමේන්තුවක් පමණි. වැඩි විස්තර සඳහා" + (tel ? " " + tel + " අංකයෙන්" : "") + " අප අමතන්න."; },
+        officer: "සකස් කළේ", date: "දිනය",
+        titles: { "Vehicle Lease": "වාහන ලීසිං", "Three-Wheel Lease": "ත්‍රීරෝද රථ ලීසිං", "Bike Lease": "යතුරුපැදි ලීසිං" } }
+};
+function quoteLang(kind) { const s = document.getElementById("waqLang_" + kind); return s && s.value === "si" ? "si" : "en"; }
+
+/* the bullet label "Month 12" / "Month 1–12" in the chosen language */
+function qtMonth(label, T) { return String(label).replace(/^Month/, T.month); }
+
+let qtLibs = null;
+function loadQuoteLibs() {
+  if (qtLibs) return qtLibs;
+  const load = function (src) {
+    return new Promise(function (res, rej) {
+      const s = document.createElement("script"); s.src = src; s.onload = res;
+      s.onerror = function () { rej(new Error("Could not load the PDF tools. Check the internet connection.")); };
+      document.head.appendChild(s);
+    });
+  };
+  qtLibs = Promise.all([
+    load("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+    load("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")
+  ]).catch(function (e) { qtLibs = null; throw e; });
+  return qtLibs;
+}
+
+function quotePageHtml(q, lang) {
+  const T = QT[lang], d = quoteLines(q.kind);
+  const tel = lsGet("mastercal_phone"), name = lsGet("mastercal_name");
+  const get = function (label) { const r = d.main.filter(function (x) { return x[0] === label; })[0]; return r ? r[1] : ""; };
+  const row = function (k, v, big) { return '<tr' + (big ? ' class="big"' : '') + '><td>' + escapeHtml(k) + '</td><td>' + escapeHtml(v) + '</td></tr>'; };
+  const hasBullet = d.bullets && d.bullets.length;
+  const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  let h = '<div class="qtHead"><img src="https://drcjayawardena.github.io/MasterCAL/icons/icon-192.png" crossorigin="anonymous" alt="">' +
+    '<div><b>MasterCAL</b><span>Vehicle Leasing</span></div><div class="qtDate">' + escapeHtml(T.date) + ': ' + today + '</div></div>' +
+    '<h1>' + escapeHtml(T.titles[q.title] || q.title) + ' · ' + escapeHtml(T.heading) + '</h1>' +
+    '<p>' + escapeHtml(T.dear) + '</p><p>' + escapeHtml(T.intro(T.titles[q.title] || q.title)).replace(/\*/g, "") + '</p>' +
+    '<table class="qtMain">' +
+      (get("Facility Amount") ? row(T.facility, "Rs " + get("Facility Amount")) : "") +
+      (get("Period (months)") ? row(T.period, get("Period (months)")) : "") +
+      row(T.rental + (hasBullet ? T.withBullet : ""), "Rs " + d.rental, true) +
+      (qNum(d.total) ? row(T.initial, "Rs " + d.total) : "") +
+    '</table>';
+  if (hasBullet) {
+    h += '<h2>' + escapeHtml(T.bullets) + '</h2><table class="qtMain">' +
+      d.bullets.map(function (r) { return row(qtMonth(r[0], T), "Rs " + r[1]); }).join("") + '</table>';
+  }
+  const cmp = q.kind === "vehicle" ? cmpRowsNow() : null;
+  if (cmp) {
+    h += '<h2>' + escapeHtml(T.compare) + '</h2><table class="qtCmp"><tr><th>' + escapeHtml(T.cPeriod) + '</th><th>' + escapeHtml(T.cRental) +
+      '</th><th>' + escapeHtml(T.cTotal) + '</th></tr>' + cmp.map(function (r) {
+        return '<tr><td>' + r[0] + ' ' + escapeHtml(T.months) + '</td><td>Rs ' + escapeHtml(r[1]) + '</td><td>Rs ' + escapeHtml(r[2]) + '</td></tr>';
+      }).join("") + '</table>';
+  }
+  h += '<p class="qtNote">' + escapeHtml(T.note(tel ? localPhone(tel) : "")) + '</p>' +
+    (name || tel ? '<p class="qtOfficer">' + escapeHtml(T.officer) + ': ' + escapeHtml([name, tel ? localPhone(tel) : ""].filter(Boolean).join(" · ")) + '</p>' : "");
+  return h;
+}
+
+async function quotePdf(q, btn) {
+  const d = quoteLines(q.kind);
+  if (!d || !qNum(d.rental)) { alert("Please complete the calculation first (the monthly rental is zero)."); return; }
+  const lang = quoteLang(q.kind);
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = "Making PDF…";
+  const page = document.createElement("div");
+  page.className = "qtPage";
+  page.innerHTML = quotePageHtml(q, lang);
+  document.body.appendChild(page);
+  try {
+    await loadQuoteLibs();
+    await Promise.all(Array.prototype.map.call(page.querySelectorAll("img"), function (im) {
+      return im.complete ? null : new Promise(function (r) { im.onload = im.onerror = r; });
+    }));
+    const canvas = await window.html2canvas(page, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+    const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    const w = 210, h = Math.min(297, canvas.height * w / canvas.width);
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, w, h);
+    const fname = "MasterCAL_" + q.title.replace(/\W+/g, "_") + "_Quotation_" + new Date().toISOString().slice(0, 10) + ".pdf";
+    const blob = pdf.output("blob");
+    const file = typeof File === "function" ? new File([blob], fname, { type: "application/pdf" }) : null;
+    if (isPhone() && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: fname });   /* pick WhatsApp and the customer */
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    }
+  } catch (e) {
+    if (!e || e.name !== "AbortError") alert("Could not make the PDF.\n\n" + (e && e.message ? e.message : e));
+  } finally {
+    page.remove();
+    btn.disabled = false; btn.textContent = old;
+  }
 }

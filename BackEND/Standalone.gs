@@ -108,6 +108,8 @@ function standalonePublish_() {
      the web app may run as a different Google account than the one who clicks Publish. */
   var modelJson = JSON.stringify(model);
   saStoreWrite_({ "online_app.html": tpl.split("__MC_MODEL__").join('{"remote":true}'), "online_model.json": modelJson });
+  /* the open apps compare this with their own version and show "MasterCAL updated — new version here" */
+  PropertiesService.getScriptProperties().setProperty("SA_PUBLISHED", model.published);
   return { formulas: nF, dropdownRules: nDv, sheets: model.order.length,
            kb: Math.round(modelJson.length / 1024), seconds: Math.round((Date.now() - t0) / 100) / 10, when: new Date() };
 }
@@ -116,8 +118,10 @@ function standalonePublish_() {
    (A cache flag, not the script lock: register / login use the script lock and a publish takes 20-40 s.) */
 function standaloneAdminPublish_() {
   var cache = CacheService.getScriptCache(), FLAG = "sa_publishing";
-  if (cache.get(FLAG)) throw new Error("An update is already running. Wait a minute and try again.");
-  cache.put(FLAG, "1", 300);
+  /* the flag holds the start time; one older than 2 minutes is left over from a run that was stopped */
+  var started = Number(cache.get(FLAG) || 0);
+  if (started && Date.now() - started < 120000) throw new Error("An update is already running. Wait a minute and try again.");
+  cache.put(FLAG, String(Date.now()), 300);
   try {
     var r = standalonePublish_();
     return { formulas: r.formulas, sheets: r.sheets, kb: r.kb, seconds: r.seconds, when: r.when.toISOString() };

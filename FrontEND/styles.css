@@ -716,3 +716,45 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .vcChCode b{ font-family:Consolas,monospace; font-size:14px; color:var(--ink); }
 .vcChCode small{ color:var(--muted); }
 .vcChNote{ flex-basis:100%; font-size:12px; color:var(--muted); }
+
+/* LTV: facility as % of the market value */
+.ltvOut{ font-weight:800; margin-left:4px; }
+.ltvOut.ok{ color:#1b7a3a; } .ltvOut.warn{ color:#b26a00; } .ltvOut.bad{ color:#d71920; }
+
+/* Compare periods (Payment Detail) */
+.cmpBox{ margin-top:10px; }
+.cmpBtn{ width:100%; height:36px; border:1px solid var(--brand); border-radius:8px; background:#fff; color:var(--brand);
+  font-weight:700; font-size:13px; cursor:pointer; }
+.cmpBtn:disabled{ opacity:.6; cursor:default; }
+.cmpTable{ width:100%; margin-top:8px; border-collapse:collapse; font-size:13px; table-layout:auto; }
+.cmpTable th{ background:var(--brand); color:#fff; padding:5px 6px; font-size:12px; text-align:right; }
+.cmpTable th:first-child, .cmpTable td:first-child{ text-align:left; }
+.cmpTable td{ padding:5px 6px; border-bottom:1px solid var(--line); text-align:right; }
+.cmpTable tr.cur td{ background:#eaf5ec; font-weight:700; }
+
+/* Quotation bar: language + PDF */
+.waQuoteLang{ flex:0 0 auto; height:40px; padding:0 8px; border:1px solid var(--field-bd); border-radius:8px; background:var(--field); font-size:14px; }
+.waQuotePdf{ flex:0 0 auto; height:40px; padding:0 14px; border:1px solid #b42318; border-radius:8px; background:#fff; color:#b42318;
+  font-weight:700; font-size:14px; cursor:pointer; }
+.waQuotePdf:disabled{ opacity:.6; cursor:default; }
+
+/* PDF quotation page (drawn off screen, A4 width) */
+.qtPage{ position:fixed; left:-10000px; top:0; width:794px; padding:48px 56px; box-sizing:border-box; background:#fff; color:#1c2b20;
+  font-family:"Noto Sans Sinhala","Iskoola Pota","Nirmala UI",Arial,sans-serif; font-size:16px; line-height:1.5; }
+.qtHead{ display:flex; align-items:center; gap:14px; border-bottom:3px solid #1c5e3a; padding-bottom:14px; margin-bottom:18px; }
+.qtHead img{ width:56px; height:56px; border-radius:12px; }
+.qtHead b{ display:block; font-size:26px; color:#1c5e3a; }
+.qtHead span{ font-size:14px; color:#556; }
+.qtDate{ margin-left:auto; font-size:14px; color:#556; }
+.qtPage h1{ font-size:22px; color:#1c5e3a; margin:0 0 12px; }
+.qtPage h2{ font-size:17px; color:#1c5e3a; margin:20px 0 8px; }
+.qtPage p{ margin:0 0 8px; }
+.qtMain, .qtCmp{ width:100%; border-collapse:collapse; margin-top:8px; }
+.qtMain td{ padding:9px 12px; border-bottom:1px solid #e3e8ee; }
+.qtMain td:last-child{ text-align:right; font-weight:700; }
+.qtMain tr.big td{ background:#eaf5ec; font-size:19px; color:#1b5e20; }
+.qtCmp th{ background:#1c5e3a; color:#fff; padding:7px 10px; font-size:14px; text-align:right; }
+.qtCmp th:first-child, .qtCmp td:first-child{ text-align:left; }
+.qtCmp td{ padding:7px 10px; border-bottom:1px solid #e3e8ee; text-align:right; }
+.qtNote{ margin-top:22px !important; font-size:13px; color:#556; }
+.qtOfficer{ font-size:14px; font-weight:700; }
