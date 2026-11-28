@@ -224,8 +224,6 @@ function init() {
   setupBkScheduleToggle();
   setupTabs();
   ["facilityAmount", "insurance"].forEach(function (id) { mcMoney(document.getElementById(id)); });
-  setupLtv();
-  setupCompare();
   setupWhatsAppQuotes();
 
   /* Gate: log in before doing anything. */
@@ -800,6 +798,7 @@ function showOutputs(result) {
   if (result.charges) renderCharges(result.charges);
   if (result.enabled) applyEnabled(result.enabled);
   applyExpress(result.express);
+  cmpFollow();
 }
 
 
@@ -2890,9 +2889,6 @@ function vcShowValuation(out) {
   const old = out.querySelector("#vcValBox"); if (old) old.remove();
   const v = vcValuation();
   if (!v) return;
-  ltvFromValuation(v.value, ["vcMake", "vcModel", "vcYear"].map(function (id) {
-    const el = document.getElementById(id); return el && el.selectedIndex > 0 ? el.options[el.selectedIndex].text.replace(/\s*\(\d[\d,]*\)$/, "") : "";
-  }).filter(Boolean).join(" "));
   const from = v.parts.map(function (p) { return p[0] + " " + p[1].length; }).join(" + ");
   const riyaTip = !vcMedian.riya.length && out.querySelector("#vcPasteBtn") ? " Calculate the riyasewana prices below to include riyasewana.com." : "";
   out.insertAdjacentHTML("afterbegin",
@@ -3067,6 +3063,13 @@ function setupWhatsAppQuotes() {
     bar.querySelector(".waQuotePdf").addEventListener("click", function () { quotePdf(q, this); });
     const pick = bar.querySelector(".waQuotePick");
     if (pick) pick.addEventListener("click", function () { pickContactInto(document.getElementById("waq_" + q.kind)); });
+    if (q.kind === "vehicle") {   /* left: the quotation; right: Compare periods */
+      const left = document.createElement("div");
+      left.className = "waQuoteMain";
+      while (bar.firstChild) left.appendChild(bar.firstChild);
+      bar.appendChild(left);
+      setupCompare(bar);
+    }
     anchor.parentNode.insertBefore(bar, anchor.nextSibling);
   });
 }
@@ -3340,65 +3343,33 @@ function vcShowChassis() {
 
 
 /* =========================================================
-   LTV (4W): facility amount as a % of the vehicle's market value.
-   The market value is filled in from the last Valuations check (Estimated market value) and can be typed.
-   Up to 70% green, up to 80% amber, above 80% red.
-========================================================= */
-const LTV_OK = 70, LTV_WARN = 80;
-var vcLastValue = null;   /* { value, label } from the last Valuations check */
-
-function setupLtv() {
-  const fa = document.getElementById("facilityAmount");
-  if (!fa || document.getElementById("mktValue")) return;
-  const field = fa.closest(".field");
-  const wrap = document.createElement("div");
-  wrap.className = "field ltvField";
-  wrap.innerHTML = '<label for="mktValue">MARKET VALUE <span id="ltvOut" class="ltvOut"></span></label>' +
-    '<input id="mktValue" type="text" inputmode="decimal" placeholder="From Valuations, or type">';
-  field.parentNode.insertBefore(wrap, field.nextSibling);
-  const mv = mcMoney(document.getElementById("mktValue"));
-  mv.addEventListener("input", function () { mv.dataset.auto = ""; showLtv(); });
-  mv.addEventListener("blur", showLtv);
-  fa.addEventListener("input", showLtv);
-  fa.addEventListener("blur", showLtv);
-}
-
-function showLtv() {
-  const out = document.getElementById("ltvOut"), mv = document.getElementById("mktValue");
-  if (!out || !mv) return;
-  const f = qNum(value("facilityAmount")), m = qNum(mv.value);
-  if (!f || !m) { out.textContent = ""; out.className = "ltvOut"; return; }
-  const p = f / m * 100;
-  out.textContent = "· LTV " + p.toFixed(1) + "%";
-  out.className = "ltvOut " + (p <= LTV_OK ? "ok" : p <= LTV_WARN ? "warn" : "bad");
-  out.title = p > LTV_WARN ? "Facility is more than " + LTV_WARN + "% of the market value" : "";
-}
-
-/* called by Valuations when an Estimated market value is shown */
-function ltvFromValuation(value, label) {
-  vcLastValue = { value: value, label: label };
-  const mv = document.getElementById("mktValue");
-  if (!mv) return;
-  if (!qNum(mv.value) || mv.dataset.auto === "1") { mv.value = value; mv.dataset.auto = "1"; mv.title = "From Valuations: " + label; }
-  showLtv();
-}
-
-
-/* =========================================================
    COMPARE PERIODS (4W): the same facility for 24 / 36 / 48 / 60 months (and the current period).
    Each period is calculated by the normal calculator (same rules as the screen), then the
    current inputs are calculated again so the screen is unchanged.
 ========================================================= */
 var cmpLast = null;   /* { key, rows: [[period, rental, totalPaid]] } */
 
-function setupCompare() {
-  const card = document.querySelector(".paymentCard .summary");
-  if (!card || document.getElementById("cmpBtn")) return;
+function setupCompare(bar) {
+  if (!bar || document.getElementById("cmpBtn")) return;
   const box = document.createElement("div");
   box.className = "cmpBox";
   box.innerHTML = '<button type="button" id="cmpBtn" class="cmpBtn">Compare periods (24 · 36 · 48 · 60)</button><div id="cmpOut"></div>';
-  card.appendChild(box);
+  bar.classList.add("waQuoteCmp");
+  bar.appendChild(box);
   document.getElementById("cmpBtn").addEventListener("click", function () { comparePeriods(this); });
+}
+
+/* A comparison on screen follows the inputs: after a bullet payment (or anything else) changes the
+   calculation, the table is calculated again with the new inputs. */
+var cmpRunning = false, cmpTimer = 0;
+function cmpFollow() {
+  if (!cmpLast || cmpRunning) return;
+  clearTimeout(cmpTimer);
+  cmpTimer = setTimeout(function () {
+    const btn = document.getElementById("cmpBtn");
+    if (!cmpLast || cmpRunning || !btn || calcInFlight) { if (cmpLast && !cmpRunning) cmpFollow(); return; }
+    if (cmpKey(collectInputData()) !== cmpLast.key) comparePeriods(btn);
+  }, 900);
 }
 
 function waitFor(cond, ms) {
@@ -3408,7 +3379,7 @@ function waitFor(cond, ms) {
   });
 }
 
-function cmpKey(d) { return [d.productType, d.facilityAmount, d.bic, d.insurance, d.stampDuty, d.irr, d.scheduleType].join("|"); }
+function cmpKey(d) { return [d.productType, d.facilityAmount, d.bic, d.insurance, d.stampDuty, d.irr, d.scheduleType, JSON.stringify(quoteBullets())].join("|"); }
 
 async function comparePeriods(btn) {
   const out = document.getElementById("cmpOut");
@@ -3419,6 +3390,7 @@ async function comparePeriods(btn) {
   if (cur && periods.indexOf(cur) < 0) periods.push(cur);
   periods.sort(function (a, b) { return a - b; });
   btn.disabled = true;
+  cmpRunning = true;
   out.innerHTML = '<p class="vcHint">Calculating…</p>';
   await waitFor(function () { return !calcInFlight; }, 30000);
   calcInFlight = true;
@@ -3437,6 +3409,7 @@ async function comparePeriods(btn) {
     calcInFlight = false; calcLastKey = ""; calcSent = null; calcEpoch++; calcCache = {}; calcCacheN = 0;
     saveInputs();
     btn.disabled = false;
+    cmpRunning = false;
   }
   cmpLast = { key: cmpKey(base), rows: rows };
   const hasBullet = quoteBullets().length;
@@ -3444,7 +3417,7 @@ async function comparePeriods(btn) {
     rows.map(function (r) {
       return '<tr' + (r[0] === cur ? ' class="cur"' : '') + '><td>' + r[0] + ' months</td><td>' + escapeHtml(r[1]) + '</td><td>' + escapeHtml(r[2]) + '</td></tr>';
     }).join("") + '</tbody></table>' +
-    (hasBullet ? '<p class="vcHint">The bullet payments are the same in every period.</p>' : '') +
+    (hasBullet ? '<p class="vcHint">Including the bullet payments (' + hasBullet + ').</p>' : '') +
     '<p class="vcHint">This table is added to the PDF quotation.</p>';
 }
 
