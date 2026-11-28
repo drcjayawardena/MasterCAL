@@ -800,6 +800,7 @@ function showOutputs(result) {
   if (result.enabled) applyEnabled(result.enabled);
   applyExpress(result.express);
   cmpFollow();
+  ecFollow(result);
 }
 
 
@@ -1222,6 +1223,7 @@ function addScheduleRowUI(index) {
     fromInput.focus();
     return;
   }
+  if (!bulletFromOk(fromValue, fromInput)) return;
 
   scheduleBusy = true;
 
@@ -1341,7 +1343,18 @@ function deleteScheduleRowUI(index) {
    UPDATE FROM / AMOUNT
 ========================================================= */
 
+/* A bullet payment's FROM month must be within the period (FROM <= PERIOD). */
+function bulletFromOk(from, input) {
+  const per = Number(value("period")) || 0, f = Number(from);
+  if (from === "" || !per || !(f > per)) return true;
+  alert("FROM (" + f + ") must be equal to or less than the PERIOD (" + per + " months).");
+  if (input) { input.value = ""; input.focus(); }
+  return false;
+}
+
 function updateFrom(index, newValue) {
+  if (!bulletFromOk(newValue === null || newValue === undefined ? "" : String(newValue),
+                    document.querySelector('#scheduleBody tr[data-index="' + index + '"] input[data-type="from"]'))) return;
 
   api("updateScheduleFrom", [
     Number(index),
@@ -3549,4 +3562,66 @@ async function quotePdf(q, btn) {
     page.remove();
     btn.disabled = false; btn.textContent = old;
   }
+}
+
+
+/* =========================================================
+   EXPRESS CASH MONTHLY RENTAL (4W, Standalone app): after every calculation the same facility is also
+   calculated as EXPRESS CASH (by the normal calculator), shown in bold red at the bottom of Payment Detail.
+   Then the current inputs are calculated again, so the screen is unchanged. Only in the Standalone app,
+   where a calculation is instant (on the server it would make every calculation three times slower).
+========================================================= */
+const EC_PRODUCT = "EXPRESS CASH";
+var ecLastKey = "", ecTimer = 0, ecRunning = false;
+
+function ecBox() {
+  let b = document.getElementById("ecRental");
+  if (!b) {
+    const card = document.querySelector(".paymentCard .summary");
+    if (!card) return null;
+    b = document.createElement("div");
+    b.id = "ecRental";
+    b.className = "ecRental";
+    b.hidden = true;
+    b.innerHTML = '<span>EXPRESS CASH MONTHLY RENTAL</span><b id="ecRentalValue"></b>';
+    card.appendChild(b);
+  }
+  return b;
+}
+function ecShow(v) {
+  const b = ecBox(); if (!b) return;
+  b.hidden = !qNum(v);
+  document.getElementById("ecRentalValue").textContent = v || "";
+}
+function ecKey(d) { return [d.facilityAmount, d.bic, d.insurance, d.stampDuty, d.irr].join("|"); }
+
+function ecFollow(result) {
+  if (!window.__mc || ecRunning) return;               /* Standalone app (local calculator) only */
+  const d = collectInputData();
+  if (!qNum(d.facilityAmount) || !qNum(d.irr)) { ecShow(""); ecLastKey = ""; return; }
+  if (String(d.productType).toUpperCase() === EC_PRODUCT) { ecShow(result.monthlyRental); ecLastKey = ""; return; }
+  if (ecKey(d) === ecLastKey) return;
+  clearTimeout(ecTimer);
+  ecTimer = setTimeout(ecRun, 400);
+}
+
+async function ecRun() {
+  if (ecRunning || cmpRunning) return;
+  if (calcInFlight) { ecTimer = setTimeout(ecRun, 300); return; }
+  const base = collectInputData(), key = ecKey(base);
+  if (key === ecLastKey || String(base.productType).toUpperCase() === EC_PRODUCT) return;
+  ecRunning = true; calcInFlight = true;
+  let v = "";
+  try {
+    const r = await api("calcInputs", [Object.assign({}, base, { productType: EC_PRODUCT, withSchedule: false })]);
+    v = (r && r.outputs && r.outputs.monthlyRental) || "";
+  } catch (e) { v = ""; }
+  finally {
+    /* the calculator now holds EXPRESS CASH: calculate the current inputs again */
+    ecLastKey = key;
+    calcInFlight = false; calcLastKey = ""; calcSent = null; calcEpoch++; calcCache = {}; calcCacheN = 0;
+    saveInputs();
+    ecRunning = false;
+  }
+  ecShow(v);
 }
