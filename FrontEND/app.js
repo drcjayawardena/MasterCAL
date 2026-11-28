@@ -2856,17 +2856,13 @@ function setupVehicleCheck() {
    The text stays in this browser and is not sent anywhere. */
 var vcClipBase = null;
 function vcClipTry() {
-  const btns = Array.prototype.filter.call(document.querySelectorAll(".vcPasteBtn"), function (b) { return !b.hidden; });
-  if (!btns.length || !navigator.clipboard || !navigator.clipboard.readText) return;
+  const box = document.getElementById("vcPasteBox"), btn = document.getElementById("vcPasteBtn");
+  if (!box || !btn || box.hidden || btn.hidden || !navigator.clipboard || !navigator.clipboard.readText) return;
   navigator.clipboard.readText().then(function (t) {
     t = String(t || "");
-    if (!t || t === vcClipBase || t.length < 300) return;
-    /* which site the copied page came from (its own name is on every page); one helper left -> that one */
-    const key = /patpat/i.test(t) && !/riyasewana/i.test(t) ? "patpat" : /riyasewana/i.test(t) ? "riya" : (btns.length === 1 ? btns[0].dataset.key : "");
-    const btn = btns.filter(function (b) { return b.dataset.key === key; })[0];
-    if (!btn || vcPastePrices(t, key).length < 3) return;
+    if (!t || t === vcClipBase || t.length < 300 || vcPastePrices(t).length < 3) return;
     vcClipBase = t;
-    document.getElementById("vcPasteBox_" + key).value = t;
+    box.value = t;
     btn.click();
   }, function () { /* no permission: the paste box still works */ });
 }
@@ -2877,9 +2873,9 @@ window.addEventListener("focus", vcClipTry);
    list, the middle price of that list, rounded to the nearest Rs 10,000. Each ad counts once, so the site with more
    ads weighs more and a few extreme prices do not move it. On a computer, until the riyasewana prices are calculated,
    it says how to include them; on a phone riyasewana is not offered (copying a whole page is not practical there). */
-var vcMedian = { ikman: [], riya: [], patpat: [] };      /* the ad prices of each site */
+var vcMedian = { ikman: [], riya: [] };      /* the ad prices of each site */
 function vcValuation() {
-  const parts = [["ikman.lk", vcMedian.ikman], ["riyasewana.com", vcMedian.riya], ["patpat.lk", vcMedian.patpat]]
+  const parts = [["ikman.lk", vcMedian.ikman], ["riyasewana.com", vcMedian.riya]]
     .filter(function (p) { return p[1].length; });
   const all = [].concat.apply([], parts.map(function (p) { return p[1]; })).filter(function (v) { return v > 0; })
     .sort(function (x, y) { return x - y; });
@@ -2893,9 +2889,7 @@ function vcShowValuation(out) {
   const v = vcValuation();
   if (!v) return;
   const from = v.parts.map(function (p) { return p[0] + " " + p[1].length; }).join(" + ");
-  const left = Array.prototype.filter.call(out.querySelectorAll(".vcPasteBtn"), function (b) { return !b.hidden; })
-    .map(function (b) { return b.dataset.key === "patpat" ? "patpat.lk" : "riyasewana.com"; });
-  const riyaTip = left.length ? " Calculate the " + left.join(" and ") + " prices below to include them." : "";
+  const riyaTip = !vcMedian.riya.length && out.querySelector("#vcPasteBtn") ? " Calculate the riyasewana prices below to include riyasewana.com." : "";
   out.insertAdjacentHTML("afterbegin",
     '<div class="vcVal" id="vcValBox"><div><span>Estimated market value</span><b>' + vcRs(v.value) + '</b></div>' +
     '<small>' + (v.parts.length > 1 ? 'Median of all ' + v.n + ' ad prices (' + from + '), rounded to the nearest Rs 10,000.'
@@ -2922,7 +2916,7 @@ function runVehicleCheck() {
   /* phone: ikman.lk only (riyasewana needs the whole page copied, which a phone can't do easily) */
   const phone = isPhone();
   out.innerHTML = '<p class="vcHint">Checking ikman.lk' + (phone ? '' : ' and riyasewana.com') + '…</p>';
-  vcMedian = { ikman: [], riya: [], patpat: [] };
+  vcMedian = { ikman: [], riya: [] };
   /* remember what is on the clipboard now: only a NEWER copy (from riyasewana) is picked up automatically */
   vcClipBase = null;
   if (!phone) try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { vcClipBase = t; }, function () {}); } catch (e) {}
@@ -2930,9 +2924,7 @@ function runVehicleCheck() {
   api("checkVehicle", [make, model, year, grade, document.getElementById("vcType").value,
                        vcKeyOf(document.getElementById("vcMake")), vcKeyOf(document.getElementById("vcModel"))])
     .then(function (r) {
-      /* patpat.lk shows a "confirm you are human" page to programs, so (like riyasewana) the officer opens it */
-      const patpat = { blocked: true, ads: [], searchUrl: vcPatpatUrl(document.getElementById("vcType").value, make, model, year) };
-      out.innerHTML = (phone ? '' : vcSiteHtml(r.riyasewana, "riyasewana.com") + vcSiteHtml(patpat, "patpat.lk")) + vcSiteHtml(r.ikman, "ikman.lk");
+      out.innerHTML = (phone ? '' : vcSiteHtml(r.riyasewana, "riyasewana.com")) + vcSiteHtml(r.ikman, "ikman.lk");
       const prices = function (x) { return (x && !x.blocked && x.ads || []).map(function (a) { return Number(a.priceValue) || 0; }).filter(Boolean); };
       vcMedian.ikman = prices(r.ikman);
       vcMedian.riya = phone ? [] : prices(r.riyasewana);      /* normally empty: our server cannot read riyasewana */
@@ -2948,49 +2940,33 @@ function runVehicleCheck() {
 
 /* Prices found in text copied from a riyasewana search page: "Rs. 8,500,000" -> 8500000.
    Values under Rs 100,000 are ignored (they are not vehicle prices). */
-function vcPastePrices(text, key) {
+function vcPastePrices(text) {
   /* the "Price Trend" table at the bottom of the page lists monthly averages, not ads: ignore everything from there */
   text = String(text || "");
   const cut = text.search(/Price Trend in Sri Lanka/i);
   if (cut > 0) text = text.slice(0, cut);
   const out = [], re = /Rs\.?\s*([\d]{1,3}(?:,\d{3})+|\d{5,})/gi;
   let m;
-  while ((m = re.exec(text))) {
+  while ((m = re.exec(String(text || "")))) {
     const v = Number(m[1].replace(/,/g, ""));
-    if (v < 100000 || v > 2000000000) continue;
-    /* patpat.lk cards also show a monthly "Best Lease Rental": not a vehicle price */
-    /* (the words on the same line just before the price, or on the line above it) */
-    if (key === "patpat" && (/(lease|rental)[^\n]*(\n[ \t]*)?$/i.test(text.slice(Math.max(0, m.index - 60), m.index).split("\n").slice(-2).join("\n")) ||
-                            /^\s*(\/\s*m|per\s*month|monthly|p\.?m)/i.test(text.slice(re.lastIndex, re.lastIndex + 15)))) continue;
-    out.push(v);
+    if (v >= 100000 && v <= 2000000000) out.push(v);
   }
   return out;
 }
 
-/* patpat.lk search for this vehicle: /vehicle/<type>/<make>/<model>[/all/all/<year>] */
-const VC_PATPAT_TYPES = { "Car": "car", "SUV / Jeep": "suv", "Cab / Pickup": "pickup", "Van / MPV": "van",
-                          "Lorry": "lorry", "Three Wheeler": "threewheeler", "Motorcycle": "bike" };
-function vcPatpatUrl(type, make, model, year) {
-  const slug = function (x) { return String(x || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); };
-  return "https://patpat.lk/en/sri-lanka/vehicle/" + (VC_PATPAT_TYPES[type] || "all") + "/" + slug(make) + "/" + slug(model) +
-         (year ? "/all/all/" + encodeURIComponent(year) : "");
-}
-
 function vcBindPaste(root) {
-  root.querySelectorAll(".vcPasteBtn").forEach(function (btn) { vcBindPasteBtn(root, btn); });
-}
-function vcBindPasteBtn(root, btn) {
-  const key = btn.dataset.key, site = btn.closest(".vcSite");
+  const btn = root.querySelector("#vcPasteBtn");
+  if (!btn) return;
   btn.addEventListener("click", function () {
-    const box = site.querySelector(".vcPasteBox"), res = site.querySelector(".vcPasteOut");
-    const p = vcPastePrices(box.value, key).sort(function (a, b) { return a - b; });
-    if (!p.length) { res.innerHTML = '<p class="vcErr">No prices found. Copy the whole page (Ctrl+A, Ctrl+C) from the ' + (key === "patpat" ? "patpat.lk" : "riyasewana") + ' search results and paste it again.</p>'; return; }
+    const box = root.querySelector("#vcPasteBox"), res = root.querySelector("#vcPasteOut");
+    const p = vcPastePrices(box.value).sort(function (a, b) { return a - b; });
+    if (!p.length) { res.innerHTML = '<p class="vcErr">No prices found. Copy the whole page (Ctrl+A, Ctrl+C) from the riyasewana search results and paste it again.</p>'; return; }
     const n = p.length, sum = p.reduce(function (a, b) { return a + b; }, 0);
     const med = n % 2 ? p[(n - 1) / 2] : Math.round((p[n / 2 - 1] + p[n / 2]) / 2);
     /* the helper (open-search button, paste box, Calculate) is hidden once the summary is shown;
        it comes back the next time Check is pressed */
-    site.querySelectorAll(".vcPreCalc").forEach(function (el) { el.hidden = true; });
-    vcMedian[key] = p.slice();
+    root.querySelectorAll(".vcPreCalc").forEach(function (el) { el.hidden = true; });
+    vcMedian.riya = p.slice();
     vcShowValuation(root);
     /* same four boxes, in the same order, as ikman.lk */
     res.innerHTML = '<div class="vcStats">' +
@@ -3004,8 +2980,7 @@ function vcBindPasteBtn(root, btn) {
 function vcSiteHtml(r, name) {
   r = r || { ads: [] };
   /* riyasewana: always the SAME named tab, so a new check re-uses (and reloads) the tab that is already open */
-  const key = /patpat/i.test(name) ? "patpat" : "riya";
-  const tgt = /riyasewana/i.test(name) ? 'target="riyasewanaTab"' : /patpat/i.test(name) ? 'target="patpatTab"' : 'target="_blank" rel="noopener"';
+  const tgt = /riyasewana/i.test(name) ? 'target="riyasewanaTab"' : 'target="_blank" rel="noopener"';
   const link = r.searchUrl
     ? ' <a href="' + escapeHtml(r.searchUrl) + '" ' + tgt + '>View on ' + escapeHtml(name) + ' ↗</a>' : "";
   let h = '<section class="vcSite"><div class="vcSiteHead"><h3>' + escapeHtml(name) + '</h3>' + link + '</div>';
@@ -3014,9 +2989,9 @@ function vcSiteHtml(r, name) {
     return h + '<p class="vcHint vcPreCalc">' + escapeHtml(name) + ' does not share its data with our server, so open the same search on the site itself:</p>' +
       (r.searchUrl ? '<a class="vcOpenBtn vcPreCalc" href="' + escapeHtml(r.searchUrl) + '" ' + tgt + '>Open ' + escapeHtml(name) + ' search ↗</a>' : '') +
       '<div class="vcPaste"><p class="vcHint vcPreCalc"><b>Want the average price?</b> On that page press <b>Ctrl+A</b> then <b>Ctrl+C</b> (select all, copy) and come back to this tab: the prices are calculated automatically (if your browser asks to allow clipboard access, choose Allow). Otherwise paste here:</p>' +
-      '<textarea id="vcPasteBox_' + key + '" class="vcPasteBox vcPreCalc" rows="3" placeholder="Paste the ' + escapeHtml(name) + ' page text here"></textarea>' +
-      '<button type="button" class="vcPasteBtn vcOpenBtn vcPreCalc" data-key="' + key + '">Calculate prices</button>' +
-      '<div class="vcPasteOut"></div></div></section>';
+      '<textarea id="vcPasteBox" class="vcPreCalc" rows="3" placeholder="Paste the riyasewana page text here"></textarea>' +
+      '<button type="button" id="vcPasteBtn" class="vcOpenBtn vcPreCalc">Calculate prices</button>' +
+      '<div id="vcPasteOut"></div></div></section>';
   }
   if (r.error) return h + '<p class="vcErr">' + escapeHtml(r.error) + '</p></section>';
   if (!r.ads.length) return h + '<p class="vcHint">No matching ads were found.' + (r.why ? ' <small>(' + escapeHtml(r.why) + ')</small>' : '') + '</p></section>';
