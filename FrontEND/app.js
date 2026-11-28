@@ -3356,7 +3356,8 @@ function setupCompare(bar) {
   box.innerHTML = '<button type="button" id="cmpBtn" class="cmpBtn">Compare periods (24 · 36 · 48 · 60)</button><div id="cmpOut"></div>';
   bar.classList.add("waQuoteCmp");
   bar.appendChild(box);
-  document.getElementById("cmpBtn").addEventListener("click", function () { comparePeriods(this); });
+  /* the bar is not on the page yet: find the button inside the box */
+  box.querySelector(".cmpBtn").addEventListener("click", function () { comparePeriods(this); });
 }
 
 /* A comparison on screen follows the inputs: after a bullet payment (or anything else) changes the
