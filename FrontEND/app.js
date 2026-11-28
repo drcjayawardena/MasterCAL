@@ -3408,10 +3408,22 @@ async function comparePeriods(btn) {
     cmpRunning = false;
   }
   cmpLast = { key: cmpKey(base), rows: rows };
-  const hasBullet = quoteBullets().length;
+  const bl = quoteBullets(), hasBullet = bl.length;
+  /* bullets that start after a period ends are not paid in that period: say so on its row
+     (a slab that only partly fits says "partly") */
+  const beyond = function (period) {
+    const notes = [];
+    bl.forEach(function (b) {
+      const m = /(\d+)(?:–(\d+))?/.exec(b[0]); if (!m) return;
+      const from = Number(m[1]), to = Number(m[2] || m[1]);
+      if (from > period) notes.push("month " + b[0].replace(/^Month /, "") + " not included");
+      else if (to > period) notes.push("month " + b[0].replace(/^Month /, "") + " partly included");
+    });
+    return notes.length ? '<div class="cmpNote">Bullet ' + escapeHtml(notes.join(", ")) + '</div>' : "";
+  };
   out.innerHTML = '<table class="cmpTable"><thead><tr><th>Period</th><th>Monthly Rental</th><th>Total Paid</th></tr></thead><tbody>' +
     rows.map(function (r) {
-      return '<tr' + (r[0] === cur ? ' class="cur"' : '') + '><td>' + r[0] + ' months</td><td>' + escapeHtml(r[1]) + '</td><td>' + escapeHtml(r[2]) + '</td></tr>';
+      return '<tr' + (r[0] === cur ? ' class="cur"' : '') + '><td>' + r[0] + ' months' + beyond(r[0]) + '</td><td>' + escapeHtml(r[1]) + '</td><td>' + escapeHtml(r[2]) + '</td></tr>';
     }).join("") + '</tbody></table>' +
     (hasBullet ? '<p class="vcHint">Including the bullet payments (' + hasBullet + ').</p>' : '') +
     '<p class="vcHint">This table is added to the PDF quotation.</p>';
