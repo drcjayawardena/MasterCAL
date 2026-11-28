@@ -224,6 +224,7 @@ function init() {
   setupBkScheduleToggle();
   setupTabs();
   ["facilityAmount", "insurance"].forEach(function (id) { mcMoney(document.getElementById(id)); });
+  setupCompare();
   setupWhatsAppQuotes();
 
   /* Gate: log in before doing anything. */
@@ -3063,13 +3064,6 @@ function setupWhatsAppQuotes() {
     bar.querySelector(".waQuotePdf").addEventListener("click", function () { quotePdf(q, this); });
     const pick = bar.querySelector(".waQuotePick");
     if (pick) pick.addEventListener("click", function () { pickContactInto(document.getElementById("waq_" + q.kind)); });
-    if (q.kind === "vehicle") {   /* left: the quotation; right: Compare periods */
-      const left = document.createElement("div");
-      left.className = "waQuoteMain";
-      while (bar.firstChild) left.appendChild(bar.firstChild);
-      bar.appendChild(left);
-      setupCompare(bar);
-    }
     anchor.parentNode.insertBefore(bar, anchor.nextSibling);
   });
 }
@@ -3349,13 +3343,14 @@ function vcShowChassis() {
 ========================================================= */
 var cmpLast = null;   /* { key, rows: [[period, rental, totalPaid]] } */
 
-function setupCompare(bar) {
-  if (!bar || document.getElementById("cmpBtn")) return;
+/* Compare periods sits at the bottom of the Charges Calculation card */
+function setupCompare() {
+  const card = document.getElementById("chargesSection");
+  if (!card || document.getElementById("cmpBtn")) return;
   const box = document.createElement("div");
   box.className = "cmpBox";
   box.innerHTML = '<button type="button" id="cmpBtn" class="cmpBtn">Compare periods (24 · 36 · 48 · 60)</button><div id="cmpOut"></div>';
-  bar.classList.add("waQuoteCmp");
-  bar.appendChild(box);
+  card.appendChild(box);
   /* the bar is not on the page yet: find the button inside the box */
   box.querySelector(".cmpBtn").addEventListener("click", function () { comparePeriods(this); });
 }

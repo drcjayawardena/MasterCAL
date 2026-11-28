@@ -720,10 +720,7 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 
 /* Compare periods (Payment Detail) */
 .cmpBox{ margin-top:10px; }
-/* 4W quotation bar: the quotation on the left, Compare periods on the right (one under the other on a phone) */
-.waQuote.waQuoteCmp{ display:flex; flex-wrap:wrap; gap:12px 24px; align-items:flex-start; }
-.waQuoteCmp .waQuoteMain{ flex:1 1 480px; min-width:0; }
-.waQuoteCmp .cmpBox{ flex:0 1 380px; min-width:260px; margin-top:0; }
+.cmpBox{ margin-top:12px; }
 .waQuoteLang{ width:auto !important; }
 .cmpBtn{ width:100%; height:36px; border:1px solid var(--brand); border-radius:8px; background:#fff; color:var(--brand);
   font-weight:700; font-size:13px; cursor:pointer; }
