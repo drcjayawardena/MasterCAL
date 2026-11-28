@@ -8,7 +8,7 @@
  * login is no longer valid (LOGIN / PENDING / BLOCKED), and when the page opens without a login. */
 (function () {
   var REMOTE = "__REMOTE_URL__";
-  var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1, adminPublish: 1, resetRequest: 1, adminReset: 1, adminSetRole: 1 };
+  var REMOTE_ACTIONS = { login: 1, register: 1, syncCopy: 1, checkVehicle: 1, vcIkman: 1, vcGradeYears: 1, adminWho: 1, adminUsers: 1, adminSetStatus: 1, adminPublish: 1, resetRequest: 1, adminReset: 1, adminSetRole: 1, sendQuote: 1 };
   var TOKEN_KEY = "mastercal_session_token";   /* same key as app.js */
   var OFFLINE_DAYS = 7, FETCH_TIMEOUT_MS = 8000;
   window.__mcRemote = true;   /* online_mode.js runs only when this is set */

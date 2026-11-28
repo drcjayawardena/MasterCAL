@@ -223,6 +223,7 @@ function init() {
   setupTwScheduleToggle();
   setupBkScheduleToggle();
   setupTabs();
+  ["facilityAmount", "insurance"].forEach(function (id) { mcMoney(document.getElementById(id)); });
   setupWhatsAppQuotes();
 
   /* Gate: log in before doing anything. */
@@ -995,6 +996,7 @@ function addlChargeInput(amount) {
     addlInput.inputMode = "decimal";
     addlInput.className = "chargesInput";
     addlInput.placeholder = "Amount";
+    mcMoney(addlInput);
     addlInput.setAttribute("aria-label", "Additional service charges");
     addlInput.addEventListener("change", function () { setAdditionalChargeUI(this.value); });
     addlInput.addEventListener("keydown", function (ev) { if (ev.key === "Enter") this.blur(); });
@@ -1166,6 +1168,7 @@ function createScheduleRow(index, row, hasData) {
 function bindScheduleRowEvents(row) {
 
   if (!row) return;
+  mcMoney(row.querySelector('input[data-type="amount"]'));
 
   const fromInput = row.querySelector('input[data-type="from"]');
   if (fromInput) {
@@ -1545,6 +1548,35 @@ function renderRentalSchedule(rows, period) {
    HELPERS
 ========================================================= */
 
+/* MONEY INPUTS: shown as 1,000,000.00 when not being edited. The element's .value still reads the plain number
+   ("1000000"), so every calculation and server call is unchanged; setting .value formats it. While the box has
+   focus it shows the plain number, so typing works as before. */
+const MC_VALUE = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+function mcFmtMoney(v) {
+  const s = String(v == null ? "" : v).replace(/,/g, "").trim();
+  if (s === "" || isNaN(Number(s))) return String(v == null ? "" : v);
+  return Number(s).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function mcPlainMoney(raw) {
+  const s = String(raw || "").replace(/,/g, "").trim();
+  return /^-?\d+\.\d+$/.test(s) ? s.replace(/\.?0+$/, "") : s;   /* "1000000.00" -> "1000000", "12.50" -> "12.5" */
+}
+function mcMoney(el) {
+  if (!el || el.dataset.money) return el;
+  el.dataset.money = "1";
+  if (el.type === "number") el.type = "text";
+  el.inputMode = "decimal";
+  Object.defineProperty(el, "value", {
+    configurable: true,
+    get: function () { return mcPlainMoney(MC_VALUE.get.call(this)); },
+    set: function (v) { MC_VALUE.set.call(this, document.activeElement === this ? String(v == null ? "" : v) : mcFmtMoney(v)); }
+  });
+  el.addEventListener("focus", function () { if (!this.readOnly) MC_VALUE.set.call(this, mcPlainMoney(MC_VALUE.get.call(this))); });
+  el.addEventListener("blur", function () { MC_VALUE.set.call(this, mcFmtMoney(MC_VALUE.get.call(this))); });
+  MC_VALUE.set.call(el, mcFmtMoney(MC_VALUE.get.call(el)));
+  return el;
+}
+
 function value(id) {
   const element = document.getElementById(id);
   return element ? element.value : "";
@@ -1587,6 +1619,7 @@ const TW_INPUT_LABELS = {
 /* Dropdowns (GRADE B4 removed from the UI). B5 = read-only display. */
 const TW_DROPDOWN_CELLS = ["B2", "B3", "B12", "B13", "B23"];
 const TW_READONLY_CELLS = ["B5"];
+const TW_MONEY_CELLS = ["B5", "B10", "B22"];   /* shown as 1,000,000.00 */
 
 function setupTabs() {
   /* tab key (data-tab)  ->  panel element id */
@@ -1661,6 +1694,7 @@ function twField(cell, data) {
     });
   }
   el.id = "tw_" + cell;
+  if (TW_MONEY_CELLS.indexOf(cell) !== -1) mcMoney(el);
   wrap.appendChild(el);
   return wrap;
 }
@@ -2009,6 +2043,7 @@ const BK_LABELS = {
   B20: "CRIB CHARGES", B21: "INITIAL RMV CHARGES"
 };
 const BK_SELECT_CELLS = ["B2", "B3", "B4", "B8", "B10", "B21"];
+const BK_MONEY_CELLS = ["B5", "B7", "B20"];   /* shown as 1,000,000.00 */
 
 function loadBike(reset) {
   const l = document.getElementById("bkLoading");
@@ -2054,6 +2089,7 @@ function bkField(cell) {
     });
   }
   el.id = "bk_" + cell;
+  if (BK_MONEY_CELLS.indexOf(cell) !== -1) mcMoney(el);
   wrap.appendChild(el);
   return wrap;
 }

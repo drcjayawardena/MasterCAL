@@ -57,6 +57,8 @@ function doPost(e) {
       if (!isAdmin_(access.who.key)) return json_({ ok: false, error: "Administrators only." });
       return json_({ ok: true, data: standaloneAdminPublish_() });
     }
+    /* quotation by WhatsApp API: needs no spreadsheet copy (the Standalone app has none to keep up to date) */
+    if (action === "sendQuote") return json_({ ok: true, data: sendQuote_(access.who.key, body.args || []) });
     if (action === "checkVehicle" || action === "vcIkman" || action === "vcGradeYears") {
       return json_({ ok: true, data: dispatch_(action, body.args || []) });
     }
@@ -66,9 +68,6 @@ function doPost(e) {
     const syncGuard = copySyncGuard_(access.who.key, action);
     if (syncGuard) return json_(syncGuard);
     const t2 = Date.now();
-
-    /* quotation by WhatsApp API: needs no spreadsheet copy, so it skips the (slow) copy opening */
-    if (action === "sendQuote") return json_({ ok: true, data: sendQuote_(access.who.key, body.args || []) });
 
     /* 3) route to this user's own copy (keyed by "wa:<number>") */
     setUserContext_(access.who.key);
