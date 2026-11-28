@@ -164,13 +164,14 @@ function checkVehicle_(make, model, year, grade, type, brandKey, modelKey) {
 
   var cache = null;
   try { cache = CacheService.getScriptCache(); } catch (e) {}
-  const ck = "vc7_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath + "|" + type).toLowerCase().replace(/\s+/g, " ");
+  const ck = "vc8_" + (make + "|" + model + "|" + year + "|" + grade + "|" + ikPath + "|" + type).toLowerCase().replace(/\s+/g, " ");
   if (cache) { try { const hit = cache.get(ck); if (hit) return JSON.parse(hit); } catch (e) {} }
 
   const out = {
     make: make, model: model, year: year, grade: grade,
     ikman: vcGrade_(vcSafe_(function () { return vcIkman_(make, model, year, ikPath, ikBody); }), grade),
-    riyasewana: vcGrade_(vcSafe_(function () { return vcRiyasewana_(make, model, year, type); }), grade)
+    riyasewana: vcGrade_(vcSafe_(function () { return vcRiyasewana_(make, model, year, type); }), grade),
+    saleme: vcGrade_(vcSafe_(function () { return vcSaleme_(make, model, year); }), grade)
   };
   if (cache) { try { cache.put(ck, JSON.stringify(out), VC_CACHE_SECONDS); } catch (e) {} }
   return out;
@@ -374,4 +375,42 @@ function vcText_(html) {
     .replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); })
     .replace(/&#x([0-9a-f]+);/gi, function (_, n) { return String.fromCharCode(parseInt(n, 16)); })
     .replace(/\s+/g, " ").trim();
+}
+
+/* ---------- saleme.lk ---------- */
+
+/* saleme.lk search (all vehicle types, its robots.txt allows reading): 20 ad cards a page as plain HTML,
+   <a href="https://www.saleme.lk/ad/..."> ... <h3 class="item-title"> ... <h4 class="item-price">RS 7,150,000</h4>.
+   Its Cloudflare answers 403 now and then, so a refused request is tried again once. */
+function vcSaleme_(make, model, year) {
+  const url = "https://www.saleme.lk/ads/sri-lanka/cars-vehicles?query=" +
+              encodeURIComponent((make + " " + model + (year ? " " + year : "")).replace(/\s+/g, " ").trim());
+  var res = null, code = 0;
+  for (var i = 0; i < 2; i++) {
+    res = vcFetch_(url); code = res.getResponseCode();
+    if (code === 200) break;
+    Utilities.sleep(700);
+  }
+  const html = code === 200 ? res.getContentText() : "";
+  if (!html || /Just a moment|challenge-platform|cf-browser-verification/i.test(html)) {
+    return { site: "saleme.lk", searchUrl: url, ads: [], summary: vcSummary_([]),
+             error: "saleme.lk did not answer this time (" + (html ? "bot check" : "HTTP " + code) + "). Press Check again to retry." };
+  }
+  const ads = [], seen = {};
+  const parts = html.split('<a href="https://www.saleme.lk/ad/');
+  const txt = function (h) { return String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim(); };
+  for (var k = 1; k < parts.length && ads.length < VC_MAX_ADS; k++) {
+    const p = parts[k], slug = p.slice(0, p.indexOf('"'));
+    if (!/^[a-z0-9\-]+$/.test(slug) || seen[slug]) continue;
+    const block = p.slice(0, 4000);
+    const title = txt((/<h3 class="item-title[^"]*">([\s\S]*?)<\/h3>/.exec(block) || [])[1]);
+    const price = txt((/<h4 class="item-price">([\s\S]*?)<\/h4>/.exec(block) || [])[1]).replace(/^RS/i, "Rs");
+    if (!title || !vcFits_(title, model, year)) continue;
+    seen[slug] = 1;
+    const loc = txt((/<p class="item-loc-cat[^"]*">([\s\S]*?)<\/p>/.exec(block) || [])[1]).split("|")[0].trim();
+    const km = txt((/<p class="vehicle-mileage">([\s\S]*?)<\/p>/.exec(block) || [])[1]);
+    ads.push({ title: title, price: price, priceValue: vcPrice_(price), details: km, location: loc, when: "",
+               url: "https://www.saleme.lk/ad/" + slug });
+  }
+  return { site: "saleme.lk", searchUrl: url, ads: ads, summary: vcSummary_(ads) };
 }
