@@ -768,3 +768,9 @@ table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 /* 3W / BIKE: facility above the Max Facility Value */
 tr.ltvOver td{ color:#d71920 !important; font-weight:800 !important; }
 .ltvOverLbl{ color:#d71920 !important; font-weight:800 !important; }
+/* Payment Detail grows with its content (Express Cash row included) instead of scrolling;
+   Rental with Residual takes the rest of the column */
+@media (min-width:1100px){
+  .paymentColumn .summaryColumn.paymentCard{ flex:0 0 auto; overflow:visible; }
+  .paymentColumn .summaryColumn.residualCard{ flex:1 1 auto; overflow:visible; }
+}
