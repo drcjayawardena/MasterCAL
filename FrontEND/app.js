@@ -1742,7 +1742,7 @@ function build3W(data) {
   ["B2", "B3"].forEach(function (cell) { valuation.appendChild(twField(cell, data)); });
   valuation.insertAdjacentHTML("beforeend",
     '<table class="summaryTable">' +
-    twOutRow("Maximum Exposure", "tw_maxExposure") +
+    twOutRow("LTV (Maximum Exposure)", "tw_maxExposure") +
     twOutRow("CF Valuation", "tw_cfValuation") +
     twOutRow("Max Facility Value", "tw_maxFacility") +
     '</table>');
@@ -1753,7 +1753,7 @@ function build3W(data) {
   payment.innerHTML = '<div class="cardTitle">Payment Detail</div>' +
     twBigRow("MONTHLY RENTAL", "tw_monthlyRental") +
     '<table class="summaryTable">' +
-    twOutRow("Exposure (LTV %)", "tw_exposurePct") +
+    twOutRow("Exposure", "tw_exposurePct") +
     twOutRow("Total Paid", "tw_totPaid") +
     twOutRow("Total Interest", "tw_totInterest") +
     twOutRow("Rate / 100,000", "tw_rate100") +
@@ -1841,7 +1841,7 @@ function render3W(data) {
   set("tw_cfValuation", o.cfValuation);
   set("tw_maxFacility", o.maxFacility);
   set("tw_exposurePct", data.totalCapPct); /* exposure %          */
-  ltvOverMax("tw_exposurePct", "tw_B10", o.maxFacility);
+  ltvOverMax("tw_exposurePct", "tw_B10", o.maxFacility, "twlbl_B10");
   set("tw_monthlyRental", o.monthlyRental);
 
   /* Labelize BIC & INSURANCE with their computed (capitalized) amounts.
@@ -2137,7 +2137,7 @@ function buildBike() {
   ["B2", "B3", "B4"].forEach(function (cell) { valuation.appendChild(bkField(cell)); });
   valuation.insertAdjacentHTML("beforeend",
     '<table class="summaryTable">' +
-    bkOutRow("Maximum Exposure", "bk_maxExposure") +
+    bkOutRow("LTV (Maximum Exposure)", "bk_maxExposure") +
     bkOutRow("CF Valuation", "bk_cfValuation") +
     bkOutRow("Max Facility Value", "bk_maxFacility") +
     '</table>');
@@ -2148,7 +2148,7 @@ function buildBike() {
   payment.innerHTML = '<div class="cardTitle">Payment Detail</div>' +
     bkBigRow("MONTHLY RENTAL", "bk_monthlyRental") +
     '<table class="summaryTable">' +
-    bkOutRow("Exposure (LTV %)", "bk_exposurePct") +
+    bkOutRow("Exposure", "bk_exposurePct") +
     bkOutRow("Total Paid", "bk_totPaid") +
     bkOutRow("Total Interest", "bk_totInterest") +
     bkOutRow("Rate / 100,000", "bk_rate100") +
@@ -2283,7 +2283,7 @@ function renderBike(data) {
   set("bk_cfValuation", o.cfValuation);
   set("bk_maxFacility", o.maxFacility);
   set("bk_exposurePct", data.exposurePct);
-  ltvOverMax("bk_exposurePct", "bk_B7", o.maxFacility);
+  ltvOverMax("bk_exposurePct", "bk_B7", o.maxFacility, "bklbl_B7");
   set("bk_totPaid", o.totPaid);
   set("bk_totInterest", o.totInterest);
   set("bk_rate100", o.rate100);
@@ -3628,8 +3628,9 @@ async function ecRun() {
   ecShow(v);
 }
 
-/* 3W / BIKE: the Exposure (LTV %) row turns red when the FACILITY AMOUNT is more than the Max Facility Value. */
-function ltvOverMax(cellId, facilityId, maxFacility) {
+/* 3W / BIKE: the Exposure row (and the FACILITY AMOUNT label with its exposure) turn red when the
+   FACILITY AMOUNT is more than the Max Facility Value, i.e. the exposure is above the LTV (Maximum Exposure). */
+function ltvOverMax(cellId, facilityId, maxFacility, labelId) {
   const cell = document.getElementById(cellId), fa = document.getElementById(facilityId);
   if (!cell) return;
   const f = qNum(fa ? fa.value : ""), m = qNum(maxFacility);
@@ -3637,4 +3638,6 @@ function ltvOverMax(cellId, facilityId, maxFacility) {
   const row = cell.closest("tr") || cell;
   row.classList.toggle("ltvOver", over);
   row.title = over ? "Facility amount is more than the Max Facility Value (" + maxFacility + ")" : "";
+  const lab = labelId && document.getElementById(labelId);
+  if (lab) lab.classList.toggle("ltvOverLbl", over);
 }
