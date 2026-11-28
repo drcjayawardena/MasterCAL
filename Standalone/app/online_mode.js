@@ -169,6 +169,7 @@
                         "and updates both staff links. It takes about 20-40 seconds.")) return;
     pub = { busy: true, ok: false, text: "Updating… keep this tab open (about 20-40 seconds)." };
     render();
+    var started = Date.now();
     api("adminPublish").then(function (r) {
       r = r || {};
       pub = { busy: false, ok: true,
@@ -176,9 +177,27 @@
                     "Staff get the new version the next time they open the link. " };
       render();
     }).catch(function (e) {
+      /* "already running": the same request often reaches Google twice; the first one is doing the update.
+         Watch the time of the last update for up to 90 s instead of reporting a failure. */
+      if (/already running/i.test(e.message || "")) { waitPublished(started); return; }
       pub = { busy: false, ok: false, text: "Update failed: " + (e.message || "unknown error") };
       render();
     });
+  }
+  function waitPublished(started, tries) {
+    tries = tries || 0;
+    pub = { busy: true, ok: false, text: "An update is running… keep this tab open." };
+    render();
+    setTimeout(function () {
+      api("appVersion").then(function (r) {
+        var p = r && r.published ? Date.parse(r.published) : 0;
+        if (p && p >= started - 5000) {
+          pub = { busy: false, ok: true, text: "Done ✅ Rates updated: " + String(r.published).slice(0, 10) + ". Staff see \"MasterCAL updated\" in their app. " };
+          render();
+        } else if (tries < 9) waitPublished(started, tries + 1);
+        else { pub = { busy: false, ok: false, text: "The update is taking longer than usual. Wait a minute, then reload this page to check \"Rates updated\" (bottom left)." }; render(); }
+      }).catch(function () { if (tries < 9) waitPublished(started, tries + 1); });
+    }, 10000);
   }
   function load() {
     api("adminUsers").then(function (r) { users = r || []; render(); }).catch(function (e) { render(e.message || "Could not load users."); });

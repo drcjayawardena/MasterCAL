@@ -20,7 +20,7 @@ let app = rd(path.join(FE, "app.js"));
 const REMOTE = (/https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/.exec(app) || [])[0]; if (!REMOTE) throw new Error("API url not found");
 app = patch(app, /https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/, "local://mastercal", "api url");
 app = patch(app, 'lsSet("mastercal_phone", data.phone || ""); loadApp(); return;', 'lsSet("mastercal_phone", data.phone || ""); loadApp(); if (window.__mcAfterLogin) window.__mcAfterLogin(); return;', "login success");
-app = patch(app, 'action !== "sendQuote");', 'action !== "sendQuote" && action !== "adminWho" && action !== "adminUsers" && action !== "adminSetStatus" && action !== "adminPublish" && action !== "adminReset" && action !== "adminSetRole");', "isCalc");
+app = patch(app, 'action !== "sendQuote");', 'action !== "sendQuote" && action !== "adminWho" && action !== "adminUsers" && action !== "adminSetStatus" && action !== "adminPublish" && action !== "adminReset" && action !== "adminSetRole" && action !== "appVersion");', "isCalc");
 app = patch(app, 'vcheck: "vcheckPanel" };', 'vcheck: "vcheckPanel", admin: "adminPanel" };', "panels");
 app = patch(app, /^warmServer\(\);$/m, "/* standalone: no warm-up */", "warm-up");
 
