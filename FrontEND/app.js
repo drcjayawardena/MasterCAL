@@ -1753,7 +1753,7 @@ function build3W(data) {
   payment.innerHTML = '<div class="cardTitle">Payment Detail</div>' +
     twBigRow("MONTHLY RENTAL", "tw_monthlyRental") +
     '<table class="summaryTable">' +
-    twOutRow("Exposure", "tw_exposurePct") +
+    twOutRow("Exposure (LTV %)", "tw_exposurePct") +
     twOutRow("Total Paid", "tw_totPaid") +
     twOutRow("Total Interest", "tw_totInterest") +
     twOutRow("Rate / 100,000", "tw_rate100") +
@@ -1841,6 +1841,7 @@ function render3W(data) {
   set("tw_cfValuation", o.cfValuation);
   set("tw_maxFacility", o.maxFacility);
   set("tw_exposurePct", data.totalCapPct); /* exposure %          */
+  ltvOverMax("tw_exposurePct", "tw_B10", o.maxFacility);
   set("tw_monthlyRental", o.monthlyRental);
 
   /* Labelize BIC & INSURANCE with their computed (capitalized) amounts.
@@ -2147,7 +2148,7 @@ function buildBike() {
   payment.innerHTML = '<div class="cardTitle">Payment Detail</div>' +
     bkBigRow("MONTHLY RENTAL", "bk_monthlyRental") +
     '<table class="summaryTable">' +
-    bkOutRow("Exposure", "bk_exposurePct") +
+    bkOutRow("Exposure (LTV %)", "bk_exposurePct") +
     bkOutRow("Total Paid", "bk_totPaid") +
     bkOutRow("Total Interest", "bk_totInterest") +
     bkOutRow("Rate / 100,000", "bk_rate100") +
@@ -2282,6 +2283,7 @@ function renderBike(data) {
   set("bk_cfValuation", o.cfValuation);
   set("bk_maxFacility", o.maxFacility);
   set("bk_exposurePct", data.exposurePct);
+  ltvOverMax("bk_exposurePct", "bk_B7", o.maxFacility);
   set("bk_totPaid", o.totPaid);
   set("bk_totInterest", o.totInterest);
   set("bk_rate100", o.rate100);
@@ -3624,4 +3626,15 @@ async function ecRun() {
     ecRunning = false;
   }
   ecShow(v);
+}
+
+/* 3W / BIKE: the Exposure (LTV %) row turns red when the FACILITY AMOUNT is more than the Max Facility Value. */
+function ltvOverMax(cellId, facilityId, maxFacility) {
+  const cell = document.getElementById(cellId), fa = document.getElementById(facilityId);
+  if (!cell) return;
+  const f = qNum(fa ? fa.value : ""), m = qNum(maxFacility);
+  const over = !!(f && m && f > m);
+  const row = cell.closest("tr") || cell;
+  row.classList.toggle("ltvOver", over);
+  row.title = over ? "Facility amount is more than the Max Facility Value (" + maxFacility + ")" : "";
 }
